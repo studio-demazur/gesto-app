@@ -6772,7 +6772,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.63';
+const VERSIONE_GESTO='0.64';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -6913,6 +6913,8 @@ logo.innerHTML=GESTO_SVG;
        la freccia o l'arco più vicini entro 22 px, poi il disco di 44 px; la maniglia sotto la punta ha la precedenza (Lab Disegno 0.2.73).
    AL6 Disegno proprio, distinto dal segno dell'origine (punto e due frecce corte) e da quello del perno (anello vuoto);
        sull'origine il gizmo prende un colore poco diverso.
+   AL8 Sullo spigolo il centro del gizmo vince sulla maniglia (caso G1, titolare, 22.11.2026).
+   DT1 Le dita muovono solo la vista: il dito non prende il gizmo né le maniglie (titolare, 22.11.2026).
    AL7 Stesso disegno e stesso comportamento di Lab Disegno: tre modi, «Ciò che è scelto», «Solo il gizmo», «Solo l'origine».
    Il perno resta sul dispositivo, fuori dal file, finché il presidio del formato non lo accoglie nel modulo linen. */
 (function(){
@@ -6979,9 +6981,14 @@ logo.innerHTML=GESTO_SVG;
     if(D&&D.snap){const s=w2s(D.snap[0],D.snap[1]);x.strokeStyle=T.acc;x.lineWidth=1.5;x.beginPath();x.arc(s[0],s[1],6,0,DUEPI);x.stroke()}
     x.restore()};
   /* la parte sotto la punta: centro, frecce, anello in 44 px (AL5); manopola e tacche solo a gizmo cresciuto */
-  gzColpo=function(B,sx,sy){if(modo(B)==='scelto'&&gripVicino(sx,sy))return null;/* come in Lab Disegno: la maniglia sotto la punta ha la precedenza */
-    const {O,u,v}=gzGeo(B),p=[sx-O[0],sy-O[1]],d=Math.hypot(p[0],p[1]),k=GZ.drag||(GZ.tipo!=='touch'&&d<GZ_VICINO)?GZ_CRESCE:1,m=mis(k),pu=p[0]*u[0]+p[1]*u[1],pv=p[0]*v[0]+p[1]*v[1],md=modo(B);
+  gzColpo=function(B,sx,sy){
+    /* DT1 (titolare, 22.11.2026): le dita muovono solo la vista; gizmo e maniglie si prendono con la penna o il mouse */
+    if(GZ.tipo==='touch')return null;
+    const {O,u,v}=gzGeo(B),p=[sx-O[0],sy-O[1]],d=Math.hypot(p[0],p[1]),k=GZ.drag||(GZ.tipo!=='touch'&&d<GZ_VICINO)?GZ_CRESCE:1,m=mis(k);
+    /* AL8 (caso G1): il centro disegnato vince sulla maniglia, anche sullo spigolo; altrove la maniglia ha la precedenza */
     if(d<=m.centro+4)return 'free';
+    if(modo(B)==='scelto'&&gripVicino(sx,sy))return null;
+    const pu=p[0]*u[0]+p[1]*u[1],pv=p[0]*v[0]+p[1]*v[1],md=modo(B);
     if(k>1){const R=14;
       if(B.tipo!=='punto'){const q=Math.SQRT1_2*m.anello;if(Math.hypot(pu+q,pv+q)<R)return 'man'}
       if(B.tipo==='ogg'&&md==='scelto'){if(Math.hypot(pu-m.scala,pv)<R)return 'sx';if(Math.hypot(pu,pv-m.scala)<R)return 'sy';if(Math.hypot(pu-m.su,pv-m.su)<R)return 'su'}}
@@ -6994,6 +7001,14 @@ logo.innerHTML=GESTO_SVG;
       if(da<bd){bd=da;best='rot'}}
     if(best)return best;
     if(d<=GZ_PRESA)return 'free';return null};
+  /* AL8: sullo spigolo il centro del gizmo si trascina; un tocco fermo sul centro arriva invece alla maniglia sotto, come prima */
+  {const _b=gzBersaglio;gzBersaglio=function(){return GZ.passa?null:_b.apply(this,arguments)}}
+  {const _c=gzCalcola;gzCalcola=function(D){GZ.ult=D;return _c.apply(this,arguments)}}
+  area.addEventListener('lostpointercapture',e=>{const D=GZ.ult;if(!D||D.id!==e.pointerId||GZ.drag)return;GZ.ult=null;
+    if(D.modo!=='free'||D.mosso||!gripVicino(D.sx0,D.sy0))return;
+    const r=area.getBoundingClientRect(),o={clientX:r.left+D.sx0,clientY:r.top+D.sy0,pointerId:e.pointerId,pointerType:e.pointerType,isPrimary:true,bubbles:true,cancelable:true,button:0};
+    GZ.ultimo=null;GZ.passa=true;
+    try{area.dispatchEvent(new PointerEvent('pointerdown',Object.assign({buttons:1,pressure:.5},o)));area.dispatchEvent(new PointerEvent('pointerup',Object.assign({buttons:0,pressure:0},o)))}finally{GZ.passa=false}richiedi('sopra')});
   /* cresce all'avvicinarsi (AL4) */
   addEventListener('pointermove',e=>{if(GZ.drag||!S.gz||e.target!==area)return;const B=gzBersaglio();let n=false;
     if(B&&e.pointerType!=='touch'){const O=w2s(B.O[0],B.O[1]),[sx,sy]=gzLoc(e);n=Math.hypot(sx-O[0],sy-O[1])<GZ_VICINO}
