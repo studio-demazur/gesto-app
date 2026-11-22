@@ -1,0 +1,32 @@
+{
+ "name": "Gesto di Lab DeMazur",
+ "short_name": "Gesto",
+ "description": "Schizzo e CAD per la penna. Studio DeMazur.",
+ "lang": "it",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "any",
+ "background_color": "#264E5D",
+ "theme_color": "#264E5D",
+ "icons": [
+  {
+   "src": "icone/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icone/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icone/icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
