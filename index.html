@@ -6772,7 +6772,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.62';
+const VERSIONE_GESTO='0.63';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -6909,7 +6909,8 @@ logo.innerHTML=GESTO_SVG;
    AL2 Il gizmo sta sempre sul perno; si sposta ovunque e il perno lo segue; l'anello gira attorno al centro che si vede.
    AL3 Il gizmo compare con la scelta; Ctrl + G serve solo a nasconderlo.
    AL4 A riposo è piccolo, frecce e anello; all'avvicinarsi di penna o mouse cresce (2,2 volte entro 70 px).
-   AL5 (in prova) Frecce, centro e anello rispondono in 44 px anche da piccoli: GZ_PRESA.
+   AL5 (in prova) Frecce, centro e arco rispondono in 44 px anche da piccoli (GZ_PRESA, metà 22): prima il centro disegnato, poi
+       la freccia o l'arco più vicini entro 22 px, poi il disco di 44 px; la maniglia sotto la punta ha la precedenza (Lab Disegno 0.2.73).
    AL6 Disegno proprio, distinto dal segno dell'origine (punto e due frecce corte) e da quello del perno (anello vuoto);
        sull'origine il gizmo prende un colore poco diverso.
    AL7 Stesso disegno e stesso comportamento di Lab Disegno: tre modi, «Ciò che è scelto», «Solo il gizmo», «Solo l'origine».
@@ -6924,7 +6925,7 @@ logo.innerHTML=GESTO_SVG;
   const gzK=()=>GZ.drag||GZ.vicino?GZ_CRESCE:1;
   const modo=B=>B&&B.tipo==='ogg'?S.gzModo:'scelto';
   /* misure di Lab Disegno: frecce da 6,5 a 20, punta 0,75; centro 4,5; anello 13 */
-  const mis=k=>({from:6.5*k,len:20*k,head:.75*k,tip:(20+7*.75)*k,centro:4.5*k,anello:13*k,scala:30*k,su:13.4*k});
+  const mis=k=>({from:6.5*k,len:20*k,head:.75*k,tip:(20+7*.75)*k,centro:4.5*k,anello:13*k,scala:30*k,su:17*k});
 
   /* AL1: «Pivot» sposta il perno, non l'origine; «Tocca» nel pannello dell'origine sposta l'origine */
   let toccaOrigine=false;
@@ -6947,20 +6948,27 @@ logo.innerHTML=GESTO_SVG;
     x.strokeStyle=ink;x.fillStyle=ink;x.lineWidth=spesso?2.6:1.4;asta();x.stroke();punta();x.fill()}
   function due(x,fn,spesso,ink){x.strokeStyle=alone();x.lineWidth=(spesso?2.4:1.4)+2.2;fn();x.stroke();x.strokeStyle=ink;x.lineWidth=spesso?2.4:1.4;fn();x.stroke()}
   function puntino(x,o,r,ink){x.beginPath();x.arc(o[0],o[1],r+1.3,0,DUEPI);x.fillStyle=alone();x.fill();x.beginPath();x.arc(o[0],o[1],r,0,DUEPI);x.fillStyle=ink;x.fill()}
+  function rgbDi(c){const d=document.createElement('canvas').getContext('2d');d.fillStyle=c;const h=d.fillStyle;if(h[0]==='#')return [1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const m=h.match(/\d+/g);return m?m.slice(0,3).map(Number):[0,0,0]}
+  const coloreGizmo=suO=>{if(!suO)return inchiostro();const a=rgbDi(inchiostro()),b=rgbDi(T.acc);return 'rgb('+a.map((v,i)=>Math.round((v+b[i])/2)).join(',')+')'};
   const sulOrigine=(B,O)=>{const P=origineSuPerno();if(!P)return false;const q=w2s(P[0],P[1]);return Math.hypot(q[0]-O[0],q[1]-O[1])<0.5};
   gzDisegna=function(x){let B=GZ.drag?GZ.drag.B:gzBersaglio();if(!B)return;const D=GZ.drag;let off=[0,0];
     if(D&&D.ris&&D.ris.ga!=null)B=Object.assign({},B,{a:D.ris.ga});
     if(D&&D.ris&&D.ris.d)off=[D.ris.d[0]*V.s,D.ris.d[1]*V.s];
     if(D&&D.ris&&D.ris.r!=null&&modo(B)==='gizmo')B=Object.assign({},B,{a:cpNorm(B.a+D.ris.r)});
     const {O:O0,u,v}=gzGeo(B),O=[O0[0]+off[0],O0[1]+off[1]],k=gzK(),m=mis(k),att=D?D.modo:GZ.hover,md=modo(B);
-    const suO=!D&&B.tipo==='ogg'&&sulOrigine(B,O0),ink=suO?T.acc:inchiostro();
+    const suO=!D&&B.tipo==='ogg'&&sulOrigine(B,O0),ink=coloreGizmo(suO);
     schermo(x);x.save();x.lineCap='round';x.lineJoin='round';
-    /* l'anello di rotazione; durante la rotazione l'arco percorso */
-    if(B.tipo!=='punto'){x.globalAlpha=att==='rot'?1:.7;due(x,()=>{x.beginPath();x.arc(O[0],O[1],m.anello,0,DUEPI)},att==='rot',ink);x.globalAlpha=1;
+    const punta=(d,acc)=>{const t=[O[0]+d[0]*m.len,O[1]+d[1]*m.len],h=[O[0]+d[0]*(m.len+7*m.head),O[1]+d[1]*(m.len+7*m.head)],n=[-d[1]*3.4*m.head,d[0]*3.4*m.head];
+      due(x,()=>{x.beginPath();x.moveTo(O[0]+d[0]*m.from,O[1]+d[1]*m.from);x.lineTo(t[0],t[1])},acc,ink);
+      x.beginPath();x.moveTo(h[0],h[1]);x.lineTo(t[0]+n[0],t[1]+n[1]);x.lineTo(t[0]-n[0],t[1]-n[1]);x.closePath();x.fillStyle=alone();x.fill();
+      due(x,()=>{x.beginPath();x.moveTo(h[0],h[1]);x.lineTo(t[0]+n[0],t[1]+n[1]);x.lineTo(t[0]-n[0],t[1]-n[1]);x.closePath()},acc,ink)};
+    punta(u,att==='tx');punta(v,att==='ty');
+    /* l'arco della rotazione fra le due frecce, sempre; durante la rotazione l'angolo percorso */
+    if(B.tipo!=='punto'){const a0=Math.atan2(u[1],u[0]),sp=Math.atan2(Math.sin(Math.atan2(v[1],v[0])-a0),Math.cos(Math.atan2(v[1],v[0])-a0));
+      due(x,()=>{x.beginPath();x.arc(O[0],O[1],m.anello,a0+sp*.2,a0+sp*.8,sp<0)},att==='rot',ink);
       if(D&&D.modo==='rot'&&D.ris&&D.ris.r!=null){x.globalAlpha=.14;x.fillStyle=T.acc;x.beginPath();x.moveTo(O[0],O[1]);x.arc(O[0],O[1],m.anello,D.a0,D.a0+D.ris.r,D.ris.r<0);x.closePath();x.fill();x.globalAlpha=1}}
-    freccia(x,O,u,m.from,m.len,m.head,ink,alone(),att==='tx');freccia(x,O,v,m.from,m.len,m.head,ink,alone(),att==='ty');
     due(x,()=>{x.beginPath();x.arc(O[0],O[1],m.centro,0,DUEPI)},att==='free',ink);
-    if(suO)puntino(x,O,2.2,ink);
+    x.beginPath();x.arc(O[0],O[1],1.2*Math.min(k,1.6),0,DUEPI);x.fillStyle=ink;x.fill();
     /* cresciuto: la manopola sull'anello, e per «Ciò che è scelto» le tacche di scala */
     if(k>1){if(B.tipo!=='punto'){const q=Math.SQRT1_2*m.anello,c=[O[0]-(u[0]+v[0])*q,O[1]-(u[1]+v[1])*q];x.beginPath();x.arc(c[0],c[1],att==='man'?4.6:3.6,0,DUEPI);x.fillStyle=alone();x.fill();due(x,()=>{x.beginPath();x.arc(c[0],c[1],att==='man'?4.6:3.6,0,DUEPI)},att==='man',ink)}
       if(B.tipo==='ogg'&&md==='scelto'){const q=(c,mm)=>due(x,()=>{x.beginPath();const a=B.a;x.save();x.translate(c[0],c[1]);x.rotate(a);x.rect(-3.2,-3.2,6.4,6.4);x.restore()},att===mm,ink);
@@ -6973,15 +6981,18 @@ logo.innerHTML=GESTO_SVG;
   /* la parte sotto la punta: centro, frecce, anello in 44 px (AL5); manopola e tacche solo a gizmo cresciuto */
   gzColpo=function(B,sx,sy){if(modo(B)==='scelto'&&gripVicino(sx,sy))return null;/* come in Lab Disegno: la maniglia sotto la punta ha la precedenza */
     const {O,u,v}=gzGeo(B),p=[sx-O[0],sy-O[1]],d=Math.hypot(p[0],p[1]),k=GZ.drag||(GZ.tipo!=='touch'&&d<GZ_VICINO)?GZ_CRESCE:1,m=mis(k),pu=p[0]*u[0]+p[1]*u[1],pv=p[0]*v[0]+p[1]*v[1],md=modo(B);
-    if(d<=Math.max(m.centro+3,8))return 'free';
+    if(d<=m.centro+4)return 'free';
     if(k>1){const R=14;
       if(B.tipo!=='punto'){const q=Math.SQRT1_2*m.anello;if(Math.hypot(pu+q,pv+q)<R)return 'man'}
       if(B.tipo==='ogg'&&md==='scelto'){if(Math.hypot(pu-m.scala,pv)<R)return 'sx';if(Math.hypot(pu,pv-m.scala)<R)return 'sy';if(Math.hypot(pu-m.su,pv-m.su)<R)return 'su'}}
-    const ax=(t,n)=>t>=m.from-2&&t<=m.tip+6&&Math.abs(n)<=GZ_PRESA?Math.abs(n):null,cx=ax(pu,pv),cy=ax(pv,pu);
-    const cr=B.tipo!=='punto'&&Math.abs(d-m.anello)<=GZ_PRESA?Math.abs(d-m.anello):null;
-    /* a riposo le frecce hanno la precedenza; cresciuto, vince la parte più vicina */
-    const c=[['tx',cx],['ty',cy],['rot',k>1?cr:null]].filter(q=>q[1]!=null).sort((a,b)=>a[1]-b[1]);if(c.length)return c[0][0];
-    if(cr!=null)return 'rot';
+    const half=GZ_PRESA;let best=null,bd=half;
+    const freccia_=w=>{const t=Math.max(m.from,Math.min(m.len+7*m.head,p[0]*w[0]+p[1]*w[1]));return Math.hypot(p[0]-w[0]*t,p[1]-w[1]*t)};
+    [['tx',u],['ty',v]].forEach(([n,w])=>{const dd=freccia_(w);if(dd<=bd){bd=dd;best=n}});
+    if(B.tipo!=='punto'){const a0=Math.atan2(u[1],u[0]),wr=z=>Math.atan2(Math.sin(z),Math.cos(z)),sp=wr(Math.atan2(v[1],v[0])-a0),q=wr(Math.atan2(p[1],p[0])-a0),lo=sp*.2,hi=sp*.8;
+      const dentro=sp<0?q<=lo&&q>=hi:q>=lo&&q<=hi;let da;
+      if(dentro)da=Math.abs(d-m.anello);else{const e1=a0+lo,e2=a0+hi;da=Math.min(Math.hypot(p[0]-Math.cos(e1)*m.anello,p[1]-Math.sin(e1)*m.anello),Math.hypot(p[0]-Math.cos(e2)*m.anello,p[1]-Math.sin(e2)*m.anello))}
+      if(da<bd){bd=da;best='rot'}}
+    if(best)return best;
     if(d<=GZ_PRESA)return 'free';return null};
   /* cresce all'avvicinarsi (AL4) */
   addEventListener('pointermove',e=>{if(GZ.drag||!S.gz||e.target!==area)return;const B=gzBersaglio();let n=false;
@@ -7027,7 +7038,9 @@ logo.innerHTML=GESTO_SVG;
   try{const i=TASTI_FISSI.findIndex(t=>t[0]==='Ctrl + G');if(i>=0)TASTI_FISSI[i]=['Ctrl + G','Nasconde o mostra il gizmo, che compare da solo con la scelta']}catch(e){}
   window.__gestoGZ={GZ,gzK,mis,GZ_PRESA,modo:()=>S.gzModo,imposta:m=>{S.gzModo=m;salvaPref();rendiPP();richiedi('sopra')},bersaglio:()=>{const B=gzBersaglio();return B?{tipo:B.tipo,O:w2s(B.O[0],B.O[1]),W:B.O,a:B.a}:null},
     colpo:(sx,sy)=>{const B=gzBersaglio();return B?gzColpo(B,sx,sy):null},perno:()=>pivotSel(),perTemp:()=>pivotTemp,origine:()=>origineSuPerno(),pivot:P=>impostaPivot(P),sulOrigine:()=>{const B=gzBersaglio();return !!B&&sulOrigine(B,w2s(B.O[0],B.O[1]))},gz:()=>S.gz,
-    ent:()=>selEnts().map(e=>({k:e.k,g:e.g,pv:e.pv||null}))};
+    ent:()=>selEnts().map(e=>({k:e.k,g:e.g,pv:e.pv||null})),
+    parti:k=>{const B=gzBersaglio();if(!B)return null;const {O,u,v}=gzGeo(B),m=mis(k||GZ_CRESCE),a0=Math.atan2(u[1],u[0]),sp=Math.atan2(Math.sin(Math.atan2(v[1],v[0])-a0),Math.cos(Math.atan2(v[1],v[0])-a0)),am=a0+sp/2,q=Math.SQRT1_2*m.anello,t=(m.from+m.len)/2;
+      return {centro:O,tx:[O[0]+u[0]*t,O[1]+u[1]*t],ty:[O[0]+v[0]*t,O[1]+v[1]*t],rot:[O[0]+Math.cos(am)*m.anello,O[1]+Math.sin(am)*m.anello],man:[O[0]-(u[0]+v[0])*q,O[1]-(u[1]+v[1])*q]}}};
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
