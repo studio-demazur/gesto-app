@@ -6772,7 +6772,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.59';
+const VERSIONE_GESTO='0.60';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -6862,6 +6862,126 @@ logo.innerHTML=GESTO_SVG;
     r.innerHTML='<p>Gesto ora è su <b>gesto.demazur.com</b>.</p><button type="button" id="lmTrB">Trasferisci i disegni</button><small id="lmTrS">Copia disegni, firme e preferenze nella nuova app. Qui non si cancella nulla.</small>';
     const T=document.querySelector('.lmenu .lmT');T.after(r);$('lmTrB').onclick=()=>trasferisci();
   }
+})();
+
+/* ----- Fase 60: il foglio è un file sul disco (FD1–FD7, Vlad, 22.11.2026) -----
+   Dove il sistema lo consente (app installata o pagina in Edge e Chrome sul computer) ogni foglio può essere legato
+   a un file .dmz: Salva scrive su quel file, il salvataggio è automatico a ogni pausa, Apri lega il file al foglio.
+   La memoria del browser resta come copia di appoggio. Altrove (iPad, Safari, claude.ai) resta scarica e importa. */
+(function(){
+  const FDOK=AUTONOMA&&!!window.showSaveFilePicker&&!!window.showOpenFilePicker&&window.top===window;
+  const TIPO=[{description:'Foglio di Gesto',accept:{'application/octet-stream':['.dmz']}}];
+  const FD=new Map();let pausa=null,inScrittura=null,ultimoErrore='',silenzio=false;
+  const dbH=()=>new Promise((ok,ko)=>{const r=indexedDB.open('gesto-file',1);r.onupgradeneeded=()=>r.result.createObjectStore('h');r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)});
+  async function regSet(id,v){try{const d=await dbH();await new Promise(ok=>{const tx=d.transaction('h','readwrite');v?tx.objectStore('h').put(v,id):tx.objectStore('h').delete(id);tx.oncomplete=ok;tx.onerror=ok});d.close()}catch(e){}}
+  async function regTutti(){try{const d=await dbH();const r=await new Promise(ok=>{const a=[];const c=d.transaction('h').objectStore('h').openCursor();c.onsuccess=()=>{const k=c.result;if(!k){ok(a);return}a.push([k.key,k.value]);k.continue()};c.onerror=()=>ok(a)});d.close();return r}catch(e){return[]}}
+  const voce=id=>FD.get(id)||null;
+  async function permesso(h,chiedi){const o={mode:'readwrite'};try{if((await h.queryPermission(o))==='granted')return true;if(!chiedi)return false;return (await h.requestPermission(o))==='granted'}catch(e){return false}}
+
+  /* ---- il contenuto del foglio corrente, letto subito: il cambio di foglio durante la lettura delle immagini non lo altera ---- */
+  async function contenuto(){
+    const f=foglio(),o={formato:'lavagna-demazur',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
+    ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
+    let n=0,persi=0;RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
+    const imm=[...elencoSfondi()];[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a})});
+    if(!f.uuid)fogliSet({uuid:uuid7()});const u=f.uuid,nome=f.nome||'Foglio';
+    for(const b of imm){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
+    const c=senzaNull(o);delete c.formato;delete c.versione;
+    const env={formato:'demazur',involucro:'2.0',documento:u,tipo:'linen',nome,app:'Gesto di Lab DeMazur',scritto:new Date().toISOString(),moduli:{linen:{versione:1,richiesto:true,contenuto:c}}};
+    return {blob:new Blob([JSON.stringify(env)],{type:'application/octet-stream'}),n,persi,id:f.id}}
+
+  /* ---- scrittura sul file legato ---- */
+  async function scrivi(v,b){const w=await v.h.createWritable();await w.write(b.blob);await w.close();const fl=await v.h.getFile();v.mod=fl.lastModified;v.sporco=false;v.conflitto=false;regSet(b.id,{h:v.h,nome:v.nome,mod:v.mod})}
+  async function salvaLegato(chiedi){
+    const id=foglioId,v=voce(id);if(!v)return false;
+    if(!await permesso(v.h,chiedi)){v.attesa=true;aggFile();return false}v.attesa=false;
+    try{const fl=await v.h.getFile();if(v.mod&&fl.lastModified>v.mod+1000&&!chiedi){v.conflitto=true;aggFile();avviso('«'+v.nome+'» è stato modificato altrove: il salvataggio automatico è sospeso. Usa Salva per sovrascriverlo o Salva con nome.');return false}}catch(e){}
+    const p=(async()=>{const b=await contenuto();if(!b.n&&!chiedi)return false;await scrivi(v,b);aggFile();if(b.persi)avviso('Salvato senza '+b.persi+(b.persi===1?' sfondo, che non si è potuto leggere':' sfondi, che non si sono potuti leggere'));return true})();
+    inScrittura=p;try{return await p}catch(e){console.warn(e);ultimoErrore=e&&e.name||'';avviso('Il file «'+v.nome+'» non si è potuto scrivere');aggFile();return false}finally{if(inScrittura===p)inScrittura=null}}
+  async function salvaConNome(){
+    const f=foglio();let h;try{h=await showSaveFilePicker({suggestedName:(f.nome||'Foglio').replace(/[\\\/:*?"<>|]+/g,' ').trim()+'.dmz',types:TIPO,id:'gesto-fogli'})}catch(e){if(e&&e.name!=='AbortError')avviso('Salvataggio non riuscito');return false}
+    const v={h,nome:h.name,mod:0,sporco:true};FD.set(foglioId,v);regSet(foglioId,{h,nome:h.name,mod:0});
+    const ok=await salvaLegato(true);if(ok)avviso('Salvato in «'+h.name+'». Da ora il foglio si salva da solo su questo file.');return ok}
+  async function salvaFD(){const v=voce(foglioId);if(!v)return salvaConNome();clearTimeout(pausa);const ok=await salvaLegato(true);if(ok)avviso('Salvato in «'+v.nome+'»');return ok}
+
+  /* ---- apertura: il file resta legato al foglio ---- */
+  async function leggiFile(h){const fl=await h.getFile();let o;try{o=JSON.parse(new TextDecoder('utf-8').decode(daZip(new Uint8Array(await fl.arrayBuffer()))))}catch(e){return {fl,o:null}}return {fl,o}}
+  const attendi=c=>new Promise(ok=>{const t0=Date.now();(function g(){if(c()||Date.now()-t0>8000)ok();else setTimeout(g,60)})()});
+  async function mappaImmagini(o){const mappa=new Map();let persi=0;const una=async a=>{if(mappa.has(a))return;const dati=o.immagini&&o.immagini[a];if(!dati||!assets){persi++;return}
+      try{const q=daData(dati),r=await assets.upload(q,{type:q.type});mappa.set(a,r.id);immagine(r.id,r.url)}catch(e){persi++}};
+    for(const b of (o.rami.sfondi||[]))await una(b.a);for(const tv of (o.rami.tavole||[])){const a=tv.cart&&tv.cart.kp;if(a)await una(a)}return {mappa,persi}}
+  /* sostituisce il contenuto del foglio corrente con quello del file */
+  async function ricarica(o){
+    const {mappa,persi}=await mappaImmagini(o);const del=[];RAMI.forEach(r=>MOS[r].forEach(x=>{if(r!=='tratti')x._r=r;del.push(x)}));
+    const add=[];RAMI.forEach(r=>(o.rami[r]||[]).forEach(d=>{if(!d||!d.id)return;const c=Object.assign({},d);delete c.id;
+      if(r==='sfondi'){if(!mappa.has(c.a))return;c.a=mappa.get(c.a)}if(r==='tavole'&&c.cart&&c.cart.kp){if(mappa.has(c.cart.kp))c.cart.kp=mappa.get(c.cart.kp);else{delete c.cart.kp;delete c.cart.kpOn}}
+      const x=PARSE[r](d.id,c);if(!x)return;if(r!=='tratti')x._r=r;add.push(x)}));
+    silenzio=true;if(o.foglio){const p={};['sc','o','qu','ts','cartDef','dp','formati','cartigli'].forEach(k=>{if(o.foglio[k]!=null)p[k]=o.foglio[k]});fogliSet(p)}
+    silenzio=true;try{esegui({add,del},false)}finally{setTimeout(()=>{silenzio=false},0)}clearTimeout(pausa);return persi}
+  async function apriHandle(h){
+    const {fl,o:grezzo}=await leggiFile(h);const o=grezzo&&apriDmz(grezzo);
+    if(!o||o.formato!=='lavagna-demazur'||!o.rami){avviso('«'+h.name+'» non è un foglio di Gesto');return}
+    if(o.versione>1){avviso('Il file viene da una versione più recente di Gesto: aggiorna l’app');return}
+    /* già aperto: stesso file o stesso documento */
+    let id=null;for(const [k,v] of FD){try{if(await v.h.isSameEntry(h)){id=k;break}}catch(e){}}
+    if(!id&&o._doc){const f=fogli.find(q=>q.uuid===o._doc);if(f)id=f.id}
+    if(id){const v=voce(id);if(id!==foglioId){await primaDiCambiare();$('foglio').value=id;apriFoglio(id);menuFogli()}
+      await attendi(()=>caricato);
+      const nuovo=!v||!v.mod||fl.lastModified>v.mod+1000;
+      if(nuovo&&!(v&&v.sporco)){const persi=await ricarica(o);avviso('Aperto «'+h.name+'»'+(persi?' · '+persi+' sfondi non recuperati':''))}
+      else if(nuovo)avviso('«'+h.name+'» è cambiato altrove, ma qui ci sono modifiche non salvate: le tengo. Usa Salva con nome per non perdere nessuna delle due.');
+      else avviso('«'+h.name+'» è già aperto');
+      const w={h,nome:h.name,mod:fl.lastModified,sporco:v?v.sporco:false};FD.set(id,w);regSet(id,{h,nome:h.name,mod:w.mod});aggFile();return}
+    /* nuovo: si apre in un foglio nuovo, legato al file */
+    await primaDiCambiare();await importaFoglio(fl);await attendi(()=>caricato);
+    const f=foglio();if(o._doc&&!f.uuid)fogliSet({uuid:o._doc});
+    FD.set(f.id,{h,nome:h.name,mod:fl.lastModified,sporco:false});regSet(f.id,{h,nome:h.name,mod:fl.lastModified});aggFile();
+    avviso('Aperto «'+h.name+'». Le modifiche si salvano su questo file.')}
+  async function apriFD(){let hs;try{hs=await showOpenFilePicker({types:TIPO,multiple:false,id:'gesto-fogli'})}catch(e){return}if(hs&&hs[0])apriHandle(hs[0]).catch(e=>{console.warn(e);avviso('Il file non si apre')})}
+
+  /* ---- modifiche e pause ---- */
+  async function primaDiCambiare(){const v=voce(foglioId);clearTimeout(pausa);if(inScrittura)await inScrittura;if(v&&v.sporco)await salvaLegato(false)}
+  function segnaModifica(){if(!caricato||silenzio)return;const v=voce(foglioId);if(!v)return;v.sporco=true;aggFile();clearTimeout(pausa);pausa=setTimeout(()=>{salvaLegato(false)},2000)}
+  if(FDOK){
+    const _salva=salva;salva=function(r,id,op,obj){const p=_salva.apply(this,arguments);segnaModifica();return p};
+    const _set=fogliSet;fogliSet=function(p){const x=_set.apply(this,arguments);if(p&&!('uuid' in p&&Object.keys(p).length===1))segnaModifica();return x};
+    const _apri=apriFoglio;let cambio=false;apriFoglio=function(id){if(cambio||id===foglioId||!(voce(foglioId)||{}).sporco)return _apri.apply(this,arguments);
+      cambio=true;const a=arguments,t=this;primaDiCambiare().finally(()=>{cambio=false;_apri.apply(t,a);aggFile()})};
+    $('foglio').onchange=function(){apriFoglio(this.value);setTimeout(aggFile,0)};
+    const _crea=creaFoglio;creaFoglio=function(){const t=this,a=arguments;primaDiCambiare().finally(()=>{_crea.apply(t,a);aggFile()})};$('nuovoOk').onclick=()=>creaFoglio();
+    $('exFoglio').onclick=()=>salvaFD();$('imFoglio').onclick=()=>apriFD();
+    addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||e.altKey)return;const k=e.key.toLowerCase();
+      if(k==='s'){e.preventDefault();e.stopImmediatePropagation();e.shiftKey?salvaConNome():salvaFD()}
+      else if(k==='o'){e.preventDefault();e.stopImmediatePropagation();apriFD()}},true);
+    addEventListener('beforeunload',e=>{const v=voce(foglioId);if(v&&v.sporco){salvaLegato(false);e.preventDefault();e.returnValue=''}});
+    /* tornando all'app: se il file è cambiato altrove (altro computer, Nextcloud) e qui non ci sono modifiche, si ricarica */
+    async function controllaEsterno(){const v=voce(foglioId);if(!v||v.sporco||inScrittura||!caricato)return;if(!await permesso(v.h,false)){v.attesa=true;aggFile();return}
+      try{const fl=await v.h.getFile();if(v.mod&&fl.lastModified>v.mod+1000){const {o:g}=await leggiFile(v.h);const o=g&&apriDmz(g);if(o&&o.rami){await ricarica(o);v.mod=fl.lastModified;v.sporco=false;regSet(foglioId,{h:v.h,nome:v.nome,mod:v.mod});aggFile();avviso('«'+v.nome+'» aggiornato dalla versione sul disco')}}}catch(e){}}
+    addEventListener('focus',()=>setTimeout(controllaEsterno,300));document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(controllaEsterno,300)});
+    /* doppio clic su un .dmz (app installata, FD5) */
+    if(window.launchQueue&&launchQueue.setConsumer)launchQueue.setConsumer(async p=>{if(!p.files||!p.files.length)return;await attendi(()=>db&&caricato);for(const h of p.files)await apriHandle(h).catch(e=>console.warn(e))});
+    /* collegamenti salvati */
+    regTutti().then(a=>{a.forEach(([id,v])=>{if(v&&v.h&&fogli.some(f=>f.id===id)||v&&v.h)FD.set(id,{h:v.h,nome:v.nome||v.h.name,mod:v.mod||0,sporco:false})});aggFile();setTimeout(controllaEsterno,1500)});
+    /* la voce Salva con nome fra i comandi */
+    try{COMANDI.push({k:'salvacome',n:'Salva con nome',en:'Save as',ab:'SAVEAS',f:()=>salvaConNome(),al:['salva come']})}catch(e){}
+  }
+
+  /* ---- FD6: nel menu il file legato e lo stato ---- */
+  const st=document.createElement('style');st.textContent='.lmFile{display:flex;align-items:center;gap:8px;font-size:12.5px;line-height:1.3;opacity:.85;min-height:20px}'
+    +'.lmFile .fdDot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--acc)}.lmFile .fdDot.sp{background:transparent;box-shadow:inset 0 0 0 1.5px var(--acc)}'
+    +'.lmFile .fdN{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;font-weight:600}.lmFile .fdS{opacity:.75}'
+    +'.lmFile button{margin-left:auto;height:24px;padding:0 9px;border:1px solid var(--acc);border-radius:6px;background:transparent;color:var(--fg);font:inherit;font-size:12px;cursor:pointer}';
+  document.head.appendChild(st);
+  const riga=document.createElement('div');riga.className='lmR lmFile';riga.hidden=!FDOK;$('lmF').after(riga);
+  function aggFile(){if(!FDOK)return;const v=voce(foglioId);
+    if(!v){riga.innerHTML='<span class="fdDot sp"></span><span class="fdS">Solo in questo browser</span><button type="button" data-a="sc">Salva su disco</button>';riga.title='Il foglio non è ancora legato a un file .dmz'}
+    else{const s=v.conflitto?'cambiato altrove':v.attesa?'da riconsentire':v.sporco?'modifiche in corso':'salvato';
+      riga.innerHTML='<span class="fdDot'+(v.sporco||v.attesa||v.conflitto?' sp':'')+'"></span><span class="fdN"></span><span class="fdS">'+s+'</span>'+(v.attesa||v.conflitto?'<button type="button" data-a="s">'+(v.conflitto?'Sovrascrivi':'Consenti')+'</button>':'');
+      riga.querySelector('.fdN').textContent=v.nome;riga.title='Foglio legato al file '+v.nome}
+    const b=riga.querySelector('button');if(b)b.onclick=()=>{b.dataset.a==='sc'?salvaConNome():salvaFD()};
+    try{document.title=(v?v.nome.replace(/\.dmz$/i,'')+(v.sporco?' •':'')+' · ':'')+'Gesto di Lab DeMazur'}catch(e){}}
+  window.__gestoFD={FD,salvaFD,salvaConNome,apriHandle,aggFile,contenuto,FDOK};
+  aggFile();
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;

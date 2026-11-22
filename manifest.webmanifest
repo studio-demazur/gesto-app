@@ -9,6 +9,27 @@
  "orientation": "any",
  "background_color": "#264E5D",
  "theme_color": "#264E5D",
+ "launch_handler": {
+  "client_mode": "focus-existing"
+ },
+ "file_handlers": [
+  {
+   "action": "./",
+   "accept": {
+    "application/vnd.demazur.dmz": [
+     ".dmz"
+    ]
+   },
+   "icons": [
+    {
+     "src": "icone/icon-192.png",
+     "sizes": "192x192",
+     "type": "image/png"
+    }
+   ],
+   "launch_type": "single-client"
+  }
+ ],
  "icons": [
   {
    "src": "icone/icon-192.png",
