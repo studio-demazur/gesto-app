@@ -6772,7 +6772,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.66';
+const VERSIONE_GESTO='0.67';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -7229,11 +7229,30 @@ orienta.addEventListener('pointerup',e=>{if(!vrSuNord(e))return;e.preventDefault
  '.vrOk{height:30px;padding:0 12px;border:0;border-radius:6px;background:var(--acc);color:#fff;font:600 12px var(--sans);cursor:pointer}';
  document.head.appendChild(st)}
 
-try{COMANDI.push({k:'allineavista',n:'Allinea la vista',en:'Align view',ab:'AV',f:()=>vrAllinea(),al:['allinea vista','ruota vista']});
-  COMANDI.push({k:'vistanord',n:'Vista a nord',en:'North view',ab:'NV',f:()=>vrNord(),al:['nord']})}catch(e){}
+try{COMANDI.push({k:'alignview',n:'Allinea la vista',en:'Align view',ab:'AV',f:()=>vrAllinea(),al:['allinea vista','ruota vista']});
+  COMANDI.push({k:'northview',n:'Vista a nord',en:'North view',ab:'NV',f:()=>vrNord(),al:['nord']})}catch(e){}
 window.__gestoVR={r:()=>V.r,gradi:()=>vrGradi(V.r),imposta:g=>{cancelAnimationFrame(vrAnimId);const r=vrDaGradi(g);if(r!=null)vrGira(vrNorm(r-V.r),V.W/2,V.H/2)},gira:(g,cx,cy)=>vrGira(-g*Math.PI/180,cx,cy),
   nord:()=>vrNord(),allinea:()=>vrAllinea(),menu:()=>vrApriMenu(),chiudi:()=>vrChiudi(),aperto:()=>!!vrM,viste:()=>vrViste(),salva:n=>vrSalva(n),apri:i=>vrApri(vrViste()[i]),
   w2s:(x,y)=>w2s(x,y),s2w:(x,y)=>s2w(x,y),V:()=>({s:V.s,ox:V.ox,oy:V.oy,r:V.r,W:V.W,H:V.H}),snap:g=>vrSnap(g*Math.PI/180)*180/Math.PI,lato:()=>vrLatoScelto()};
+
+/* ---------- 69 fingers serve the canvas only (DT2–DT4, owner 22.11.2026) ----------
+   DT2 Fingers serve the canvas only: pan, zoom, rotate, fit.
+   DT3 A quick pinch (fingers closed fast, then lifted) fits the whole drawing; a double tap on the north sign returns the view to north.
+   DT4 Declared exception to DT2: a two-finger tap undoes, a three-finger tap redoes, as in tablet drawing apps.
+   From this phase on, new code, comments, tests and internal notes are written in English (EN1, owner 22.11.2026). */
+const QUICK_PINCH={maxMs:450,ratio:0.55,minPx:60};
+const quickPinch={pts:new Map(),t0:0,d0:0,dLast:0};
+function quickPinchDist(){const p=[...quickPinch.pts.values()];return Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1])}
+area.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;quickPinch.pts.set(e.pointerId,[e.clientX,e.clientY]);
+  if(quickPinch.pts.size===2){quickPinch.t0=performance.now();quickPinch.d0=quickPinch.dLast=quickPinchDist()}else quickPinch.t0=0},true);
+area.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'||!quickPinch.pts.has(e.pointerId))return;quickPinch.pts.set(e.pointerId,[e.clientX,e.clientY]);
+  if(quickPinch.pts.size===2)quickPinch.dLast=quickPinchDist()},true);
+function quickPinchEnd(e){if(e.pointerType!=='touch'||!quickPinch.pts.has(e.pointerId))return;
+  const q=quickPinch,fast=q.t0&&q.pts.size===2&&performance.now()-q.t0<QUICK_PINCH.maxMs,closed=q.d0>=QUICK_PINCH.minPx&&q.dLast<q.d0*QUICK_PINCH.ratio;
+  q.pts.delete(e.pointerId);q.t0=0;
+  if(fast&&closed&&e.type==='pointerup'&&!penaVicina())setTimeout(()=>{inquadra();avviso('Tutto il disegno')},0)}
+area.addEventListener('pointerup',quickPinchEnd,true);area.addEventListener('pointercancel',quickPinchEnd,true);
+window.__gestoDT={quickPinch:()=>({t0:quickPinch.t0,d0:quickPinch.d0,dLast:quickPinch.dLast,n:quickPinch.pts.size})};
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('lavagna-foglio')||'f1'}catch(e){}
