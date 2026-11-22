@@ -863,26 +863,26 @@ const wrap=$('wrap');
 const strato=id=>{const c=$(id);return {c,x:c.getContext('2d')}};
 const L={fondo:strato('cFondo'),inch:strato('cInch'),vivo:strato('cVivo'),sopra:strato('cSopra')};
 const area=L.sopra.c;
-const V={s:1,ox:0,oy:0,dpr:1,W:0,H:0,rx:0,ry:0};
+const V={s:1,ox:0,oy:0,dpr:1,W:0,H:0,rx:0,ry:0,r:0,c:1,n:0};
 function dim(){
   const r=wrap.getBoundingClientRect(),d=window.devicePixelRatio||1;
   V.dpr=d;V.W=r.width;V.H=r.height;V.rx=r.left;V.ry=r.top;
   Object.values(L).forEach(l=>{l.c.width=Math.max(1,Math.round(r.width*d));l.c.height=Math.max(1,Math.round(r.height*d))});
   richiedi();
 }
-const s2w=(x,y)=>[(x-V.ox)/V.s,(y-V.oy)/V.s];
-const w2s=(x,y)=>[x*V.s+V.ox,y*V.s+V.oy];
-function vista(x){x.setTransform(V.dpr*V.s,0,0,V.dpr*V.s,V.dpr*V.ox,V.dpr*V.oy)}
+const s2w=(x,y)=>{const X=(x-V.ox)/V.s,Y=(y-V.oy)/V.s;return V.r?[X*V.c+Y*V.n,Y*V.c-X*V.n]:[X,Y]};
+const w2s=(x,y)=>V.r?[(x*V.c-y*V.n)*V.s+V.ox,(x*V.n+y*V.c)*V.s+V.oy]:[x*V.s+V.ox,y*V.s+V.oy];
+function vista(x){const k=V.dpr*V.s;x.setTransform(k*V.c,k*V.n,-k*V.n,k*V.c,V.dpr*V.ox,V.dpr*V.oy)}
 function schermo(x){x.setTransform(V.dpr,0,0,V.dpr,0,0)}
-function rettVista(){return {x0:-V.ox/V.s,y0:-V.oy/V.s,x1:(V.W-V.ox)/V.s,y1:(V.H-V.oy)/V.s}}
+function rettVista(){if(!V.r)return {x0:-V.ox/V.s,y0:-V.oy/V.s,x1:(V.W-V.ox)/V.s,y1:(V.H-V.oy)/V.s};const P=[s2w(0,0),s2w(V.W,0),s2w(0,V.H),s2w(V.W,V.H)],X=P.map(p=>p[0]),Y=P.map(p=>p[1]);return {x0:Math.min(...X),y0:Math.min(...Y),x1:Math.max(...X),y1:Math.max(...Y)}}
 /* spostamento e ingrandimento: lo strato dei tratti si muove come immagine e si ridisegna 90 ms dopo */
 let inkV={s:1,ox:0,oy:0},inkT=null,vistaDaInquadrare=true;
 function cambioVista(){
   if(rac&&rac.scopo==='scrivi'&&rac.ink&&rac.ink.length)aggScritto();
   if(ED.on)posizionaEd();
   $('zoom').textContent=(V.s>=0.995?Math.round(V.s*100):fmt(V.s*100,V.s<0.1?2:1))+'%';richiedi('fondo','vivo','sopra');
-  const k=V.s/inkV.s;L.inch.c.style.transform='translate('+(V.ox-inkV.ox*k)+'px,'+(V.oy-inkV.oy*k)+'px) scale('+k+')';
-  clearTimeout(inkT);inkT=setTimeout(()=>{richiedi('inch');try{localStorage.setItem('lavagna-vista-'+foglioId,JSON.stringify([V.s,V.ox,V.oy]))}catch(e){}},90);
+  const k=V.s/inkV.s,dr=V.r-(inkV.r||0);L.inch.c.style.transform=dr?'translate('+V.ox+'px,'+V.oy+'px) rotate('+dr+'rad) scale('+k+') translate('+(-inkV.ox)+'px,'+(-inkV.oy)+'px)':'translate('+(V.ox-inkV.ox*k)+'px,'+(V.oy-inkV.oy*k)+'px) scale('+k+')';
+  clearTimeout(inkT);inkT=setTimeout(()=>{richiedi('inch');try{localStorage.setItem('lavagna-vista-'+foglioId,JSON.stringify([V.s,V.ox,V.oy,V.r]))}catch(e){}},90);
 }
 function zoomA(f,cx,cy){const ns=Math.min(50,Math.max(0.002,V.s*f));f=ns/V.s;V.ox=cx-(cx-V.ox)*f;V.oy=cy-(cy-V.oy)*f;V.s=ns;cambioVista()}
 function inquadra(){
@@ -994,7 +994,7 @@ function apriFoglio(id){
   try{localStorage.setItem('lavagna-foglio',id)}catch(e){}
   unsub.forEach(u=>{try{u()}catch(e){}});unsub=[];
   ricomponi();aggStato();aggScala();
-  vistaDaInquadrare=true;try{const v=JSON.parse(localStorage.getItem('lavagna-vista-'+id)||'null');if(v){V.s=v[0];V.ox=v[1];V.oy=v[2];vistaDaInquadrare=false;cambioVista()}}catch(e){}
+  vistaDaInquadrare=true;vrImposta(0);try{const v=JSON.parse(localStorage.getItem('lavagna-vista-'+id)||'null');if(v){V.s=v[0];V.ox=v[1];V.oy=v[2];vrImposta(IMPAG?0:(v[3]||0));vistaDaInquadrare=false;cambioVista()}}catch(e){}
   if(!db){if(vistaDaInquadrare)inquadra();return}
   clearTimeout(timerCar);timerCar=setTimeout(()=>{if(!caricato)stato('Archivio non raggiungibile per ora')},10000);
   RAMI.forEach(r=>{const col=colDi(r);
@@ -1297,7 +1297,7 @@ function disegnaQuota(x,e,col,lw){
   const G=quotaGeo(e);x.strokeStyle=col;x.fillStyle=col;x.lineCap='butt';x.setLineDash([]);
   x.lineWidth=lw;x.beginPath();G.linee.forEach(l=>{x.moveTo(l[0],l[1]);x.lineTo(l[2],l[3])});(G.archi||[]).forEach(a=>{x.moveTo(a[0]+a[2]*Math.cos(a[3]),a[1]+a[2]*Math.sin(a[3]));x.arc(a[0],a[1],a[2],a[3],a[4])});x.stroke();
   x.lineWidth=lw*2;x.beginPath();G.segni.forEach(l=>{x.moveTo(l[0],l[1]);x.lineTo(l[2],l[3])});x.stroke();
-  const t=G.testo;x.save();x.translate(t.x,t.y);x.rotate(t.ang);x.font=fontCss(qQuota(),t.h/0.7);x.textAlign='center';x.textBaseline='alphabetic';x.fillText(t.str,0,0);x.restore();
+  const t=G.testo;x.save();x.translate(t.x,t.y);x.rotate(t.ang);if(vrRibalta(x,t.ang)){x.translate(0,-t.h/2);x.rotate(Math.PI);x.translate(0,t.h/2)}x.font=fontCss(qQuota(),t.h/0.7);x.textAlign='center';x.textBaseline='alphabetic';x.fillText(t.str,0,0);x.restore();
 }
 function stileE(e){const l=lyDi(e.l||'generale'),s=e.st||{};return {c:s.c||l.c||'nero',lt:s.lt||l.lt||'continua',lw:s.lw!=null?s.lw:(l.lw!=null?l.lw:0.25)}}
 /* pxs = pixel per mm del modello sul supporto. A schermo lo spessore è costante in pixel
@@ -1685,7 +1685,7 @@ function arco3(A,B,C){const [ax,ay]=A,[bx,by]=B,[cx,cy]=C,d=2*(ax*(by-cy)+bx*(cy
   const ux=((ax*ax+ay*ay)*(by-cy)+(bx*bx+by*by)*(cy-ay)+(cx*cx+cy*cy)*(ay-by))/d,uy=((ax*ax+ay*ay)*(cx-bx)+(bx*bx+by*by)*(ax-cx)+(cx*cx+cy*cy)*(bx-ax))/d;
   let a0=Math.atan2(ay-uy,ax-ux),a1=Math.atan2(cy-uy,cx-ux);if(!inArco(a0,a1,Math.atan2(by-uy,bx-ux))){const t=a0;a0=a1;a1=t}
   return {c:[ux,uy],r:Math.hypot(ax-ux,ay-uy),a0,a1}}
-const rettP=(A,B)=>[A[0],A[1],B[0],A[1],B[0],B[1],A[0],B[1]];
+const rettP=(A,B)=>{if(!V.r||IMPAG)return [A[0],A[1],B[0],A[1],B[0],B[1],A[0],B[1]];const a=vrA(A),b=vrA(B);return [a,[b[0],a[1]],b,[a[0],b[1]]].flatMap(vrD)};
 let ordineCadVer=-1,ordineCad=[];
 const PRIORITA={retino:0,quota:2};
 function ordinatiCad(){if(ordineCadVer!==datiVer){ordineCad=[...MOS.cad.values()].filter(e=>!nascosti.has(e.id)).sort((a,b)=>((PRIORITA[a.k]??1)-(PRIORITA[b.k]??1))||((a.t||0)-(b.t||0)));ordineCadVer=datiVer}return ordineCad}
@@ -1742,7 +1742,7 @@ function ordinati(){
   return ordine;
 }
 function disegnaInch(){
-  const l=L.inch,x=l.x;pulisciStrato(l);vista(x);inkV={s:V.s,ox:V.ox,oy:V.oy};l.c.style.transform='';
+  const l=L.inch,x=l.x;pulisciStrato(l);vista(x);inkV={s:V.s,ox:V.ox,oy:V.oy,r:V.r};l.c.style.transform='';
   const r=rettVista(),mw=0.6/V.s,fuori=b=>b.x1<r.x0||b.x0>r.x1||b.y1<r.y0||b.y0>r.y1;
   for(const t of ordinati()){if(!visibileT(t))continue;const g=geom(t);if(fuori(g.b))continue;if(t.l===LY_CONV){x.globalAlpha=.4;disegnaTratto(x,t,false,g,mw);x.globalAlpha=1}else disegnaTratto(x,t,false,g,mw)}
   if(bloccoMod){x.globalAlpha=.22;for(const e of ordinatiCad()){if(e.bk||!visibileBase(e)||fuori(bbE(e)))continue;disegnaEnt(x,e,false,V.s)}x.globalAlpha=1}
@@ -1901,7 +1901,7 @@ function anteprima(){
     case 'linea':case 'tara':return all.length>=2?{k:'linea',g:{a:all[all.length-2],b:all[all.length-1]}}:null;
     case 'poli':return all.length>=2?{k:'poli',g:{p:all.flat(),ch:false}}:null;
     case 'finestra':return all.length>=2?{k:'poli',g:{p:rettP(all[0],all[1]),ch:true}}:null;
-    case 'rett':{if(all.length<2)return null;let B=all[1];if(rac.w!=null)B=[p[0][0]+rac.w,B[1]];return {k:'poli',g:{p:rettP(all[0],B),ch:true}}}
+    case 'rett':{if(all.length<2)return null;let B=all[1];if(rac.w!=null){const a=vrA(p[0]),b=vrA(B);B=vrD([a[0]+rac.w,b[1]])}return {k:'poli',g:{p:rettP(all[0],B),ch:true}}}
     case 'cerchio':return all.length>=2?{k:'cerchio',g:{c:all[0],r:dist(all[0],all[1])}}:null;
     case 'arco':if(all.length===2)return {k:'linea',g:{a:all[0],b:all[1]}};if(all.length>=3){const g=arco3(all[0],all[1],all[2]);return g?{k:'arco',g}:null}return null;
     case 'spl':return all.length>=2?{k:'spline',g:{f:all.flat(),ch:false}}:null;
@@ -1943,7 +1943,7 @@ function valuta(){
     case 'linea':if(n>=2){crea(nuovaEnt('linea',{a:p[n-2],b:p[n-1]}));if(rac.trasc){nuovaRaccolta('linea');return}rac.pts=[p[n-1]];rac.refs=[rac.refs[n-1]]}break;
     case 'poli':if(n>=4&&dist(p[0],p[n-1])*V.s<3){rac.pts.pop();chiudiPoli(true);return}break;
     case 'spl':if(n>=4&&dist(p[0],p[n-1])*V.s<3){rac.pts.pop();chiudiSpline(true);return}break;
-    case 'rett':if(n>=2){const B=rac.w!=null?[p[0][0]+rac.w,p[1][1]]:p[1];if(Math.abs(B[0]-p[0][0])>1e-6&&Math.abs(B[1]-p[0][1])>1e-6)crea(nuovaEnt('poli',{p:rettP(p[0],B),ch:true}));nuovaRaccolta('rett');return}break;
+    case 'rett':if(n>=2){const B=rac.w!=null?vrD([vrA(p[0])[0]+rac.w,vrA(p[1])[1]]):p[1];if(vrRettOk(p[0],B))crea(nuovaEnt('poli',{p:rettP(p[0],B),ch:true}));nuovaRaccolta('rett');return}break;
     case 'cerchio':if(n>=2){const r=dist(p[0],p[1]);if(r>1e-6)crea(nuovaEnt('cerchio',{c:p[0],r}));nuovaRaccolta('cerchio');return}break;
     case 'arco':if(n>=3){const g=arco3(p[0],p[1],p[2]);if(g)crea(nuovaEnt('arco',g));nuovaRaccolta('arco');return}break;
     case 'retino':if(n>=1){creaRetino(p[n-1]);nuovaRaccolta('retino');return}break;
@@ -2213,8 +2213,8 @@ area.addEventListener('pointermove',e=>{
     if(tocchi.size===1){if(dueDita())return;V.ox+=now[0]-prev[0];V.oy+=now[1]-prev[1];cambioVista();return}
     const a=[...tocchi.values()],d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]),cx=(a[0][0]+a[1][0])/2,cy=(a[0][1]+a[1][1])/2;
     /* la vista parte solo dopo un movimento vero: due contatti fermi (palmo appoggiato in parte) non la spostano */
-    if(gesto&&!gesto.mosso&&dueDita()){pinch={d:Math.max(1,d),cx,cy};return}
-    if(pinch){V.ox+=cx-pinch.cx;V.oy+=cy-pinch.cy;zoomA(d/pinch.d,cx,cy)}pinch={d:Math.max(1,d),cx,cy};return;
+    if(gesto&&!gesto.mosso&&dueDita()){pinch={d:Math.max(1,d),cx,cy,an:Math.atan2(a[1][1]-a[0][1],a[1][0]-a[0][0]),raw:V.r};return}
+    const an=Math.atan2(a[1][1]-a[0][1],a[1][0]-a[0][0]),raw=pinch&&pinch.an!=null?pinch.raw+vrNorm(an-pinch.an):V.r;if(pinch){V.ox+=cx-pinch.cx;V.oy+=cy-pinch.cy;if(vrPuo())vrGira(vrNorm(vrSnap(raw)-V.r),cx,cy);zoomA(d/pinch.d,cx,cy)}pinch={d:Math.max(1,d),cx,cy,an,raw};return;
   }
   if(isPen(e)&&contatto(e))segnaPenna();
   aggCoord(e);aggiorna(e);
@@ -2913,7 +2913,7 @@ function posizionaEd(){
   edT.querySelectorAll('[data-h]').forEach(el=>{el.style.fontSize=(+el.dataset.h*k/0.7)+'px'});
   const box=ED.w>0&&ED.mode!=='quota';st.width=box?(ED.w*k)+'px':'auto';st.whiteSpace=box?'pre-wrap':'pre';st.background=ED.bg?T.paper:'transparent';
   const G=impaginaT(gEditor(),[0,0],A.al,A.v,0),dom=rapportoBase(B.f==='p'?'p':'s',B.b?1:0,B.i?1:0,lh)*fpx;
-  const tx=G.x0*k,ty=(G.y0+G.asc)*k-dom,S0=w2s(A.p[0],A.p[1]),a=-(A.ang||0)*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a);
+  const tx=G.x0*k,ty=(G.y0+G.asc)*k-dom,S0=w2s(A.p[0],A.p[1]),a=-(A.ang||0)*Math.PI/180+V.r,ca=Math.cos(a),sa=Math.sin(a);
   st.transform='translate('+S0[0]+'px,'+S0[1]+'px) rotate('+a+'rad) translate('+tx+'px,'+ty+'px)';
   edAnc.style.transform='translate('+(S0[0]-4)+'px,'+(S0[1]-4)+'px)';
   edMan.hidden=!box;if(box){const W=edT.offsetWidth,H=edT.offsetHeight,lx=tx+(A.al==='d'?0:W),ly=ty+H/2;edMan.style.transform='translate('+(S0[0]+lx*ca-ly*sa-7)+'px,'+(S0[1]+lx*sa+ly*ca-14)+'px) rotate('+a+'rad)'}
@@ -6512,7 +6512,7 @@ function gzColpo(B,sx,sy){const {O,u,v}=gzGeo(B),p=[sx-O[0],sy-O[1]],d=Math.hypo
   if(pu>12&&pu<GZ_L+10&&Math.abs(pv)<7)return 'tx';if(pv>12&&pv<GZ_L+10&&Math.abs(pu)<7)return 'ty';
   if(B.tipo!=='punto'&&Math.abs(d-GZ_R)<6)return 'rot';return null}
 function gzDisegna(x){let B=GZ.drag?GZ.drag.B:gzBersaglio();if(!B)return;const D=GZ.drag;let off=[0,0];if(D&&D.ris&&D.ris.ga!=null)B=Object.assign({},B,{a:D.ris.ga});
-  if(D&&D.ris&&D.ris.d)off=[D.ris.d[0]*V.s,D.ris.d[1]*V.s];
+  if(D&&D.ris&&D.ris.d)off=vrSchermoV(D.ris.d,V.s);
   const {O:O0,u,v}=gzGeo(B),O=[O0[0]+off[0],O0[1]+off[1]],att=D?D.modo:GZ.hover,cX=colore('terracotta'),cY=colore('verde');
   schermo(x);x.save();x.lineCap='round';x.lineJoin='round';
   const tratto=(m,col)=>{x.strokeStyle=att===m?T.acc:col;x.fillStyle=x.strokeStyle;x.lineWidth=att===m?2.25:1.4};
@@ -6772,7 +6772,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.64';
+const VERSIONE_GESTO='0.65';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -6955,7 +6955,7 @@ logo.innerHTML=GESTO_SVG;
   const sulOrigine=(B,O)=>{const P=origineSuPerno();if(!P)return false;const q=w2s(P[0],P[1]);return Math.hypot(q[0]-O[0],q[1]-O[1])<0.5};
   gzDisegna=function(x){let B=GZ.drag?GZ.drag.B:gzBersaglio();if(!B)return;const D=GZ.drag;let off=[0,0];
     if(D&&D.ris&&D.ris.ga!=null)B=Object.assign({},B,{a:D.ris.ga});
-    if(D&&D.ris&&D.ris.d)off=[D.ris.d[0]*V.s,D.ris.d[1]*V.s];
+    if(D&&D.ris&&D.ris.d)off=vrSchermoV(D.ris.d,V.s);
     if(D&&D.ris&&D.ris.r!=null&&modo(B)==='gizmo')B=Object.assign({},B,{a:cpNorm(B.a+D.ris.r)});
     const {O:O0,u,v}=gzGeo(B),O=[O0[0]+off[0],O0[1]+off[1]],k=gzK(),m=mis(k),att=D?D.modo:GZ.hover,md=modo(B);
     const suO=!D&&B.tipo==='ogg'&&sulOrigine(B,O0),ink=coloreGizmo(suO);
@@ -7031,7 +7031,7 @@ logo.innerHTML=GESTO_SVG;
   marcaPivot=function(x){const es=selEnts();if(!es.length)return;const B=S.gz?gzBersaglio():null,G=B?w2s(B.O[0],B.O[1]):null,ink=inchiostro();
     x.save();x.lineCap='round';x.lineJoin='round';
     const c=collezioneIntera(es),lista=c&&es.length>1?(c.pv?[{P:c.pv,a:0}]:[]):es.slice(0,200).map(e=>({P:pivotDi(e),a:axDi(e)}));
-    lista.forEach(({P,a})=>{const o=w2s(P[0],P[1]);if(G&&Math.hypot(o[0]-G[0],o[1]-G[1])<0.5)return;const u=[Math.cos(a),Math.sin(a)],v=[Math.sin(a),-Math.cos(a)];
+    lista.forEach(({P,a})=>{a+=V.r||0;const o=w2s(P[0],P[1]);if(G&&Math.hypot(o[0]-G[0],o[1]-G[1])<0.5)return;const u=[Math.cos(a),Math.sin(a)],v=[Math.sin(a),-Math.cos(a)];
       freccia(x,o,u,3.5,15,.75,ink,alone(),false);freccia(x,o,v,3.5,15,.75,ink,alone(),false);puntino(x,o,2.2,ink)});
     const Pp=pivotSel();if(Pp&&!B){const o=w2s(Pp[0],Pp[1]);if(!lista.some(q=>{const s=w2s(q.P[0],q.P[1]);return Math.hypot(s[0]-o[0],s[1]-o[1])<0.5}))due(x,()=>{x.beginPath();x.arc(o[0],o[1],4.5,0,DUEPI)},false,ink)}
     x.restore()};
@@ -7057,6 +7057,183 @@ logo.innerHTML=GESTO_SVG;
     parti:k=>{const B=gzBersaglio();if(!B)return null;const {O,u,v}=gzGeo(B),m=mis(k||GZ_CRESCE),a0=Math.atan2(u[1],u[0]),sp=Math.atan2(Math.sin(Math.atan2(v[1],v[0])-a0),Math.cos(Math.atan2(v[1],v[0])-a0)),am=a0+sp/2,q=Math.SQRT1_2*m.anello,t=(m.from+m.len)/2;
       return {centro:O,tx:[O[0]+u[0]*t,O[1]+u[1]*t],ty:[O[0]+v[0]*t,O[1]+v[1]*t],rot:[O[0]+Math.cos(am)*m.anello,O[1]+Math.sin(am)*m.anello],man:[O[0]-(u[0]+v[0])*q,O[1]-(u[1]+v[1])*q]}}};
 })();
+
+/* ---------- 68 rotazione della vista (VR1–VR12, titolare 22.11.2026) ----------
+   VR1 due dita ruotano la vista attorno al punto fra le dita, con aggancio a 0, 90, 180 e 270° entro 5°.
+   VR2 la rotazione vale solo nel modello: in Impaginazione i fogli restano dritti.
+   VR3 il segno del nord ruota con la vista; doppio tocco sul nord raddrizza la vista.
+   VR4 testi e numeri delle quote restano leggibili, mai capovolti.
+   VR5 l'angolo non entra nel file: resta sul dispositivo, foglio per foglio.
+   VR6 «Allinea la vista»: con un lato o due punti scelti il lato diventa orizzontale; ripetuto, verticale.
+   VR7 con la vista ruotata ortogonale, griglia e rettangoli seguono lo schermo; coordinate, quote e valori restano
+       nel modello, riferiti al nord vero; l'orientamento «Libero» del gizmo prende l'angolo della vista.
+   VR8 il ritorno al nord lascia il disegno al suo posto.
+   VR9 tocco sul nord: menu con «Nord» (sempre primo), viste salvate, «Salva la vista attuale», angolo numerico.
+   VR10 una vista salvata ha un nome libero e ricorda angolo, centro e ingrandimento.
+   VR11 le viste salvate sono del foglio e restano sul dispositivo finché il presidio del formato non le accoglie nel .dmz.
+   VR12 nella vista ruotata si disegna secondo VR7; tornati al nord il disegno conserva il suo angolo vero.
+   Convenzioni: V.r è l'angolo della vista in radianti, nel verso dello schermo (Y in basso); all'utente si mostra
+   in gradi antiorari, come gli angoli del modello. vrA porta un punto del modello negli assi dello schermo, vrD il contrario. */
+var vrLibT=null,vrAnimId=0,vrM=null,vrTap=0,vrTapT=null,vrNuova=false;
+function vrNorm(a){a=a%(2*Math.PI);if(a>Math.PI)a-=2*Math.PI;if(a<=-Math.PI)a+=2*Math.PI;return Math.abs(a)<1e-12?0:a}
+function vrA(p){return V.r?[p[0]*V.c-p[1]*V.n,p[0]*V.n+p[1]*V.c]:[p[0],p[1]]}
+function vrD(p){return V.r?[p[0]*V.c+p[1]*V.n,-p[0]*V.n+p[1]*V.c]:[p[0],p[1]]}
+function vrPuo(){return !IMPAG}
+function vrImposta(r){r=vrNorm(r||0);const cam=r!==V.r;V.r=r;V.c=r?Math.cos(r):1;V.n=r?Math.sin(r):0;if(cam)vrLibero();return cam}
+/* VR7: «Libero» prende l'angolo della vista, cioè frecce del gizmo dritte sullo schermo */
+function vrLibero(){if(typeof S==='undefined'||S.rif!=='lib')return;S.gzA=vrNorm(-V.r);clearTimeout(vrLibT);vrLibT=setTimeout(()=>{try{salvaPref();rendiPP()}catch(e){}},250)}
+/* rotazione attorno a un punto dello schermo: quel punto del disegno resta fermo (VR1, VR8) */
+function vrGira(da,cx,cy){if(!da)return;const c=Math.cos(da),s=Math.sin(da),x=V.ox-cx,y=V.oy-cy;V.ox=cx+x*c-y*s;V.oy=cy+x*s+y*c;vrImposta(V.r+da);cambioVista()}
+function vrSnap(raw){const q=Math.PI/2,k=Math.round(raw/q)*q;return Math.abs(raw-k)<5*Math.PI/180?k:raw}
+function vrAnima(r1,cx,cy){r1=vrNorm(r1);cancelAnimationFrame(vrAnimId);const d=vrNorm(r1-V.r);if(!d)return;const t0=performance.now(),T=220;let fatto=0;
+  const passo=t=>{const k=Math.min(1,(t-t0)/T);if(k>=1){vrGira(vrNorm(r1-V.r),cx,cy);return}const e=k<.5?2*k*k:1-Math.pow(2-2*k,2)/2,o=d*e;vrGira(o-fatto,cx,cy);fatto=o;vrAnimId=requestAnimationFrame(passo)};
+  vrAnimId=requestAnimationFrame(passo)}
+function vrNord(){vrAnima(0,V.W/2,V.H/2)}
+const vrGradi=r=>{let g=-vrNorm(r)*180/Math.PI;g=Math.round(g*100)/100;if(Object.is(g,-0))g=0;return String(g).replace('.',',')+'°'};
+function vrDaGradi(t){const g=parseFloat(String(t).replace(',','.').replace('°',''));return isFinite(g)?vrNorm(-g*Math.PI/180):null}
+
+/* VR4: un testo che sullo schermo verrebbe capovolto si ribalta attorno al proprio centro */
+function vrCapo(t){const c=Math.cos(t);return c<-1e-6||(Math.abs(c)<=1e-6&&Math.sin(t)>0)}
+function vrRibalta(x,a){if(!x.getTransform)return false;const m=x.getTransform(),th=Math.atan2(m.b,m.a);if(Math.abs(vrNorm(th-a))<1e-9)return false;return vrCapo(th)&&!vrCapo(a)}
+{const _dtg=disegnaTestoG;disegnaTestoG=function(x,G,col,chiaro){if(!G||!x.getTransform)return _dtg(x,G,col,chiaro);
+  const m=x.getTransform(),b=Math.atan2(m.b,m.a);if(Math.abs(b)<1e-9||!(vrCapo(b+G.a)&&!vrCapo(G.a)))return _dtg(x,G,col,chiaro);
+  const lx=G.x0+G.w/2,ly=(G.y0+G.y1)/2,ca=Math.cos(G.a),sa=Math.sin(G.a),P=[G.p[0]+lx*ca-ly*sa,G.p[1]+lx*sa+ly*ca];
+  x.save();x.translate(P[0],P[1]);x.rotate(Math.PI);x.translate(-P[0],-P[1]);_dtg(x,G,col,chiaro);x.restore()}}
+
+/* VR7: ortogonale negli assi dello schermo */
+{const _o=ortogonale;ortogonale=function(P,da){if(!V.r||!S.orto||!da||IMPAG)return _o(P,da);return vrD(_o(vrA(P),vrA(da)))}}
+function vrRettOk(A,B){const a=vrA(A),b=vrA(B);return Math.abs(b[0]-a[0])>1e-6&&Math.abs(b[1]-a[1])>1e-6}
+
+/* icona dell'origine: le frecce indicano gli assi veri del modello */
+{const _io=iconaOrigine;iconaOrigine=function(x){if(!V.r)return _io(x);const [a,b]=w2s(...orig());if(a<-60||b<-60||a>V.W+60||b>V.H+60)return;
+  x.save();const freccia=(dx,dy,col,t)=>{x.strokeStyle=col;x.fillStyle=col;x.lineWidth=1.5;x.beginPath();x.moveTo(a,b);x.lineTo(a+dx*34,b+dy*34);x.stroke();
+    x.beginPath();x.moveTo(a+dx*40,b+dy*40);x.lineTo(a+dx*31-dy*4,b+dy*31+dx*4);x.lineTo(a+dx*31+dy*4,b+dy*31-dx*4);x.closePath();x.fill();
+    x.font='600 10px Inter,Calibri,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(t,a+dx*48,b+dy*48)};
+  freccia(V.c,V.n,colore('terracotta'),'X');freccia(V.n,-V.c,colore('verde'),'Y');x.restore();
+  x.fillStyle=T.fg;x.fillRect(a-2.5,b-2.5,5,5)}}
+
+/* gizmo: le frecce seguono l'angolo vero sullo schermo */
+gzGeo=function(B){const a=B.a+(V.r||0),O=w2s(B.O[0],B.O[1]),u=[Math.cos(a),Math.sin(a)],v=[Math.sin(a),-Math.cos(a)];return {O,u,v}};
+function vrSchermoV(d,k){return V.r?[(d[0]*V.c-d[1]*V.n)*k,(d[0]*V.n+d[1]*V.c)*k]:[d[0]*k,d[1]*k]}
+
+/* scelta con il riquadro nella vista ruotata: il riquadro dello schermo, letto negli assi dello schermo */
+function vrBB(P){const b={x0:1e18,y0:1e18,x1:-1e18,y1:-1e18};P.forEach(p=>{if(p[0]<b.x0)b.x0=p[0];if(p[0]>b.x1)b.x1=p[0];if(p[1]<b.y0)b.y0=p[1];if(p[1]>b.y1)b.y1=p[1]});return b}
+function vrPrim(q){if(q.s){const a=vrA([q.s[0],q.s[1]]),b=vrA([q.s[2],q.s[3]]);return {s:[a[0],a[1],b[0],b[1]]}}const [cx,cy,r,a0,a1]=q.c,c=vrA([cx,cy]);return {c:[c[0],c[1],r,a0==null?null:a0+V.r,a1==null?null:a1+V.r]}}
+function vrPunti(e,o){o=o||[];const add=(x,y)=>o.push(vrA([x,y]));
+  if(isT(e)){const p=e.p;for(let i=0;i+1<p.length;i+=2)add(p[i],p[i+1]);return o}
+  if(e.k==='ins'){conMembri(e,m=>vrPunti(m,o));const p=e.g.p;add(p[0],p[1]);return o}
+  if(e.k==='retino'){const c=rifRet(e);return c?vrPunti(c,o):o}
+  if(e.k==='testo'){const G=testoGeo(e);if(G)G.ang.forEach(q=>add(q[0],q[1]));return o}
+  if(e.k==='dir'){const p=e.g.p;for(let i=0;i+1<p.length;i+=2)add(p[i],p[i+1]);const G=testoGeo(e);if(G)G.ang.forEach(q=>add(q[0],q[1]));return o}
+  if(e.k==='quota'){const G=quotaGeo(e);G.linee.forEach(l=>{add(l[0],l[1]);add(l[2],l[3])});(G.archi||[]).forEach(a=>{for(let i=0;i<=24;i++){const t=i/24*DUEPI;add(a[0]+a[2]*Math.cos(t),a[1]+a[2]*Math.sin(t))}});
+    const t=G.testo;if(t)[[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([i,j])=>add(t.x+i*t.h,t.y+j*t.h));return o}
+  const pr=primDi(e);if(pr.length){pr.forEach(q=>{if(q.s){add(q.s[0],q.s[1]);add(q.s[2],q.s[3]);return}
+    const [cx,cy,r,a0,a1]=q.c,A0=a0==null?0:a0,sw=a0==null?DUEPI:(((a1-a0)%DUEPI+DUEPI)%DUEPI||DUEPI),n=Math.max(8,Math.ceil(sw/DUEPI*72));for(let i=0;i<=n;i++){const t=A0+sw*i/n;add(cx+r*Math.cos(t),cy+r*Math.sin(t))}});return o}
+  const b=bbE(e);[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]].forEach(q=>add(q[0],q[1]));return o}
+function vrTocca(e,R){const b=vrBB(vrPunti(e));if(b.x1<R[0]||b.x0>R[2]||b.y1<R[1]||b.y0>R[3])return false;if(b.x0>=R[0]&&b.x1<=R[2]&&b.y0>=R[1]&&b.y1<=R[3])return true;
+  if(isT(e)){const p=e.p;if(p.length===2){const a=vrA(p);return segInRett(a[0],a[1],a[0],a[1],R)}for(let i=0;i+3<p.length;i+=2){const a=vrA([p[i],p[i+1]]),c=vrA([p[i+2],p[i+3]]);if(segInRett(a[0],a[1],c[0],c[1],R))return true}return false}
+  if(e.k==='ins'){let s=false;conMembri(e,m=>{if(!s&&vrTocca(m,R))s=true});return s}
+  if(e.k==='retino'){const c=rifRet(e);if(!c)return false;const ct=contorno(c),M=vrD([(R[0]+R[2])/2,(R[1]+R[3])/2]);if(ct&&dentroPoly(ct,M[0],M[1]))return true;return vrTocca(c,R)}
+  const pr=primDi(e);if(!pr.length)return true;return pr.some(q=>primInRett(vrPrim(q),R))}
+{const _sr=sceltaRiquadro;sceltaRiquadro=function(p0,p1,interseca){if(!V.r)return _sr(p0,p1,interseca);
+  const a=vrA(p0),b=vrA(p1),R=[Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])];
+  const dentro=e=>{const q=vrBB(vrPunti(e));return q.x0>=R[0]&&q.x1<=R[2]&&q.y0>=R[1]&&q.y1<=R[3]};
+  MOS.cad.forEach(e=>{if(!visibileE(e)||bloccatoE(e))return;if(interseca?vrTocca(e,R):dentro(e))sel.add(e.id)});
+  if(S.tool==='sel')tratti.forEach(t=>{if(nascosti.has(t.id)||!visibileT(t)||bloccatoT(t)||t.l===LY_CONV)return;if(interseca?vrTocca(t,R):dentro(t))sel.add(t.id)})}}
+
+/* inquadrature: i calcoli scritti per la vista dritta si correggono dopo, tenendo il centro dello schermo */
+function vrDopo(f){return function(...a){const r0=[V.s,V.ox,V.oy],o=f.apply(this,a);
+  if(V.r&&!IMPAG&&(V.s!==r0[0]||V.ox!==r0[1]||V.oy!==r0[2])){const C=[(V.W/2-V.ox)/V.s,(V.H/2-V.oy)/V.s],q=vrA(C);V.ox=V.W/2-q[0]*V.s;V.oy=V.H/2-q[1]*V.s;cambioVista()}return o}}
+modBlocco=vrDopo(modBlocco);mostraTavola=vrDopo(mostraTavola);apriModelloFin=vrDopo(apriModelloFin);
+{const _vl=vistaLibera;vistaLibera=function(x0,y0,w,h,s0){if(!V.r||IMPAG)return _vl(x0,y0,w,h,s0);
+  const P=[[x0,y0],[x0+w,y0],[x0+w,y0+h],[x0,y0+h]].map(vrA),b=vrBB(P);return _vl(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0,s0)}}
+{const _iq=inquadra,_iqD=vrDopo(_iq);inquadra=function(){if(!V.r||IMPAG)return _iq();const R=estremi('tutto');return R&&(R.w>0||R.h>0)?_iq():_iqD()}}
+
+/* VR2: in Impaginazione la vista è dritta; all'uscita torna l'angolo del modello */
+{const _ei=entraImpag;entraImpag=function(...a){const r=V.r;if(!r)return _ei(...a);vrImposta(0);const o=_ei(...a);if(IMPAG){if(V_MOD)V_MOD.r=r}else{vrImposta(r);cambioVista()}return o}}
+{const _xi=esciImpag;esciImpag=function(...a){const r=V_MOD&&V_MOD.r||0,era=!!IMPAG,o=_xi(...a);if(era&&!IMPAG&&r){vrImposta(r);cambioVista()}return o}}
+
+/* VR6: allinea la vista al lato scelto (o a due punti); ripetuto, il lato diventa verticale */
+function vrLatoScelto(){const pp=PARTI.slice(),lati=pp.filter(r=>r.s!=null&&!r.k&&!r.cu);
+  if(lati.length===1){const L=cpLato(lati[0]);if(L&&!L.curvo&&dist(L.A,L.B)>1e-9)return [L.A,L.B]}
+  const pts=pp.filter(r=>r.k);if(pts.length===2){const P=pts.map(r=>{const e=MOS.cad.get(r.e);return e?puntoChiave(e,r.k):null});if(P[0]&&P[1]&&dist(P[0],P[1])>1e-9)return P}
+  if(!pp.length&&sel.size===1){const e=MOS.cad.get([...sel][0]);if(e&&e.k==='linea'&&dist(e.g.a,e.g.b)>1e-9)return [e.g.a,e.g.b]}
+  return null}
+function vrAllinea(){if(IMPAG){avviso('In Impaginazione i fogli restano dritti');return}const L=vrLatoScelto();if(!L){avviso('Scegli un lato o due punti, poi «Allinea la vista»');return}
+  const a=Math.atan2(L[1][1]-L[0][1],L[1][0]-L[0][0]),oriz=Math.abs(Math.sin(a+V.r))<1e-6,base=oriz?-a+Math.PI/2:-a;
+  const c=[base,base+Math.PI].map(vrNorm).sort((x,y)=>Math.abs(vrNorm(x-V.r))-Math.abs(vrNorm(y-V.r)))[0];
+  const M=w2s((L[0][0]+L[1][0])/2,(L[0][1]+L[1][1])/2);vrChiudi();vrAnima(c,M[0],M[1]);avviso(oriz?'Lato verticale':'Lato orizzontale')}
+
+/* VR9–VR11: viste salvate del foglio, sul dispositivo */
+function vrChiave(){return 'gesto-viste-'+foglioId}
+function vrViste(){try{const l=JSON.parse(localStorage.getItem(vrChiave())||'[]');return Array.isArray(l)?l:[]}catch(e){return []}}
+function vrScrivi(l){try{localStorage.setItem(vrChiave(),JSON.stringify(l))}catch(e){}}
+function vrSalva(nome){const C=s2w(V.W/2,V.H/2),l=vrViste();l.push({n:String(nome||'').trim()||('Vista '+(l.length+1)),r:V.r,s:V.s,c:[C[0],C[1]]});vrScrivi(l);return l.length}
+function vrApri(v){if(IMPAG||!v)return;cancelAnimationFrame(vrAnimId);vrImposta(v.r||0);V.s=v.s||V.s;const q=vrA(v.c||s2w(V.W/2,V.H/2));V.ox=V.W/2-q[0]*V.s;V.oy=V.H/2-q[1]*V.s;cambioVista()}
+function vrChiudi(){if(!vrM)return;vrM.remove();vrM=null;vrNuova=false;removeEventListener('pointerdown',vrFuori,true);removeEventListener('keydown',vrEsc,true)}
+function vrFuori(e){if(vrM&&!vrM.contains(e.target)&&!(e.target.closest&&e.target.closest('.nordTocco')))vrChiudi()}
+function vrEsc(e){if(e.key==='Escape'&&vrM){e.preventDefault();e.stopPropagation();vrChiudi()}}
+function vrApriMenu(){vrChiudi();if(IMPAG)return;const m=document.createElement('div');m.id='vrMenu';m.className='vrMenu';m.setAttribute('role','menu');m.setAttribute('aria-label','Viste');vrM=m;vrRiempi();document.body.appendChild(m);vrPosiziona();
+  addEventListener('pointerdown',vrFuori,true);addEventListener('keydown',vrEsc,true)}
+function vrPosiziona(){if(!vrM)return;const r=orienta.getBoundingClientRect(),m=vrM.style;m.left=m.right=m.top=m.bottom='';
+  if(r.top+r.height/2>innerHeight/2){m.left=Math.max(6,r.left+6)+'px';m.bottom=Math.max(6,innerHeight-r.top+4)+'px'}
+  else if(r.left+r.width/2>innerWidth/2){m.right=Math.max(6,innerWidth-r.right+6)+'px';m.top=(r.bottom+4)+'px'}
+  else{m.left=Math.max(6,r.left+6)+'px';m.top=(r.bottom+4)+'px'}}
+function vrRiempi(){const m=vrM;if(!m)return;m.textContent='';const el=(t,c,x)=>{const o=document.createElement(t);if(c)o.className=c;if(x!=null)o.textContent=x;return o};
+  m.appendChild(el('div','vrTit','Vista'));
+  const riga=(nome,ang,att,f,canc)=>{const r=el('div','vrRiga'+(att?' att':''));const b=el('button','vrVoce');b.type='button';b.setAttribute('role','menuitem');
+    b.append(el('span','n',nome),el('span','g',ang));b.onclick=f;r.appendChild(b);
+    if(canc){const x=el('button','vrX','×');x.type='button';x.title='Elimina la vista «'+nome+'»';x.setAttribute('aria-label',x.title);x.onclick=e=>{e.stopPropagation();canc()};r.appendChild(x)}m.appendChild(r)};
+  riga('Nord','0°',V.r===0,()=>{vrChiudi();vrNord()});
+  const C=s2w(V.W/2,V.H/2);
+  vrViste().forEach((v,i)=>riga(v.n,vrGradi(v.r||0),Math.abs(vrNorm((v.r||0)-V.r))<1e-9&&Math.abs((v.s||0)-V.s)<1e-9*V.s&&v.c&&Math.hypot(v.c[0]-C[0],v.c[1]-C[1])*V.s<0.5,
+    ()=>{vrChiudi();vrApri(v)},()=>{const l=vrViste();l.splice(i,1);vrScrivi(l);vrRiempi()}));
+  m.appendChild(el('div','vrSep'));
+  if(vrNuova){const r=el('div','vrIn'),inp=el('input');inp.type='text';inp.value='Vista '+(vrViste().length+1);inp.setAttribute('aria-label','Nome della vista');inp.maxLength=60;
+    const ok=el('button','vrOk','Salva');ok.type='button';const fai=()=>{vrSalva(inp.value);vrNuova=false;vrRiempi()};ok.onclick=fai;
+    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();fai()}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();vrNuova=false;vrRiempi()}e.stopPropagation()};
+    r.append(inp,ok);m.appendChild(r);setTimeout(()=>{inp.focus();inp.select()},0)}
+  else{const b=el('button','vrVoce');b.type='button';b.setAttribute('role','menuitem');b.append(el('span','n','Salva la vista attuale'));b.onclick=()=>{vrNuova=true;vrRiempi()};m.appendChild(b)}
+  {const b=el('button','vrVoce');b.type='button';b.setAttribute('role','menuitem');const L=vrLatoScelto();b.disabled=!L;
+    b.append(el('span','n','Allinea la vista'),el('span','g',L?'al lato scelto':'scegli un lato'));b.onclick=()=>vrAllinea();m.appendChild(b)}
+  {const r=el('div','vrIn vrAng'),lab=el('label','n','Angolo'),inp=el('input');inp.type='text';inp.inputMode='decimal';inp.value=vrGradi(V.r).replace('°','');inp.setAttribute('aria-label','Angolo della vista in gradi, antiorario');
+    inp.title='Gradi antiorari rispetto al nord';inp.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();const r=vrDaGradi(inp.value);if(r!=null){vrChiudi();vrAnima(r,V.W/2,V.H/2)}}else if(e.key==='Escape'){e.preventDefault();vrChiudi()}};
+    r.append(lab,inp,el('span','g','°'));m.appendChild(r)}}
+
+/* VR3: il nord ruota con la vista; tocco = menu, doppio tocco = nord */
+{const _do=disegnaOrienta;disegnaOrienta=function(){_do();try{const p=orienta.querySelector('path.nord'),f=orienta.querySelector('circle.fondoN');if(!p||!f)return;
+  const cx=+f.getAttribute('cx'),cy=+f.getAttribute('cy'),R=+f.getAttribute('r');p.setAttribute('transform','translate('+cx+' '+cy+') rotate('+(V.r*180/Math.PI)+')');
+  if(IMPAG)return;const t=document.createElementNS('http://www.w3.org/2000/svg','circle');t.setAttribute('cx',cx);t.setAttribute('cy',cy);t.setAttribute('r',R+3);t.setAttribute('class','nordTocco');
+  t.setAttribute('role','button');t.setAttribute('aria-label','Nord: tocco per le viste, doppio tocco per tornare al nord');
+  const tt=document.createElementNS('http://www.w3.org/2000/svg','title');tt.textContent='Nord '+(V.r?'· vista ruotata di '+vrGradi(V.r)+' ':'')+'· tocco: viste · doppio tocco: nord';t.appendChild(tt);orienta.appendChild(t)}catch(e){}}}
+const vrSuNord=e=>e.target&&e.target.classList&&e.target.classList.contains('nordTocco');
+orienta.addEventListener('pointerdown',e=>{if(vrSuNord(e)){e.preventDefault();e.stopPropagation()}});
+orienta.addEventListener('pointerup',e=>{if(!vrSuNord(e))return;e.preventDefault();e.stopPropagation();const t=performance.now();
+  if(t-vrTap<330){clearTimeout(vrTapT);vrTap=0;vrChiudi();vrNord();return}vrTap=t;const aperto=!!vrM;clearTimeout(vrTapT);vrTapT=setTimeout(()=>{if(aperto)vrChiudi();else vrApriMenu()},250)});
+{const _cv=cambioVista;cambioVista=function(){_cv();if(vrM&&!vrNuova&&!vrM.contains(document.activeElement))vrRiempi()}}
+
+{const st=document.createElement('style');st.textContent=
+ '#orienta .nordTocco{pointer-events:auto;cursor:pointer;fill:#000;fill-opacity:0}'+
+ '.vrMenu{position:fixed;z-index:60;min-width:232px;max-width:300px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px;font:400 13px var(--sans)}'+
+ '.vrTit{font:600 12px var(--sans);opacity:.62;padding:6px 10px 4px}'+
+ '.vrRiga{display:flex;align-items:center;border-radius:7px}.vrRiga.att{background:var(--head);box-shadow:inset 0 0 0 1.5px var(--acc)}'+
+ '.vrVoce{flex:1;width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;min-height:40px;padding:0 10px;border:0;background:none;color:inherit;font:inherit;text-align:left;border-radius:7px;cursor:pointer}'+
+ '.vrVoce:hover:not([disabled]){background:var(--head)}.vrVoce[disabled]{opacity:.42;cursor:default}'+
+ '.vrVoce .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vrVoce .g,.vrIn .g{opacity:.62;font-variant-numeric:tabular-nums;white-space:nowrap}'+
+ '.vrX{width:36px;min-height:40px;border:0;background:none;color:inherit;font:400 17px var(--sans);opacity:.5;cursor:pointer;border-radius:7px}.vrX:hover{opacity:1;background:var(--head)}'+
+ '.vrSep{height:1px;background:var(--line);margin:5px 6px}'+
+ '.vrIn{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 6px 0 10px}.vrIn .n{flex:none}'+
+ '.vrIn input{flex:1;min-width:0;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--fg);font:inherit;padding:0 8px}'+
+ '.vrIn input:focus{outline:none;border-color:var(--acc)}'+
+ '.vrAng .n{flex:1}.vrAng input{flex:none;width:84px;text-align:right}.vrAng .g{margin-left:-4px}'+
+ '.vrOk{height:30px;padding:0 12px;border:0;border-radius:6px;background:var(--acc);color:#fff;font:600 12px var(--sans);cursor:pointer}';
+ document.head.appendChild(st)}
+
+try{COMANDI.push({k:'allineavista',n:'Allinea la vista',en:'Align view',ab:'AV',f:()=>vrAllinea(),al:['allinea vista','ruota vista']});
+  COMANDI.push({k:'vistanord',n:'Vista a nord',en:'North view',ab:'NV',f:()=>vrNord(),al:['nord']})}catch(e){}
+window.__gestoVR={r:()=>V.r,gradi:()=>vrGradi(V.r),imposta:g=>{cancelAnimationFrame(vrAnimId);const r=vrDaGradi(g);if(r!=null)vrGira(vrNorm(r-V.r),V.W/2,V.H/2)},gira:(g,cx,cy)=>vrGira(-g*Math.PI/180,cx,cy),
+  nord:()=>vrNord(),allinea:()=>vrAllinea(),menu:()=>vrApriMenu(),chiudi:()=>vrChiudi(),aperto:()=>!!vrM,viste:()=>vrViste(),salva:n=>vrSalva(n),apri:i=>vrApri(vrViste()[i]),
+  w2s:(x,y)=>w2s(x,y),s2w:(x,y)=>s2w(x,y),V:()=>({s:V.s,ox:V.ox,oy:V.oy,r:V.r,W:V.W,H:V.H}),snap:g=>vrSnap(g*Math.PI/180)*180/Math.PI,lato:()=>vrLatoScelto()};
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('lavagna-foglio')||'f1'}catch(e){}

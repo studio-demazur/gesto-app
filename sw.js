@@ -1,5 +1,5 @@
 /* Linen, Studio DeMazur: l'app intera resta sul dispositivo e si apre senza rete. Versione legata al contenuto dell'app. */
-const V='gesto-e89dab0d4f91',FILE=['./','index.html','manifest.webmanifest','icone/icon-192.png','icone/icon-512.png','icone/icon-maskable-512.png','icone/apple-touch-icon.png','icone/favicon-32.png'];
+const V='gesto-8f98b2fc98e0',FILE=['./','index.html','manifest.webmanifest','icone/icon-192.png','icone/icon-512.png','icone/icon-maskable-512.png','icone/apple-touch-icon.png','icone/favicon-32.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(n=>(n.startsWith('lavagna-')||n.startsWith('gesto-'))&&n!==V).map(n=>caches.delete(n)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
