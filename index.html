@@ -6772,7 +6772,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.60';
+const VERSIONE_GESTO='0.61';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -6783,86 +6783,6 @@ const GESTO_SVG='<svg viewBox="0 0 512 512" aria-hidden="true" focusable="false"
 logo.innerHTML=GESTO_SVG;
 (()=>{const di=document.querySelector('.lmenu .lmT .lmDi');if(!di||document.querySelector('.lmT .lmDm'))return;const s=document.createElement('span');s.className='lmDm';s.setAttribute('aria-hidden','true');s.innerHTML=LOGO_SVG;di.before(s)})();
 {const st=document.createElement('style');st.textContent='.lmT .lmDm{display:inline-flex;align-self:center;margin-left:2px}.lmT .lmDm svg{width:20px;height:20px;display:block;border-radius:50%;box-shadow:0 0 0 1px var(--line)}.lmT .lmDm .respiro,.lmT .lmDm .sigla{transform:none!important}';document.head.appendChild(st)}
-
-/* ----- Fase 59: trasferimento dal vecchio indirizzo (studio-demazur.github.io) a gesto.demazur.com (AU10) -----
-   Il browser tiene i dati separati per indirizzo: questo passaggio copia disegni, firme, riferimenti ai file e preferenze
-   dalla vecchia app alla nuova. Copia senza cancellare: nella nuova app un dato già presente non viene sovrascritto. */
-(function(){
-  const OR=window.__gestoOrigini||{vecchia:'https://studio-demazur.github.io',nuova:'https://gesto.demazur.com'};
-  const NUOVA=OR.nuova+(OR.percorso||'/'),DB=['lavagna-demazur','linen-firme','linen-fonti'],LS=/^(lavagna-|linen-|gesto-)/;
-  const apri=(n,v,schema)=>new Promise((ok,ko)=>{let r;try{r=v?indexedDB.open(n,v):indexedDB.open(n)}catch(e){ko(e);return}
-    r.onupgradeneeded=()=>{const d=r.result;if(!schema){return}schema.forEach(s=>{if(d.objectStoreNames.contains(s.nome))return;
-      const o=d.createObjectStore(s.nome,s.kp!=null?{keyPath:s.kp,autoIncrement:s.ai}:{autoIncrement:s.ai});(s.idx||[]).forEach(i=>o.createIndex(i.nome,i.kp,{unique:i.u,multiEntry:i.m}))})};
-    r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error);r.onblocked=()=>ko(new Error('archivio bloccato'))});
-  async function esiste(n){if(!indexedDB.databases)return true;try{return (await indexedDB.databases()).some(d=>d.name===n)}catch(e){return true}}
-  /* lettura di un archivio intero: schema e coppie chiave-valore */
-  async function leggiDb(n){
-    if(!await esiste(n))return null;const d=await apri(n);const out={nome:n,v:d.version,schema:[],righe:{}};
-    for(const s of d.objectStoreNames){
-      const tx=d.transaction(s),o=tx.objectStore(s);
-      out.schema.push({nome:s,kp:o.keyPath,ai:o.autoIncrement,idx:[...o.indexNames].map(x=>{const i=o.index(x);return{nome:x,kp:i.keyPath,u:i.unique,m:i.multiEntry}})});
-      out.righe[s]=await new Promise((ok,ko)=>{const a=[];const c=o.openCursor();c.onsuccess=()=>{const k=c.result;if(!k){ok(a);return}a.push([k.primaryKey,k.value]);k.continue()};c.onerror=()=>ko(c.error)});
-    }
-    d.close();return out}
-  /* scrittura nella nuova app: solo ciò che manca */
-  async function scriviDb(p){
-    let d=await apri(p.nome,null,p.schema);
-    if(p.schema.some(s=>!d.objectStoreNames.contains(s.nome))){const v=Math.max(d.version,p.v)+(d.version>=p.v?1:0);d.close();d=await apri(p.nome,v,p.schema)}
-    let n=0,gia=0;
-    for(const s of p.schema){if(!d.objectStoreNames.contains(s.nome))continue;
-      for(const [k,v] of p.righe[s.nome]||[]){
-        const r=await new Promise((ok,ko)=>{const tx=d.transaction(s.nome,'readwrite'),o=tx.objectStore(s.nome);const q=o.get(k);
-          q.onsuccess=()=>{if(q.result!==undefined){ok(0);return}s.kp!=null?o.put(v):o.put(v,k);tx.oncomplete=()=>ok(1)};tx.onerror=()=>ko(tx.error)});
-        r?n++:gia++}}
-    d.close();return{n,gia}}
-  const leggiLs=()=>{const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(LS.test(k))o[k]=localStorage.getItem(k)}return o};
-  const quanti=p=>p&&p.righe.doc?p.righe.doc.length:0;
-
-  /* ---- lato vecchia app: invio ---- */
-  async function trasferisci(){
-    const st=$('lmTrS');const dici=t=>{if(st)st.textContent=t};
-    let pacchi=[];try{for(const n of DB){const p=await leggiDb(n);if(p)pacchi.push(p)}}catch(e){console.warn(e);dici('Lettura dei disegni non riuscita');return}
-    const w=window.open(NUOVA+'?ricevi=1','gestoNuova');if(!w){dici('Il browser ha bloccato la nuova finestra: consentila e riprova');return}
-    dici('Apertura di gesto.demazur.com…');
-    const coda=[{tipo:'ls',ls:leggiLs()},...pacchi.map(p=>({tipo:'db',p}))];let i=0,esito={n:0,gia:0,salt:[]};
-    const manda=()=>{if(i>=coda.length){w.postMessage({gesto:'fine'},OR.nuova);return}
-      const m=coda[i];try{w.postMessage({gesto:'dati',i,...m},OR.nuova)}catch(e){esito.salt.push(m.p?m.p.nome:'preferenze');i++;manda()}};
-    const fine=setTimeout(()=>{removeEventListener('message',ascolta);dici('Nessuna risposta da gesto.demazur.com: riprova fra qualche minuto')},60000);
-    function ascolta(e){if(e.origin!==OR.nuova||!e.data||!e.data.gesto)return;const m=e.data;
-      if(m.gesto==='pronto'){i=0;manda()}
-      else if(m.gesto==='ok'){esito.n+=m.n||0;esito.gia+=m.gia||0;i++;manda()}
-      else if(m.gesto==='errore'){esito.salt.push(m.cosa||'?');i++;manda()}
-      else if(m.gesto==='finito'){clearTimeout(fine);removeEventListener('message',ascolta);
-        dici('Trasferimento completato: '+quanti(pacchi.find(p=>p.nome==='lavagna-demazur'))+' disegni nel vecchio archivio, '+esito.n+' elementi copiati'+(esito.gia?', '+esito.gia+(esito.gia>1?' già presenti e lasciati intatti':' già presente e lasciato intatto'):'')+(esito.salt.length?'. Non trasferito: '+esito.salt.join(', '):'')+'. Qui non è stato cancellato nulla.')}}
-    addEventListener('message',ascolta);
-  }
-
-  /* ---- lato nuova app: ricezione ---- */
-  if(location.origin===OR.nuova&&/[?&]ricevi=1/.test(location.search)&&window.opener){
-    let tot={n:0,gia:0};
-    addEventListener('message',async e=>{if(e.origin!==OR.vecchia||!e.data||!e.data.gesto)return;const m=e.data;
-      if(m.gesto==='dati'){try{
-          if(m.tipo==='ls'){for(const k in m.ls)localStorage.setItem(k,m.ls[k]);e.source.postMessage({gesto:'ok',i:m.i,n:0},OR.vecchia)}
-          else{const r=await scriviDb(m.p);tot.n+=r.n;tot.gia+=r.gia;e.source.postMessage({gesto:'ok',i:m.i,...r},OR.vecchia)}
-        }catch(x){console.warn(x);e.source.postMessage({gesto:'errore',i:m.i,cosa:m.p?m.p.nome:'preferenze'},OR.vecchia)}}
-      else if(m.gesto==='fine'){e.source.postMessage({gesto:'finito'},OR.vecchia);
-        try{sessionStorage.setItem('gesto-ricevuti',JSON.stringify(tot))}catch(x){}
-        location.replace(location.pathname)}});
-    window.opener.postMessage({gesto:'pronto'},OR.vecchia);
-  }
-  if(location.origin===OR.nuova){let r=null;try{r=JSON.parse(sessionStorage.getItem('gesto-ricevuti')||'null');sessionStorage.removeItem('gesto-ricevuti')}catch(x){}
-    if(r)setTimeout(()=>avviso('Dati ricevuti dal vecchio indirizzo: '+r.n+' elementi'+(r.gia?', '+r.gia+' già presenti':'')),600)}
-
-  /* ---- voce del menu, solo nella vecchia app ---- */
-  if(location.origin===OR.vecchia){
-    const st=document.createElement('style');st.textContent='.lmTr{max-width:340px;flex-direction:column;align-items:stretch;gap:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}'
-      +'.lmTr p{margin:0;font-size:13px;line-height:1.35}.lmTr p b{font-weight:600}.lmTr button{align-self:flex-start;height:30px;padding:0 12px;border:1px solid var(--acc);border-radius:6px;background:transparent;color:var(--fg);font:inherit;font-size:13px;cursor:pointer}'
-      +'.lmTr small{font-size:12px;opacity:.7;line-height:1.35}';document.head.appendChild(st);
-    const r=document.createElement('div');r.className='lmR lmTr';
-    r.innerHTML='<p>Gesto ora è su <b>gesto.demazur.com</b>.</p><button type="button" id="lmTrB">Trasferisci i disegni</button><small id="lmTrS">Copia disegni, firme e preferenze nella nuova app. Qui non si cancella nulla.</small>';
-    const T=document.querySelector('.lmenu .lmT');T.after(r);$('lmTrB').onclick=()=>trasferisci();
-  }
-})();
 
 /* ----- Fase 60: il foglio è un file sul disco (FD1–FD7, Vlad, 22.11.2026) -----
    Dove il sistema lo consente (app installata o pagina in Edge e Chrome sul computer) ogni foglio può essere legato
