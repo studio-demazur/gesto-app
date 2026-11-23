@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.92';
+const VERSIONE_GESTO='0.93';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9079,6 +9079,12 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
     c.style.maxWidth=Math.max(220,w.width-L-340)+'px'};
   posImp=function(){posCtx()};
 })();
+
+/* ---------- 93. The north disc answers from the first moment (owner, 23.11.2026) ----------
+   Fault: at start the north was drawn last by a call that held the first version of disegnaOrienta (handed to
+   fonts.ready and setTimeout before the later phases wrapped it), so the disc came up without its touch area until the
+   next change of view. The current version is called again after those two, so the touch area is always there. */
+(()=>{const d=()=>disegnaOrienta();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(d);setTimeout(d,0);setTimeout(d,400)})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
