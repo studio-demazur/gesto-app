@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.76';
+const VERSIONE_GESTO='0.77';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8027,11 +8027,13 @@ function dcScegliPdf(dir){const i=document.createElement('input');i.type='file';
   i.onchange=async()=>{for(const f of [...(i.files||[])])await dcApriPdf(f,dir).catch(e=>{console.warn(e);avviso('Il PDF non si apre')})};i.click()}
 
 /* ---- DC4: folders ---- */
-const DC={chiuse:new Set(),aperti:new Set(),cart:null,menu:null};
+const DC={chiuse:new Set(),aperti:new Set(),docChiusi:new Set(),cart:null,menu:null};
 const dcCartelle=()=>Array.isArray(foglio().cartelle)?foglio().cartelle:[];
 const dcEsiste=id=>!!id&&dcCartelle().some(c=>c.id===id);
 const dcDir=t=>dcEsiste(t.dir)?t.dir:'';
 function dcSalvaCartelle(L){fogliSet({cartelle:L});rendiCol()}
+function dcAlterna(k){const qui=dcDocTs(k).some(t=>t.id===S.tav),ap=!DC.docChiusi.has(k)&&(DC.aperti.has(k)||qui);
+  if(ap){DC.aperti.delete(k);DC.docChiusi.add(k)}else{DC.docChiusi.delete(k);DC.aperti.add(k);if(!qui)vaiTavola(dcDocTs(k)[0].id)}}
 function dcNuovaCartella(p){const L=dcCartelle().slice(),c={id:idCasuale('cr'),nome:'Nuova cartella'};if(p)c.p=p;L.push(c);if(p)DC.chiuse.delete(p);dcSalvaCartelle(L);DC.rinomina='f:'+c.id;rendiCol()}
 function dcFigli(p){return dcCartelle().filter(c=>(dcEsiste(c.p)?c.p:'')===(p||''))}
 function dcSotto(p){const o=[p];dcFigli(p).forEach(c=>o.push(...dcSotto(c.id)));return o}
@@ -8113,7 +8115,7 @@ function dcFolderDom(c,box){const aperta=!DC.chiuse.has(c.id),n=ordineTav().filt
   const r=dcRiga('dcF',c.nome,n?String(n):'',aperta,el=>dcMenuCartella(c.id,el),{f:c.id});box.appendChild(r);if(DC.rinomina==='f:'+c.id)dcRinomina(r,v=>{const L=dcCartelle().map(x=>x.id===c.id?Object.assign({},x,{nome:v||x.nome}):x);dcSalvaCartelle(L)});
   if(!aperta)return;const k=document.createElement('div');k.className='dcK';box.appendChild(k);dcRiempi(c.id,k);if(!k.children.length){const v=document.createElement('div');v.className='dcVuoto';v.textContent='Vuota: trascina qui tavole e documenti';v.dataset.vuota=c.id;k.appendChild(v)}}
 function dcRiempi(p,box){dcVoci(p).forEach(v=>{if(v.k==='tav'){box.appendChild(dcCard(v.t));return}
-    const t0=v.ts[0],aperto=DC.aperti.has(v.d)||v.ts.some(t=>t.id===S.tav),r=dcRiga('dcDh',t0.pdf.nm,String(v.ts.length),aperto,el=>dcMenuDoc(v.d,el),{d:v.d});
+    const t0=v.ts[0],aperto=!DC.docChiusi.has(v.d)&&(DC.aperti.has(v.d)||v.ts.some(t=>t.id===S.tav)),r=dcRiga('dcDh',t0.pdf.nm,String(v.ts.length),aperto,el=>dcMenuDoc(v.d,el),{d:v.d});
     if(v.ts.some(t=>t.id===S.tav))r.classList.add('att');box.appendChild(r);if(DC.rinomina==='d:'+v.d)dcRinomina(r,nome=>dcRinominaDoc(v.d,nome));
     if(aperto){const k=document.createElement('div');k.className='dcK pag';v.ts.forEach(t=>k.appendChild(dcCard(t,true)));box.appendChild(k)}});
   dcFigli(p).forEach(c=>dcFolderDom(c,box))}
@@ -8123,7 +8125,7 @@ function dcRinomina(r,fatto){const s=r.querySelector('.dcN'),i=document.createEl
 let dcChiave='';
 rendiCol=function(){if(!IMPAG)return;const cur=tavAtt();if(cur&&cur.pdf)DC.aperti.add(cur.pdf.d);
   if(cur){let p=dcDir(cur);while(p){DC.chiuse.delete(p);const c=dcCartelle().find(x=>x.id===p);p=c&&dcEsiste(c.p)?c.p:''}}
-  const key=JSON.stringify([ordineTav().map(t=>[t.id,t.nome,t.dir,t.fmt,t.pdf&&[t.pdf.d,t.pdf.nm,t.pdf.p]]),dcCartelle(),[...DC.chiuse],[...DC.aperti],S.tav,DC.rinomina]);
+  const key=JSON.stringify([ordineTav().map(t=>[t.id,t.nome,t.dir,t.fmt,t.pdf&&[t.pdf.d,t.pdf.nm,t.pdf.p]]),dcCartelle(),[...DC.chiuse],[...DC.aperti],[...DC.docChiusi],S.tav,DC.rinomina]);
   if(key!==dcChiave){dcChiave=key;dcL.textContent='';dcRiempi('',dcL);if(!dcL.children.length){const v=document.createElement('div');v.className='dcVuoto';v.textContent='Nessuna tavola';dcL.appendChild(v)}}
   else dcL.querySelectorAll('.dcI').forEach(it=>it.classList.toggle('att',it.dataset.id===S.tav));
   clearTimeout(miniT);miniT=setTimeout(miniature,700)};
@@ -8156,7 +8158,7 @@ function dcMenuDoc(d,el){const ts=dcDocTs(d);const v=[['Rinomina',()=>{DC.rinomi
   const fine=e=>{if(!dr)return;const d=dr;dr=null;d.it.classList.remove('trasc');d.it.style.pointerEvents='';pulisci();
     if(!d.mosso){if(d.it.classList.contains('dcI')){vaiTavola(d.it.dataset.id);return}
       if(d.it.classList.contains('dcF')){const f=d.it.dataset.f;DC.cart=f;if(DC.chiuse.has(f))DC.chiuse.delete(f);else DC.chiuse.add(f);dcChiave='';rendiCol();return}
-      if(d.it.classList.contains('dcDh')){const k=d.it.dataset.d;if(DC.aperti.has(k)&&!dcDocTs(k).some(t=>t.id===S.tav))DC.aperti.delete(k);else{DC.aperti.add(k);vaiTavola(dcDocTs(k)[0].id)}dcChiave='';rendiCol();return}return}
+      if(d.it.classList.contains('dcDh')){const k=d.it.dataset.d;dcAlterna(k);dcChiave='';rendiCol();return}return}
     if(!seg)return;let ids;if(d.it.classList.contains('dcDh'))ids=dcDocTs(d.it.dataset.d).map(t=>t.id);else ids=[d.it.dataset.id];if(seg.prima&&ids.includes(seg.prima))return;dcSposta(ids,seg.dir,seg.prima)};
   dcL.addEventListener('pointerup',fine);dcL.addEventListener('pointercancel',fine);
   const root=document.querySelector('#impCol .icT');if(root){root.addEventListener('pointerup',()=>{if(!dr||!dr.mosso)return})}
@@ -8545,6 +8547,11 @@ prAggTesta=function(){const t=PR.chiusa?'Mostra la Penna':'Riponi la Penna';prTe
 window.__gestoPN={doc:()=>PN.doc,folded:()=>[...PN.sez],fold:k=>{const s=[...document.querySelectorAll('#pEsporta .sez,#pp .sez')].find(x=>pnChiave(x)===k);if(s)s.click();return [...PN.sez]},
   heads:()=>({doc:$('icChiudi').title,prop:($('pEsporta').querySelector('.ph .riponi:not([style*="none"])')||{}).title||null,cross:getComputedStyle($('pEsporta').querySelector('.ph [data-chiudi]')).display,tabDoc:$('icApri').title,tabProp:panApri.title})};
 setTimeout(()=>{pnTesta();if(IMPAG&&!ER.full)document.body.classList.toggle('colChiusa',!PN.doc);pnPiegheP()},0);
+
+/* ---------- 78. A document in the tree closes like a folder (owner, 23.11.2026) ----------
+   DC9 A tap on the head of a document opens or closes its pages, also while one writes on one of them;
+       opening a closed document leads to its first page only if the page in front is elsewhere. */
+window.__gestoDC.toggleDoc=d=>{const it=document.querySelector('#dcL .dcDh[data-d="'+d+'"]');if(it)dcAlterna(d);return !DC.docChiusi.has(d)};
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
