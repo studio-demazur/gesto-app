@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.90';
+const VERSIONE_GESTO='0.91';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9050,6 +9050,15 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
   new MutationObserver(ora).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','class','style']});
   new MutationObserver(ora).observe(document.body,{attributes:true,attributeFilter:['class']});
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change',ora);setTimeout(ora,0)})();
+
+/* ---------- 91. The selection bar beside the logo, in line (owner, 23.11.2026) ----------
+   AN5 The bar of the selection stands beside the panel of the logo, 8 px from it, on the same top line and with the
+       same height (55 px): it never overlaps the column of the tools, in the browser or under the window keys. */
+(()=>{const st=document.createElement('style');st.textContent=
+  '@media (min-width:721px){body:not(.mancino) .ctx.dock{left:calc(var(--LL) + 60px)!important;right:auto!important;top:var(--TL)!important;'+
+  'min-height:55px;box-sizing:border-box;align-items:center;max-width:calc(100% - var(--LL) - 60px - 340px)!important}}'+
+  '.ctx.dock{-webkit-app-region:no-drag;app-region:no-drag}';
+  document.head.appendChild(st)})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
