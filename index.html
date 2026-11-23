@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.81';
+const VERSIONE_GESTO='0.82';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8782,6 +8782,34 @@ $('crQ').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')
 {const _rc=rendiCol;rendiCol=function(...a){const v=_rc(...a);if(CR.q.trim())crRendi();return v}}
 try{COMANDI.push({k:'searchproject',n:'Cerca nel progetto',en:'Search the project',ab:'CRC',f:()=>{if(!IMPAG)entraImpag();document.body.classList.remove('colChiusa');setTimeout(()=>$('crQ').focus(),60)},al:['cerca','cerca documento','trova documento']})}catch(e){}
 window.__gestoCR={search:q=>crCerca(q).map(v=>({k:v.k,nome:v.nome,per:v.per.join(' › '),stato:v.stato,data:v.data})),type:q=>{const i=$('crQ');i.value=q;i.dispatchEvent(new Event('input'));return crRis.innerText}};
+
+/* ---------- 83. Search results as a tree (owner, 23.11.2026) ----------
+   GC6 (revised) The results of the search show as the tree itself: only what is found, inside its folders, opened;
+       a folder found shows all it holds; what is found is marked; emptying the field gives back the tree as it was. */
+let crBusy=false;
+crRendi=function(){if(crBusy)return;const q=CR.q.trim();crRis.hidden=true;const L=$('dcL');if(L)L.style.display='';
+  if(q&&!CR.salvo)CR.salvo={chiuse:new Set(DC.chiuse),aperti:new Set(DC.aperti),docChiusi:new Set(DC.docChiusi||[])};
+  if(q){DC.chiuse=new Set();DC.aperti=new Set();DC.docChiusi=new Set(ordineTav().filter(t=>t.pdf).map(t=>t.pdf.d))}
+  else if(CR.salvo){DC.chiuse=CR.salvo.chiuse;DC.aperti=CR.salvo.aperti;DC.docChiusi=CR.salvo.docChiusi;CR.salvo=null}
+  dcChiave='';rendiCol()};
+function crFiltra(){const L=$('dcL'),q=CR.q.trim();if(!L)return;L.querySelectorAll('.crNo,.crHit').forEach(e=>e.classList.remove('crNo','crHit'));const m0=L.querySelector('.crNessuno');if(m0)m0.remove();if(!q)return;
+  const C=dcCartelle(),par=id=>{const c=C.find(x=>x.id===id);return c&&dcEsiste(c.p)?c.p:''};
+  const r=crCerca(q),docs=new Set(),fam=new Set(),tavs=new Set(),dirs=new Set();/* fam: working documents shown only to carry the list of their revisions */
+  r.forEach(v=>{if(v.k==='dir')dirs.add(v.id);else{const t=MOS.tavole.get(v.id);if(!t)return;if(t.pdf){docs.add(t.pdf.d);if(t.pdf.fam&&t.pdf.fam!==t.pdf.d)fam.add(t.pdf.fam)}else tavs.add(t.id)}});
+  const dentro=dir=>{let p=dir,n=0;while(p&&n++<60){if(dirs.has(p))return true;p=par(p)}return false};
+  const tieni=new Set();const sali=dir=>{let p=dir,n=0;while(p&&n++<60){tieni.add(p);p=par(p)}};
+  dirs.forEach(d=>{sali(d);dcSotto(d).forEach(x=>tieni.add(x))});
+  ordineTav().forEach(t=>{const ok=t.pdf?docs.has(t.pdf.d)||fam.has(t.pdf.d):tavs.has(t.id);if(ok)sali(dcDir(t)||'')});
+  const nascondi=(el,segue)=>{el.classList.add('crNo');const k=el.nextElementSibling;if(k&&k.classList.contains(segue))k.classList.add('crNo')};
+  L.querySelectorAll('.dcF').forEach(h=>{const f=h.dataset.f;if(!tieni.has(f))nascondi(h,'dcK');else if(dirs.has(f))h.classList.add('crHit')});
+  L.querySelectorAll('.dcDh').forEach(h=>{const t=dcDocTs(h.dataset.d)[0];if(!t)return;const ok=docs.has(h.dataset.d)||fam.has(h.dataset.d)||dentro(dcDir(t)||'');if(!ok)nascondi(h,'pag');else if(docs.has(h.dataset.d))h.classList.add('crHit')});
+  L.querySelectorAll('.dcI').forEach(c=>{if(c.closest('.pag'))return;const t=MOS.tavole.get(c.dataset.id);if(!t)return;const ok=tavs.has(t.id)||dentro(dcDir(t)||'');if(!ok)c.classList.add('crNo');else if(tavs.has(t.id))c.classList.add('crHit')});
+  L.querySelectorAll('.dcVuoto').forEach(v=>v.classList.add('crNo'));
+  L.querySelectorAll('.dcRevR').forEach(x=>{const h=x.closest('.dcRevL');if(h&&h.previousElementSibling&&h.previousElementSibling.classList.contains('crNo'))h.classList.add('crNo')});
+  if(!r.length){const m=document.createElement('div');m.className='crNessuno crV';m.textContent='Nessun risultato per «'+q+'»';L.prepend(m)}}
+{const _rc=rendiCol;rendiCol=function(...a){if(crBusy)return _rc(...a);crBusy=true;let v;try{v=_rc(...a)}finally{crBusy=false}try{crFiltra()}catch(e){console.warn(e)}return v}}
+{const st=document.createElement('style');st.textContent='#dcL .crNo{display:none!important}#dcL .crHit{box-shadow:inset 0 0 0 1.5px var(--acc)}#dcL .dcI.crHit{box-shadow:none}#dcL .dcI.crHit .icM{box-shadow:0 0 0 2px var(--acc)}.dcRevR b,.dcRevR span{white-space:nowrap}';document.head.appendChild(st)}
+window.__gestoCR.type=q=>{const i=$('crQ');i.value=q;i.dispatchEvent(new Event('input'));return [...$('dcL').querySelectorAll('.dcF,.dcDh,.dcI')].filter(e=>!e.closest('.crNo')&&!e.classList.contains('crNo')&&e.offsetParent!==null).map(e=>(e.classList.contains('crHit')?'* ':'')+(e.querySelector('.dcN,.icN span')||e).textContent.trim())};
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
