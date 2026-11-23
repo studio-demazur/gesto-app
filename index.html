@@ -2238,7 +2238,7 @@ area.addEventListener('pointerup',su);area.addEventListener('pointercancel',su);
 ['gesturestart','gesturechange','gestureend','dblclick'].forEach(t=>document.addEventListener(t,e=>{if(e.target===area||area.contains(e.target))e.preventDefault()},{passive:false}));
 area.addEventListener('pointerleave',()=>{coordP=null;richiedi('coord');if(!ptr&&cursore){cursore=null;richiedi('sopra')}});
 area.addEventListener('contextmenu',e=>{registra(e);e.preventDefault()});
-area.addEventListener('wheel',e=>{e.preventDefault();if(e.ctrlKey||e.metaKey)zoomA(Math.exp(-e.deltaY*0.0025),...pos(e));else{V.ox-=e.deltaX;V.oy-=e.deltaY;cambioVista()}},{passive:false});
+area.addEventListener('wheel',e=>{e.preventDefault();const dy=e.deltaMode===1?e.deltaY*33:e.deltaY,dx=e.deltaMode===1?e.deltaX*33:e.deltaX;if(e.shiftKey){V.ox-=dy||dx;cambioVista()}else if(e.altKey){V.oy-=dy;cambioVista()}else zoomA(Math.exp(-dy*0.0025),...pos(e))},{passive:false});
 const TASTI={v:'sel',p:'penna',e:'gomma',h:'mano',l:'linea',y:'poli',r:'rett',c:'cerchio',a:'arco',b:'bez',k:'spl',f:'libera',t:'retino',q:'quota',n:'testo',z:'scrivi',d:'dir',u:'ell',m:'polig',x:'taglia',w:'estendi',g:'raccordo',j:'offset'};
 document.addEventListener('keydown',e=>{
   if(e.target&&e.target.isContentEditable)return;const tg=e.target&&e.target.tagName;if(tg==='TEXTAREA')return;
@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.94';
+const VERSIONE_GESTO='0.95';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9175,6 +9175,177 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
     pstrip.style.right='';pstrip.style.left=l+'px';prAggTesta();requestAnimationFrame(prFade);erPosCol()};
   const sv=()=>{rail0.style.maxHeight='';if(!pstrip.hidden)posPennaLato()};
   new MutationObserver(m=>{if(m.some(x=>x.attributeName==='class'))setTimeout(sv,0)}).observe(document.body,{attributes:true,attributeFilter:['class']});})();
+
+/* ---------- 95. Clean offset with few points; Semplifica (owner, 23.11.2026) ----------
+   OF1 Where the offset makes stretches that overlap or loop (the distance exceeds the radius of curvature), those
+       stretches are cut away: one clean line, with a corner where the two stretches meet.
+   OF2 An offset spline is rebuilt through the passing points of the original, each moved along its normal; where the
+       distance from the exact offset exceeds 0.1 mm, only the points needed there are added; at a cut of OF1 the
+       point falls on the cut. Without corners the result is a spline; with corners a Bézier curve through the same
+       points, since a spline cannot hold a corner.
+   Semplifica: a spline or a curve keeps its form within 0.1 mm with the fewest points; a spline becomes a Bézier curve
+   when that needs fewer points (a spline through few points cannot hold an arbitrary form). */
+(()=>{
+  let TOL=0.1;const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]],add=(a,b)=>[a[0]+b[0],a[1]+b[1]],mul=(a,k)=>[a[0]*k,a[1]*k],
+    dot=(a,b)=>a[0]*b[0]+a[1]*b[1],len=a=>Math.hypot(a[0],a[1]),nrm=a=>{const l=len(a);return l>1e-12?[a[0]/l,a[1]/l]:[0,0]},lft=t=>[-t[1],t[0]],
+    dd=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+  const coppie=f=>{const o=[];for(let i=0;i+1<f.length;i+=2)o.push([f[i],f[i+1]]);return o};
+  const densa=e=>coppie(polyCurva(e));
+  /* grid of the segments of a polyline, for distances and crossings */
+  function griglia(P,cell){const g=new Map(),k=(i,j)=>i*73856093^j*19349663;
+    for(let s=0;s<P.length-1;s++){const a=P[s],b=P[s+1],x0=Math.floor(Math.min(a[0],b[0])/cell),x1=Math.floor(Math.max(a[0],b[0])/cell),y0=Math.floor(Math.min(a[1],b[1])/cell),y1=Math.floor(Math.max(a[1],b[1])/cell);
+      for(let i=x0;i<=x1;i++)for(let j=y0;j<=y1;j++){const h=k(i,j);let l=g.get(h);if(!l)g.set(h,l=[]);l.push(s)}}
+    return {g,cell,P,k}}
+  function distG(G,q,R){const {g,cell,P,k}=G,c=Math.ceil(R/cell),i0=Math.floor(q[0]/cell),j0=Math.floor(q[1]/cell);let best=Infinity;const vis=new Set();
+    for(let i=i0-c;i<=i0+c;i++)for(let j=j0-c;j<=j0+c;j++){const l=g.get(k(i,j));if(!l)continue;for(const s of l){if(vis.has(s))continue;vis.add(s);const a=P[s],b=P[s+1],ab=sub(b,a),L=dot(ab,ab);let t=L?dot(sub(q,a),ab)/L:0;t=Math.max(0,Math.min(1,t));const d=dd(q,add(a,mul(ab,t)));if(d<best)best=d}}
+    return best}
+  /* nearest point and normal on a polyline */
+  function piede(P,q){let bi=0,bt=0,bd=Infinity;for(let s=0;s<P.length-1;s++){const a=P[s],ab=sub(P[s+1],a),L=dot(ab,ab);let t=L?dot(sub(q,a),ab)/L:0;t=Math.max(0,Math.min(1,t));const d=dd(q,add(a,mul(ab,t)));if(d<bd){bd=d;bi=s;bt=t}}
+    return {s:bi+bt,d:bd,t:nrm(sub(P[Math.min(bi+1,P.length-1)],P[bi]))}}
+  const aParam=(P,s)=>{const i=Math.min(Math.floor(s),P.length-2),t=s-i;return add(P[i],mul(sub(P[i+1],P[i]),t))};
+  /* OF1: raw offset, then the stretches nearer than the distance to the original are cut away */
+  function offsetPulito(P,ds,ch){
+    const n=P.length,O=[];for(let i=0;i<n;i++){let a=P[i-1],b=P[i+1];if(ch){if(i===0)a=P[n-2];if(i===n-1)b=P[1]}const t=nrm(sub(b||P[i],a||P[i]));O.push(add(P[i],mul(lft(t),ds)))}
+    const D=Math.abs(ds),cell=Math.max(D/2,1e-3),G=griglia(P,cell),GO=griglia(O,cell);
+    /* crossings of the raw offset with itself */
+    const tagli=[];for(let s=0;s<O.length-1;s++){const a=O[s],b=O[s+1],x0=Math.floor(Math.min(a[0],b[0])/cell),x1=Math.floor(Math.max(a[0],b[0])/cell),y0=Math.floor(Math.min(a[1],b[1])/cell),y1=Math.floor(Math.max(a[1],b[1])/cell),vis=new Set();
+      for(let i=x0;i<=x1;i++)for(let j=y0;j<=y1;j++){const l=GO.g.get(GO.k(i,j));if(!l)continue;for(const m of l){if(m<=s+1||vis.has(m))continue;if(ch&&s===0&&m===O.length-2)continue;vis.add(m);
+        const c=O[m],e=O[m+1],r=sub(b,a),q=sub(e,c),den=r[0]*q[1]-r[1]*q[0];if(Math.abs(den)<1e-14)continue;const w=sub(c,a),t=(w[0]*q[1]-w[1]*q[0])/den,u=(w[0]*r[1]-w[1]*r[0])/den;
+        if(t>=0&&t<=1&&u>=0&&u<=1){tagli.push(s+t,m+u)}}}}
+    const valido=s=>distG(G,aParam(O,s),D*1.05)>=D*0.995;
+    /* also where a stretch passes from valid to too near without crossing itself (ends of open lines, near other parts) */
+    const esatto=s=>distG(G,aParam(O,s),D*1.05)>=D-0.005;/* the cut falls where the distance is the offset itself */
+    let pv=valido(0);for(let k=1;k<O.length;k++){const v=valido(k);if(v!==pv){let a=k-1,b=k;const lato=esatto(a);for(let it=0;it<30;it++){const m=(a+b)/2;if(esatto(m)===lato)a=m;else b=m}tagli.push((a+b)/2)}pv=v}
+    const cuts=[0,...tagli.sort((x,y)=>x-y),O.length-1];
+    const tratto=(a,b)=>{const o=[aParam(O,a)];for(let i=Math.floor(a)+1;i<=Math.ceil(b)-1&&i<O.length;i++)if(i>a&&i<b)o.push(O[i]);o.push(aParam(O,b));return o};
+    const pezzi=[];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1];if(b-a<1e-9)continue;if(valido((a+b)/2))pezzi.push({a,b,p:tratto(a,b)})}
+    /* join the kept stretches: a jump in the parameter is a corner; a gap in space starts a new line */
+    const linee=[],J=Math.max(TOL*5,D*0.01);let cur=null;
+    pezzi.forEach(z0=>{let z=z0;if(cur&&dd(cur.p[cur.p.length-1],z.p[0])<=J){const e0=cur.p[cur.p.length-1];if(dd(e0,z.p[0])>1e-9){/* meet where the two stretches cross, not at either end */
+        const cp=cur.p,zp=z.p;let fatto=false;
+        for(let i=cp.length-2;i>=Math.max(0,cp.length-6)&&!fatto;i--)for(let j=0;j<Math.min(zp.length-1,5)&&!fatto;j++){const A=cp[i],B=cp[i+1],C2=zp[j],D2=zp[j+1],r=sub(B,A),q=sub(D2,C2),den=r[0]*q[1]-r[1]*q[0];if(Math.abs(den)<1e-14)continue;
+          const w=sub(C2,A),t=(w[0]*q[1]-w[1]*q[0])/den,u=(w[0]*r[1]-w[1]*r[0])/den;if(t>=-0.02&&t<=1.02&&u>=-0.02&&u<=1.02){const X=add(A,mul(r,t));cur.p=cp.slice(0,i+1).concat([X]);z={a:z.a,b:z.b,p:[X,...zp.slice(j+1)]};fatto=true}}
+        if(!fatto){cur.p[cur.p.length-1]=z.p[0]}}if(Math.abs(cur.fine-z.a)>1e-6)cur.angoli.push(cur.p.length-1);z.p.slice(1).forEach(q=>cur.p.push(q));cur.fine=z.b}
+      else{cur={p:z.p.slice(),angoli:[],fine:z.b,inizio:z.a};linee.push(cur)}});
+    if(ch&&linee.length>1){const f=linee[0],l=linee[linee.length-1];if(dd(l.p[l.p.length-1],f.p[0])<=J){const k=l.p.length-1;l.angoli.push(k);f.p.slice(1).forEach(q=>l.p.push(q));f.angoli.forEach(a=>l.angoli.push(a+k));linee.shift()}}
+    linee.forEach(L=>{L.chiusa=ch&&linee.length===1&&dd(L.p[0],L.p[L.p.length-1])<=J&&!L.angoli.length});
+    return {linee,O,G,D}}
+  /* OF2: fewest passing points on a smooth stretch C, starting from the given candidates */
+  function adatta(C,cand,ch){
+    const GC=griglia(C,Math.max(1e-3,TOL*20));let s=cand.slice().sort((x,y)=>x.s-y.s);const fin=C.length-1;
+    if(!ch){if(!s.length||s[0].s>1e-6)s.unshift({s:0,p:C[0]});if(s[s.length-1].s<fin-1e-6)s.push({s:fin,p:C[fin]})}
+    s=s.filter((x,i)=>!i||x.s-s[i-1].s>1e-6&&dd(x.p,s[i-1].p)>TOL);
+    for(let it=0;it<400;it++){const f=s.flatMap(x=>x.p),sg=splineBez(f,ch),D=[];if(sg.length){D.push([sg[0][0],sg[0][1]]);const o=[];o.push(sg[0][0],sg[0][1]);sg.forEach(q=>bezAppiattisci(q,TOL/10,o));for(let i=2;i<o.length;i+=2)D.push([o[i],o[i+1]])}
+      if(D.length<2)break;const GD=griglia(D,Math.max(1e-3,TOL*20));
+      let w=-1,we=TOL;for(let i=0;i<C.length;i++){const e=distG(GD,C[i],we*4+TOL*20);if(e>we){we=e;w=i}}
+      let back=TOL;for(let i=0;i<D.length;i+=3){const e=distG(GC,D[i],TOL*40);if(e>back){back=e}}
+      if(w<0&&back<=TOL*1.5)return s;
+      if(w<0)break;const ns={s:w,p:C[w]};let k=s.findIndex(x=>x.s>w);if(k<0)k=s.length;if((k>0&&s[k-1].s===w))break;s.splice(k,0,ns)}
+    return s}
+
+  /* cubic through C[i..j] with the tangents of C at its ends (shared by the neighbours, so no kink); split where the error is too big */
+  function tanC(C,i,ch){const n=C.length;let a=C[i-1],b=C[i+1];if(ch){if(i===0)a=C[n-2];if(i===n-1)b=C[1]}if(!a)a=C[i];if(!b)b=C[i];return nrm(sub(b,a))}
+  function cubica(C,i,j,t1,t2,out,prof){
+    const P0=C[i],P3=C[j],u=[0];for(let k=i+1;k<=j;k++)u.push(u[u.length-1]+dd(C[k],C[k-1]));const L=u[u.length-1]||1;for(let k=0;k<u.length;k++)u[k]/=L;
+    const Ls=dd(P0,P3);let B;
+    const Q=(t)=>{const m=1-t;return add(add(mul(B[0],m*m*m),mul(B[1],3*m*m*t)),add(mul(B[2],3*m*t*t),mul(B[3],t*t*t)))},
+      Q1=(t)=>{const m=1-t;return add(add(mul(sub(B[1],B[0]),3*m*m),mul(sub(B[2],B[1]),6*m*t)),mul(sub(B[3],B[2]),3*t*t))},
+      Q2=(t)=>add(mul(add(sub(B[2],mul(B[1],2)),B[0]),6*(1-t)),mul(add(sub(B[3],mul(B[2],2)),B[1]),6*t));
+    const risolvi=()=>{let c00=0,c01=0,c11=0,x0=0,x1=0;for(let k=0;k<u.length;k++){const t=u[k],m=1-t,b0=m*m*m,b1=3*m*m*t,b2=3*m*t*t,b3=t*t*t,A1=mul(t1,b1),A2=mul(t2,-b2);
+        c00+=dot(A1,A1);c01+=dot(A1,A2);c11+=dot(A2,A2);const tmp=sub(C[i+k],add(mul(P0,b0+b1),mul(P3,b2+b3)));x0+=dot(A1,tmp);x1+=dot(A2,tmp)}
+      const det=c00*c11-c01*c01;let a1=det?(x0*c11-x1*c01)/det:0,a2=det?(c00*x1-c01*x0)/det:0;if(!(a1>Ls*1e-3)||!(a2>Ls*1e-3)||a1>Ls*0.9||a2>Ls*0.9){a1=a2=Ls/3}
+      B=[P0,add(P0,mul(t1,a1)),sub(P3,mul(t2,a2)),P3]};
+    risolvi();
+    for(let it=0;it<4;it++){for(let k=1;k<u.length-1;k++){const t=u[k],d=sub(Q(t),C[i+k]),q1=Q1(t),q2=Q2(t),num=dot(d,q1),den=dot(q1,q1)+dot(d,q2);if(Math.abs(den)>1e-12)u[k]=Math.max(0,Math.min(1,t-num/den))}risolvi()}
+    /* error: distance of the samples from the curve itself */
+    const S=[];for(let k=0;k<=48;k++)S.push(Q(k/48));const GS=griglia(S,Math.max(1e-3,Ls/24));
+    let we=0,wk=-1;for(let k=1;k<u.length-1;k++){const e=distG(GS,C[i+k],Math.max(TOL*50,Ls/4));if(e>we){we=e;wk=i+k}}
+    if(we>TOL&&j-i>2&&prof<40){const tm=tanC(C,wk,false);cubica(C,i,wk,t1,tm,out,prof+1);cubica(C,wk,j,tm,t2,out,prof+1);return}
+    out.push([...B[0],...B[1],...B[2],...B[3]])}
+  function bezSuAncore(C,idx,ch){const segs=[];const I=[...new Set(idx)].sort((a,b)=>a-b);for(let k=0;k<I.length-1;k++){const i=I[k],j=I[k+1];if(j-i<1)continue;
+      const t1=I.angoli&&I.angoli.has(i)?nrm(sub(C[i+1],C[i])):tanC(C,i,ch),t2=I.angoli&&I.angoli.has(j)?nrm(sub(C[j],C[j-1])):tanC(C,j,ch);cubica(C,i,j,t1,t2,segs,0)}return segs}
+  /* candidates: the passing points of the original, moved along the normal and kept where the offset is clean */
+  function candidati(F,P,ds,C,D,G){const o=[];F.forEach(f=>{const pf=piede(P,f),q=add(f,mul(lft(pf.t),ds));if(distG(G,q,D*1.05)<D*0.995)return;const pc=piede(C,q);if(pc.d<=Math.max(TOL*5,D*0.02))o.push({s:pc.s,p:aParam(C,pc.s)})});return o}
+  function passaggi(e){if(e.k==='spline')return coppie(e.g.f);const p=coppie(e.g.p),o=[];for(let i=0;i<p.length;i+=3)o.push(p[i]);return o}
+  function costruisci(L,F,P,ds,D,G,base,tipo){
+    const C=L.p,ch=L.chiusa,cand=candidati(F,P,ds,C,D,G);
+    /* anchors: ends, corners, moved passing points (as indices of C) */
+    const idx=[0,C.length-1,...L.angoli];const fissi=[0,C.length-1,...L.angoli].map(k=>C[k]),vic=Math.max(1,D*0.1);
+    cand.forEach(c=>{const k=Math.round(c.s);if(k>0&&k<C.length-1&&!fissi.some(q=>dd(q,C[k])<vic))idx.push(k)});
+    const I=[...new Set(idx)].sort((a,b)=>a-b);
+    if(!L.angoli.length&&tipo==='spline'){/* the spline through the moved points, if it stays within the tolerance */
+      const f=I.flatMap(k=>C[k]),pts=ch?f.slice(0,-2):f,sg=splineBez(pts,ch),o=[];if(sg.length){o.push(sg[0][0],sg[0][1]);sg.forEach(q=>bezAppiattisci(q,TOL/10,o))}
+      const GD=griglia(coppie(o),Math.max(1e-3,TOL*20));let ok=true;for(let i=0;i<C.length&&ok;i+=2)if(distG(GD,C[i],TOL*30)>TOL)ok=false;
+      if(ok)return {k:'spline',g:ch?{f:pts,ch:true}:{f:pts}}}
+    const Ia=I.slice();Ia.angoli=new Set(L.angoli);const segs=bezSuAncore(C,Ia,ch);const g={p:bezPunti(segs)};if(ch)g.ch=true;return {k:'curva',g}}
+  function bezPunti(segs){if(!segs.length)return [];const p=[segs[0][0],segs[0][1]];segs.forEach(q=>p.push(q[2],q[3],q[4],q[5],q[6],q[7]));return p}
+  function offsetCurva(e,d,Pt,mk){
+    const P=densa(e),ch=!!e.g.ch;if(P.length<2)return null;
+    let bi=0,bd=Infinity;for(let i=0;i<P.length-1;i++){const q=distPrim({s:[...P[i],...P[i+1]]},Pt[0],Pt[1]);if(q<bd){bd=q;bi=i}}
+    const lato=Math.sign(dot(sub(Pt,P[bi]),lft(nrm(sub(P[bi+1],P[bi])))))||1,ds=d*lato;
+    const R=offsetPulito(P,ds,ch);if(!R.linee.length)return null;
+    const L=R.linee.reduce((a,b)=>b.p.length>a.p.length?b:a),r=costruisci(L,passaggi(e),P,ds,R.D,R.G,e,e.k);
+    return r?mk(r.k,r.g):null}
+  /* poly-lines with straight sides only: the same cut of the loops on the corners */
+  function pulisciPoli(e,r){if(!r||r.k!=='poli'||r.g.bu)return r;const V=coppie(r.g.p),ch=!!r.g.ch;if(V.length<3)return r;
+    const Q=ch?V.concat([V[0]]):V.slice(),O=Q,orig=pezziOrig(e);const D=Math.abs(orig.d);if(!D)return r;
+    const cell=Math.max(D/2,1e-3),G=griglia(orig.P,cell),GO=griglia(O,cell),tagli=[];
+    for(let s=0;s<O.length-1;s++)for(let m=s+2;m<O.length-1;m++){if(ch&&s===0&&m===O.length-2)continue;const a=O[s],b=O[s+1],c=O[m],f=O[m+1],rr=sub(b,a),q=sub(f,c),den=rr[0]*q[1]-rr[1]*q[0];if(Math.abs(den)<1e-14)continue;const w=sub(c,a),t=(w[0]*q[1]-w[1]*q[0])/den,u=(w[0]*rr[1]-w[1]*rr[0])/den;if(t>1e-9&&t<1-1e-9&&u>1e-9&&u<1-1e-9)tagli.push(s+t,m+u)}
+    if(!tagli.length)return r;
+    const cuts=[0,...tagli.sort((x,y)=>x-y),O.length-1],val=s=>distG(G,aParam(O,s),D*1.05)>=D*0.995,out=[];
+    for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1];if(b-a<1e-9||!val((a+b)/2))continue;const st=aParam(O,a);if(!out.length||dd(out[out.length-1],st)>1e-6)out.push(st);for(let k=Math.floor(a)+1;k<b;k++)if(k>a)out.push(O[k]);out.push(aParam(O,b))}
+    if(ch&&out.length>2&&dd(out[0],out[out.length-1])<1e-6)out.pop();
+    if(out.length<2)return null;return fattaEnt(Object.assign({},r,{g:Object.assign({},r.g,{p:out.flat()})}))}
+  let ultimaD=0;function pezziOrig(e){const P=[];primDi(e).forEach(q=>{if(q.s){if(!P.length||dd(P[P.length-1],[q.s[0],q.s[1]])>1e-9)P.push([q.s[0],q.s[1]]);P.push([q.s[2],q.s[3]])}
+      else{const [cx,cy,r,a0,a1]=q.c,A0=a0==null?0:a0,A1=a1==null?Math.PI*2:a1,n=Math.max(8,Math.ceil(Math.abs(A1-A0)/0.05));for(let i=0;i<=n;i++){const a=A0+(A1-A0)*i/n;P.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}}});
+    return {P,d:ultimaD}}
+  const _off=offsetE;offsetE=function(e,d,P){ultimaD=d;
+    if(e.k==='curva'||e.k==='spline'){const mk=(k,g)=>{const o={id:nuovoId('cad'),k,g:arrotondaG(g),l:e.l,t:Date.now()};if(e.col)o.col=e.col;if(e.st)o.st=e.st;return fattaEnt(o)};
+      try{const r=offsetCurva(e,d,P,mk);if(r)return r}catch(err){console.warn('offset',err)}}
+    const r=_off(e,d,P);if(e.k==='poli'){try{return pulisciPoli(e,r)}catch(err){return r}}return r};
+  /* Semplifica: fewest passing points within 0.1 mm */
+  function semplificaE(e){const P=densa(e),ch=!!e.g.ch;if(P.length<3)return null;const GP=griglia(P,Math.max(1e-3,TOL*20));
+    if(e.k==='spline'){/* remove, one at a time, the passing point whose absence changes the curve least, while it stays within 0.1 mm */
+      let f=coppie(e.g.f);if(ch&&f.length>1&&dd(f[0],f[f.length-1])<1e-9)f.pop();const n0=f.length;if(n0<3)return null;
+      const pezzo=(g,i0,i1)=>{const sg=splineBez(g.flat(),ch),o=[];for(let k=Math.max(0,i0);k<=Math.min(sg.length-1,i1);k++){const q=sg[k];if(!o.length)o.push(q[0],q[1]);bezAppiattisci(q,TOL/10,o)}return coppie(o)};
+      const costo=(g,i)=>{if(!ch&&(i===0||i===g.length-1))return Infinity;const h=g.slice(0,i).concat(g.slice(i+1)),m=h.length;if(m<(ch?3:2))return Infinity;
+        const loc=pezzo(h,i-3,i+1);let w=0;for(const q of loc){const d=distG(GP,q,TOL*40);if(d>w)w=d;if(w>TOL)return w}
+        /* and the original near the point stays on the new curve */
+        if(loc.length>1){const GL=griglia(loc,Math.max(1e-3,TOL*20)),a0=g[Math.max(0,i-1)],a1=g[Math.min(g.length-1,i+1)];const s0=piede(P,a0).s,s1=piede(P,a1).s;
+          for(let k=Math.floor(Math.min(s0,s1));k<=Math.ceil(Math.max(s0,s1))&&k<P.length;k++){const d=distG(GL,P[k],TOL*40);if(d>w)w=d;if(w>TOL)return w}}
+        return w};
+      for(let it=0;it<n0;it++){let bi=-1,bc=TOL;for(let i=0;i<f.length;i++){const c=costo(f,i);if(c<=bc){bc=c;bi=i}}if(bi<0)break;f.splice(bi,1)}
+      /* the same form as a Bézier curve often needs far fewer points: the fewer wins */
+      const I=[0,P.length-1];I.angoli=new Set();const segs=bezSuAncore(P,I,ch),nb=segs.length+(ch?0:1);
+      if(nb<f.length&&nb<n0){const g={p:bezPunti(segs)};if(ch)g.ch=true;return {k:'curva',g}}
+      if(f.length>=n0)return null;return ch?{k:'spline',g:{f:f.flat(),ch:true}}:{k:'spline',g:{f:f.flat()}}}
+    /* Bézier curve: corners stay corners, the rest is fitted again with the fewest anchors */
+    const an=coppie(e.g.p),idx=[0,P.length-1],ang=new Set();for(let i=3;i<an.length-1;i+=3){const t1=nrm(sub(an[i],an[i-1])),t2=nrm(sub(an[i+1],an[i]));if(dot(t1,t2)<Math.cos(10*Math.PI/180)){const k=Math.round(piede(P,an[i]).s);idx.push(k);ang.add(k)}}
+    const I=[...new Set(idx)].sort((a,b)=>a-b);I.angoli=ang;const segs=bezSuAncore(P,I,ch);
+    if(segs.length>=Math.floor((an.length-1)/3))return null;const g={p:bezPunti(segs)};if(ch)g.ch=true;return {k:'curva',g}}
+  window.__gestoOF={bez:e=>{const P=densa(e),I=[0,P.length-1];I.angoli=new Set();return bezSuAncore(P,I,false).length+1},tol:v=>{TOL=v},offsetPulito,semplificaE,adatta,offset:(...a)=>offsetE(...a),poly:e=>polyCurva(e)};
+  const nPunti=e=>e.k==='spline'?e.g.f.length>>1:Math.floor((e.g.p.length/2-1)/3)+1;
+  const _rp=rendiPP;rendiPP=function(...a){const v=_rp(...a);try{if(pp.hidden)return v;const es=selEnts().filter(e=>e.k==='spline'||e.k==='curva');if(!es.length)return v;
+    const sz=document.createElement('div');sz.className='sez';sz.textContent='Curva';pp.appendChild(sz);
+    const r=document.createElement('div');r.className='pr';const k=document.createElement('span');k.className='k';k.textContent='Punti';const n=document.createElement('span');n.className='num';n.textContent=String(es.reduce((s,e)=>s+nPunti(e),0));
+    const b=document.createElement('button');b.type='button';b.className='pb';b.textContent='Semplifica';b.title='Il minimo dei punti che conserva la forma entro 0,1 mm';
+    b.onclick=()=>{const addL=[],del=[];let prima=0,dopo=0;es.forEach(e=>{const g=semplificaE(e);prima+=nPunti(e);if(!g){dopo+=nPunti(e);return}const o=fattaEnt(Object.assign({},e,{k:g.k,g:arrotondaG(g.g)}));delete o._poly;addL.push(o);del.push(e);dopo+=nPunti(o)});
+      if(addL.length){esegui({add:addL,del});avviso('Punti: da '+prima+' a '+dopo)}else avviso('Già al minimo dei punti')};
+    r.append(k,n,b);pp.appendChild(r);if(typeof pnPieghe==='function')pnPieghe(pp)}catch(err){console.warn(err)}return v};
+})();
+/* AN7 Leaving the layout, the model comes back alone: the panel of the export that served the layout closes.
+   When the export is opened in the model it stands like the other panels on the left: 8 px from the tools, on the
+   top line, ending 10 px above the north disc.
+   VS4 The chips of «Che cosa esce» show what goes out with the thin outline of the ink, never white on white. */
+(()=>{const st=document.createElement('style');st.textContent=
+  '@media (min-width:721px){body:not(.mancino):not(.impagina) #pEsporta{left:calc(var(--LL) + 60px)!important;right:auto!important;top:var(--TL)!important;max-height:calc(100% - var(--TL) - var(--LL) - 57px)!important}}'+
+  '.tvis .chip{border:1px solid var(--hair)!important;color:var(--fg)!important;background:transparent!important;padding:4px 10px!important}'+
+  '.tvis .chip[aria-pressed="true"]{box-shadow:inset 0 0 0 1.5px var(--fg);border-color:transparent!important;text-decoration:none;opacity:1}'+
+  '.tvis .chip[aria-pressed="false"]{color:var(--muted)!important;text-decoration:line-through;opacity:.8}';
+  document.head.appendChild(st);
+  let era=document.body.classList.contains('impagina');
+  new MutationObserver(()=>{const ora=document.body.classList.contains('impagina');if(era&&!ora&&!$('pEsporta').hidden)pannello(null);era=ora}).observe(document.body,{attributes:true,attributeFilter:['class']});
+})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
