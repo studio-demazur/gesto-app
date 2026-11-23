@@ -8937,10 +8937,13 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
 /* ---------- 87. The logo alone in its circle; the chosen tool outlined (owner, 23.11.2026) ----------
    UI3 (revised) When the tools are hidden only the logo shows, in its circle with a slightly stronger ring; a tap brings
        the whole panel in from the side, the space of the logo included, and takes it away again.
+   In the light theme the logo is a petrol G with a petrol ring on a white disc; in the dark theme a white G on the petrol disc.
    VS4 (revised for Gesto) The chosen tool is outlined, not filled: the other tools have no outline, so the outline alone marks it. */
 (()=>{const st=document.createElement('style');st.textContent=
-  ':root{--anello:rgba(30,63,76,.45)}:root[data-theme="dark"]{--anello:rgba(252,248,244,.55)}'+
-  '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--anello:rgba(252,248,244,.55)}}'+
+  /* light theme: petrol G and petrol ring on a white disc; dark theme: white G and light ring on the petrol disc */
+  ':root{--anello:#264E5D;--logoBg:#FFFFFF;--logoFg:#264E5D}:root[data-theme="dark"]{--anello:rgba(252,248,244,.55);--logoBg:#1E3F4C;--logoFg:#FFFFFF}'+
+  '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--anello:rgba(252,248,244,.55);--logoBg:#1E3F4C;--logoFg:#FFFFFF}}'+
+  '#logo svg>circle{fill:var(--logoBg)}#logo svg .sigla path,#logo svg .sigla circle{fill:var(--logoFg)}#logo svg .sigla path{stroke:var(--logoFg)}'+
   '#logo svg{box-shadow:0 0 0 2px var(--anello)!important}'+
   '#logoPan{transition:transform .18s ease,opacity .18s ease,border-radius .18s,border-color .18s}'+
   'body.senzaStr #logoPan{transform:translateX(calc(-100% - 16px));opacity:0;pointer-events:none}'+
