@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.88';
+const VERSIONE_GESTO='0.89';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8989,7 +8989,7 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
        The other panels keep the same 17 px from the edges: Proprietà from the right and the top, every panel from the
        bottom. Under the window keys of the installed app Proprietà starts below them, the only part that cannot go up.
        The pen strip under the tools ends 10 px above the north disc, so the disc is never under it.
-   AN3 A tap on the logo, showing or hiding the tools, turns the logo once around itself. */
+   AN3 A tap on the logo, showing or hiding the tools, turns the logo once around itself, counter-clockwise, the way the arrow under the bar of the G points. */
 (()=>{const st=document.createElement('style');st.textContent=
   /* the line and the edge of the left column, 17 px in every mode on the computer; the right side keeps --T under the window keys; the phone keeps its layout */
   ':root{--TL:17px;--LL:17px}@media not (display-mode: window-controls-overlay){:root{--T:17px}}'+
@@ -9016,7 +9016,7 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
   /* AN3: one full turn, 0.7 s, on every change of the tools; none for whoever asked the system for less motion */
   const svg=document.querySelector('#logo svg');let era=document.body.classList.contains('senzaStr');
   const giro=()=>{if(!svg||!svg.animate||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-    svg.animate([{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:700,easing:'cubic-bezier(.45,.05,.25,1)'})};
+    svg.animate([{transform:'rotate(0deg)'},{transform:'rotate(-360deg)'}],{duration:700,easing:'cubic-bezier(.45,.05,.25,1)'})};
   new MutationObserver(()=>{const ora=document.body.classList.contains('senzaStr');if(ora!==era){era=ora;giro()}}).observe(document.body,{attributes:true,attributeFilter:['class']});
   /* the pen strip ends above the north disc when they share the left side (same rule as phase 76, with the disc kept free) */
   const _posPL89=posPennaLato;
