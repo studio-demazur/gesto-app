@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.78';
+const VERSIONE_GESTO='0.79';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8584,6 +8584,108 @@ function gcNuovoCantiere(){if(!IMPAG)entraImpag();const L=dcCartelle().slice(),i
   b.innerHTML=SV('<path d="M4 20h16"/><path d="M6 20v-6a6 6 0 0 1 12 0v6"/><path d="M12 8V5"/><path d="M9 14h6"/>');b.onclick=()=>gcNuovoCantiere();pm.insertBefore(b,pm.children[1]||null)})();
 try{COMANDI.push({k:'newsite',n:'Nuovo cantiere',en:'New building site',ab:'CNT',f:()=>gcNuovoCantiere(),al:['cantiere','nuovo cantiere','cartelle tipo']})}catch(e){}
 window.__gestoGC={site:()=>gcNuovoCantiere(),standard:()=>GC_CARTELLE.slice()};
+
+/* ---------- 80. Revisions of a document (owner, 23.11.2026) ----------
+   GC4a The original loaded never changes: fillings, ink and signatures are layers over the PDF; «Esporta l'originale» gives it back identical.
+   GC4b «Emetti revisione» fixes the state of the document in a numbered revision (00, 01, 02…) with its date; an issued revision
+        is never changed again, the work goes on in the working copy.
+   GC4c «Rendi vigente» brings a revision into «00 - VIGENTI» of its building site and moves to «Superati» the revision of the same
+        document that was in force before.
+   GC4d In the tree the revisions are gathered under their document, the one in force recognisable at first sight.
+   Data: a revision is a document of its own (pdf.d) on the same original (pdf.a), with pdf.fam (the working document), pdf.rev,
+   pdf.em (date of issue), pdf.ro (frozen), pdf.vig (in force), pdf.sup (superseded). The PDF is kept once in the file. */
+const RV={copia:false};
+const rvDocs=f=>{const m=new Map();ordineTav().forEach(t=>{if(t.pdf&&t.pdf.fam===f&&t.pdf.d!==f){if(!m.has(t.pdf.d))m.set(t.pdf.d,[]);m.get(t.pdf.d).push(t)}});
+  return [...m.values()].sort((a,b)=>(a[0].pdf.rev||0)-(b[0].pdf.rev||0))};
+const rvNum=n=>String(n).padStart(2,'0');
+const rvData=s=>{try{return new Date(s).toLocaleDateString('it-IT')}catch(e){return ''}};
+const rvFrozen=tvId=>{const t=tvId&&MOS.tavole.get(tvId);return !!(t&&t.pdf&&t.pdf.ro)};
+const rvBase=t=>(t.pdf.nmBase||t.pdf.nm||'Documento');
+/* the store answers a moment later: wait until what was written is visible before moving it (moving writes the sheets again) */
+const rvAttendi=c=>new Promise(ok=>{const t0=Date.now();(function g(){if(c()||Date.now()-t0>4000)ok();else setTimeout(g,40)})()});
+function rvAvviso(){avviso('Una revisione emessa non si modifica: si lavora sulla copia di lavoro')}
+
+/* ---- GC4b: issue ---- */
+function rvEmetti(d){const ts=dcDocTs(d);if(!ts.length)return;const t0=ts[0];if(t0.pdf.ro){rvAvviso();return}
+  const fam=t0.pdf.fam||d,n=rvDocs(fam).length,nd=idCasuale('pd'),em=new Date().toISOString(),base=rvBase(t0),nm=base+' · rev. '+rvNum(n);
+  const mappa=new Map(),nuovi=[];RV.copia=true;
+  try{ts.forEach(t=>{const id=nuovoId('tavole');mappa.set(t.id,id);
+      const pdf=Object.assign({},t.pdf,{d:nd,fam,rev:n,em,ro:1,vig:0,sup:0,nm,nmBase:base,fl:(t.pdf.fl||[]).map(f=>Object.assign({},f,{ro:1})),v:Object.assign({},t.pdf.v||{}),im:(t.pdf.im||[]).map(q=>Object.assign({},q))});
+      const c=Object.assign({},t,{id,pdf,nome:nm+(t.pdf.n>1?' · p. '+t.pdf.p:'')});delete c._r;salva('tavole',id,'set',Object.assign(c,{_r:'tavole'}));nuovi.push(id)});
+    /* the ink of the pages goes with the revision */
+    ['tratti','cad'].forEach(r=>[...MOS[r].values()].forEach(o=>{if(!o.tv||!mappa.has(o.tv))return;const c=Object.assign({},o,{id:nuovoId(r),tv:mappa.get(o.tv)});if(r==='cad')fattaEnt(c);salva(r,c.id,'set',c)}));
+    if(t0.pdf.fam!==fam||!t0.pdf.nmBase)ts.forEach(t=>salva('tavole',t.id,'set',Object.assign({},t,{pdf:Object.assign({},t.pdf,{fam,nmBase:base})})));
+  }finally{RV.copia=false}
+  ricomponi();rvAttendi(()=>nuovi.every(id=>MOS.tavole.has(id))&&ts.every(t=>{const q=MOS.tavole.get(t.id);return q&&q.pdf&&q.pdf.fam===fam})).then(()=>{dcSposta(nuovi,dcDir(t0)||'',null);DC.aperti.add(d);dcChiave='';rendiCol();avviso('Emessa «'+nm+'» del '+rvData(em)+'. Si continua a lavorare sulla copia di lavoro.')});return nd}
+
+/* ---- GC4c: in force ---- */
+function rvCantiere(dir){/* the folder of the site: the nearest one, going up, that holds «00 - VIGENTI»; otherwise the top one */
+  const C=dcCartelle(),by=id=>C.find(c=>c.id===id);let p=dir,top=dir;
+  while(p){if(C.some(c=>c.p===p&&/^00\s*-\s*vigenti$/i.test(c.nome.trim())))return p;top=p;const c=by(p);p=c&&dcEsiste(c.p)?c.p:''}return top||''}
+function rvCartella(sito,nome,re){const C=dcCartelle();let c=C.find(x=>(x.p||'')===(sito||'')&&re.test(x.nome.trim()));
+  if(!c){c={id:idCasuale('cr'),nome};if(sito)c.p=sito;dcSalvaCartelle(C.concat([c]))}return c.id}
+function rvVigente(d){const ts=dcDocTs(d);if(!ts.length||!ts[0].pdf.ro){avviso('Prima emetti una revisione');return}
+  const fam=ts[0].pdf.fam,work=dcDocTs(fam)[0],sito=rvCantiere(dcDir(work||ts[0])||'');
+  const vig=rvCartella(sito,'00 - VIGENTI',/^00\s*-\s*vigenti$/i),sup=rvCartella(sito,'Superati',/^superati$/i);
+  /* flags and folder are written together, so a later reordering cannot bring back an old state */
+  const scrivi=(t,f,dir)=>salva('tavole',t.id,'set',Object.assign({},t,{dir,pdf:Object.assign({},t.pdf,f)})),prima=[];
+  rvDocs(fam).forEach(L=>{const q=L[0].pdf;if(q.d===d||!q.vig)return;L.forEach(t=>{scrivi(t,{vig:0,sup:1},sup);prima.push(t.id)})});
+  ts.forEach(t=>scrivi(t,{vig:1,sup:0},vig));
+  rvAttendi(()=>ts.every(t=>{const q=MOS.tavole.get(t.id);return q&&q.pdf.vig&&q.dir===vig})&&prima.every(id=>{const q=MOS.tavole.get(id);return q&&q.pdf.sup&&q.dir===sup})).then(()=>{
+    if(prima.length)dcSposta(prima,sup,null);dcSposta(ts.map(t=>t.id),vig,null);DC.chiuse.delete(vig);dcChiave='';rendiCol();avviso('«'+ts[0].pdf.nm+'» è vigente, in «00 - VIGENTI»')})}
+
+/* ---- GC4a: the original, as it was loaded ---- */
+async function rvOriginale(d){const t=dcDocTs(d)[0];if(!t)return;try{const dati=await datiSfondo({a:t.pdf.a}),b=daData(dati);
+    await salvaFile(rvBase(t).replace(/[\\\/:*?"<>|]+/g,' ').trim()+' - originale.pdf',new Blob([b],{type:'application/pdf'}))}catch(e){console.warn(e);avviso('L’originale non si è potuto leggere')}}
+
+/* ---- a frozen revision takes no ink, no signature, no stamp ---- */
+{const _e=esegui;esegui=function(cmd,...a){if(!RV.copia&&cmd&&[...(cmd.add||[]),...(cmd.del||[])].some(o=>o&&rvFrozen(o.tv))){rvAvviso();ricomponi();return}return _e(cmd,...a)}}
+{const _s=salva;salva=function(r,id,op,obj){if(!RV.copia&&(r==='tratti'||r==='cad')){const o=op==='del'?(MOS[r].get(id)||obj):obj;if(o&&rvFrozen(o.tv)){rvAvviso();setTimeout(ricomponi,0);return Promise.resolve()}}return _s.apply(this,arguments)}}
+{const _p=pfPosa;pfPosa=function(...a){const t=IMPAG&&tavAtt();if(t&&t.pdf&&t.pdf.ro){rvAvviso();return}return _p(...a)}}
+
+/* ---- menus: the document and the page ---- */
+dcMenuDoc=function(d,el){const ts=dcDocTs(d),q=ts[0]&&ts[0].pdf;if(!q)return;const v=[];
+  if(q.ro){if(!q.vig)v.push(['Rendi vigente',()=>rvVigente(d)]);v.push(['Esporta il documento',()=>pfEsporta(ts.map(t=>t.id))],['Esporta l’originale',()=>rvOriginale(d)],['Togli la revisione',()=>dcTogliDoc(d),true])}
+  else{v.push(['Rinomina',()=>{DC.rinomina='d:'+d;dcChiave='';rendiCol()}],['Emetti revisione',()=>rvEmetti(d)],['Esporta il documento',()=>pfEsporta(ts.map(t=>t.id))],['Esporta l’originale',()=>rvOriginale(d)]);
+    if(ts.length>1)v.push(['Separa le pagine',()=>dcSepara(d)]);v.push(['Togli il documento',()=>dcTogliDoc(d),true])}
+  dcMenu(el,v)};
+{const _pp=prPdfPagina;prPdfPagina=function(b,t){if(!t.pdf.ro){_pp(b,t);const r=document.createElement('div');r.className='pr';r.appendChild(bottone('Emetti revisione',()=>rvEmetti(t.pdf.d)));
+      const ex=[...dcPag.querySelectorAll('.pr')].pop();dcPag.insertBefore(r,ex||null);return}
+  const sz=document.createElement('div');sz.className='sez';sz.textContent='Revisione '+rvNum(t.pdf.rev||0);dcPag.appendChild(sz);
+  const n=document.createElement('div');n.className='nota';n.textContent='Emessa il '+rvData(t.pdf.em)+(t.pdf.vig?' · vigente':t.pdf.sup?' · superata':'')+'. Non si modifica.';dcPag.appendChild(n);
+  const riga=(...el)=>{const r=document.createElement('div');r.className='pr';el.forEach(x=>r.appendChild(x));dcPag.appendChild(r)};
+  if(!t.pdf.vig)riga(bottone('Rendi vigente',()=>rvVigente(t.pdf.d),'prim'));
+  riga(bottone('Esporta la revisione',()=>pfEsporta(dcDocTs(t.pdf.d).map(x=>x.id))));
+  const w=dcDocTs(t.pdf.fam)[0];if(w)riga(bottone('Torna alla copia di lavoro',()=>vaiTavola(w.id)))}}
+{const _pr=prPdfProp;prPdfProp=function(B,t){_pr(B,t);const q=t.pdf;const rs=rvDocs(q.fam||q.d);
+  if(q.ro){prSez(B,'Revisione');prRiga(B,'Numero',rvNum(q.rev||0));prRiga(B,'Emessa',rvData(q.em));prRiga(B,'Stato',q.vig?'vigente':q.sup?'superata':'emessa')}
+  else if(rs.length){prSez(B,'Revisioni');rs.forEach(L=>{const z=L[0].pdf;prRiga(B,'rev. '+rvNum(z.rev||0),rvData(z.em)+(z.vig?' · vigente':z.sup?' · superata':''))})}
+  pnPiegheP()}}
+
+/* ---- GC4d: the tree ---- */
+const rvSt=document.createElement('style');rvSt.textContent=
+  '.dcRevL{display:flex;flex-direction:column;gap:2px;margin:-4px 0 2px 14px;padding-left:8px;border-left:1px solid var(--line)}'+
+  '.dcRevR{display:flex;align-items:center;gap:6px;min-height:24px;padding:0 6px;border-radius:5px;cursor:pointer;font:400 11.5px var(--sans);color:var(--muted)}'+
+  '.dcRevR:hover{background:var(--on)}.dcRevR.att{color:var(--fg);box-shadow:inset 0 0 0 1px var(--acc)}.dcRevR b{font-weight:600;color:var(--fg)}'+
+  '.dcRevR .vig{margin-left:auto;padding:1px 6px;border-radius:8px;background:#264E5D;color:#fff;font-size:10px;letter-spacing:.02em}'+
+  ':root[data-theme="dark"] .dcRevR .vig{background:#3D6B7D}.dcRevR .sup{margin-left:auto;font-size:10px}'+
+  '.dcDh.rvV .dcC{padding:1px 6px;border-radius:8px;background:#264E5D;color:#fff!important;font:500 10px var(--sans)!important}:root[data-theme="dark"] .dcDh.rvV .dcC{background:#3D6B7D}';
+document.head.appendChild(rvSt);
+function rvAlbero(){const L=$('dcL');if(!L)return;L.querySelectorAll('.dcRevL').forEach(x=>x.remove());
+  L.querySelectorAll('.dcDh').forEach(h=>{const ts=dcDocTs(h.dataset.d),q=ts[0]&&ts[0].pdf;if(!q)return;
+    if(q.ro){h.classList.toggle('rvV',!!q.vig);if(q.vig){const c=h.querySelector('.dcC');if(c){c.textContent='vigente';c.title=ts.length+(ts.length===1?' pagina':' pagine')}}const w=q.fam&&L.querySelector('.dcDh[data-d="'+q.fam+'"]');
+      /* a revision next to its working copy shows only in the list under it */
+      if(w&&w.parentNode===h.parentNode){h.style.display='none';const k=h.nextElementSibling;if(k&&k.classList.contains('pag'))k.style.display='none'}return}
+    const rs=rvDocs(q.fam||q.d);if(!rs.length)return;const box=document.createElement('div');box.className='dcRevL';
+    rs.forEach(R=>{const z=R[0].pdf,r=document.createElement('div');r.className='dcRevR'+(R.some(t=>t.id===S.tav)?' att':'');
+      r.innerHTML='<b></b><span></span>'+(z.vig?'<i class="vig">vigente</i>':z.sup?'<i class="sup">superata</i>':'');r.querySelector('b').textContent='rev. '+rvNum(z.rev||0);r.querySelector('span').textContent=rvData(z.em);
+      r.title=z.nm;r.onclick=e=>{e.stopPropagation();vaiTavola(R[0].id)};box.appendChild(r)});
+    let a=h.nextElementSibling&&h.nextElementSibling.classList.contains('pag')?h.nextElementSibling:h;a.after(box)})}
+{const _rc=rendiCol;rendiCol=function(...a){const v=_rc(...a);try{rvAlbero()}catch(e){console.warn(e)}return v}}
+try{COMANDI.push({k:'issue',n:'Emetti revisione',en:'Issue revision',ab:'REV',f:()=>{const t=IMPAG&&tavAtt();if(t&&t.pdf)rvEmetti(t.pdf.d);else avviso('Apri prima un documento')},al:['revisione','emetti']})}catch(e){}
+window.__gestoRV={issue:d=>rvEmetti(d),inForce:d=>rvVigente(d),original:d=>rvOriginale(d),revs:f=>rvDocs(f).map(L=>Object.assign({d:L[0].pdf.d,dir:L[0].dir||null},(({rev,em,ro,vig,sup,nm})=>({rev,em,ro,vig,sup,nm}))(L[0].pdf)))};
+/* a page reached from the tree shows its fields at once, not at the next movement of the view */
+{const _v=vaiTavola;vaiTavola=function(...a){const r=_v(...a);setTimeout(()=>{try{pfSync()}catch(e){}},60);return r}}
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
