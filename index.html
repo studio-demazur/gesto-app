@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.96';
+const VERSIONE_GESTO='0.97';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9437,6 +9437,78 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
     else{R.push({v:0},{v:G.H},{v:G.H/2,c:1});if(G.ch>0)R.push({v:G.cy},{v:G.cy+G.ch},{v:G.cy-gapT(t),g:1})}
     if(G.mg){const m=G.mg;if(asse==='x')R.push({v:m.l},{v:G.W-m.r});else R.push({v:m.t},{v:G.H-m.b})}return R};
   window.__gestoIM={geo:()=>{const t=tavAtt();return t?tavGeo(t):null},tav:()=>tavAtt(),fin:()=>{const t=tavAtt();return t?finCarta(t):[]},rif:(asse)=>{const t=tavAtt();return t?riferimenti(t,tavGeo(t),new Set(),asse).map(r=>r.v):[]}};
+})();
+
+/* ---------- 97. The cartiglio: placed where it is wanted, your own, written in place, its own lines (owner, 23.11.2026) ----------
+   IM5 «Posa cartiglio»: a model from the list follows the pen and settles against the nearest side inside the margins
+       (a column on the left or the right; a corner block in one of the four corners); a tap fixes it. «Togli» removes it.
+   IM6 «Nuovo cartiglio»: a model built from the Studio blocks (order, side, width) and saved in the list.
+   IM7 A double tap on a field of the cartiglio opens it for writing in place: keyboard, or the pen, which Windows and
+       Edge turn into text inside the field.
+   IM8 The border of the cartiglio has its own weight and colour, set in its section of Proprietà. */
+(()=>{
+  const COLF={nero:'#1A1A1A',scuro:'#1E3F4C',petrolio:'#264E5D',grigio:'#7A8C93',terracotta:'#AC7853'};
+  const mg8={l:8,r:8,t:8,b:8};
+  /* the geometry with a side: the column left or right, the corner block in any corner */
+  const _geo=tavGeo;tavGeo=function(t){const G=_geo(t);if(!t||!t.mgp||!G||!G.cw)return G;const m=G.mg,s=t.cside||'',W=G.W,H=G.H,G2=G.G2;
+    if(G.mod.pos==='lato'&&s==='l'){G.cx=G.sx=m.l;G.ax0=m.l+G.cw+G2}
+    else if(G.mod.pos==='angolo'&&s){const L=s.includes('l'),T=s.includes('t');G.cx=G.sx=L?m.l:W-m.r-G.cw;G.cy=T?m.t:H-m.b-G.ch;if(T)G.ay0=m.t+G.ch+G2}
+    const c=t.c||[0,0],sc=G.sc;G.mx0=c[0]-G.aw*sc/2;G.my0=c[1]-G.ah*sc/2;return G};
+  /* IM8: the border of the cartiglio */
+  const _cor=window.cornicePdf;window.cornicePdf=function(doc,G,t){if(!t||!t.mgp||!(G.cw>0))return _cor(doc,G,t);
+    const keep=G.cw;G.cw=0;try{_cor(doc,G,t)}finally{G.cw=keep}const b=t.cartB||{};if(b.on===false)return;doc.setLineDashPattern([],0);doc.setDrawColor(COLF[b.c]||COLF.scuro);doc.setLineWidth(+b.lw||0.5);doc.rect(G.cx,G.cy,G.cw,G.ch,'S')};
+  const tvMod=p=>{const t=tavAtt();if(!t)return;if(!t.mgp){p.mgp=p.mgp||mg8;if(!t.cor)p.cor={on:true,lw:0.7,c:'scuro'}}tavSet(p);if(typeof BG!=='undefined')BG.key='';rendiTavole();richiedi()};
+  /* IM5: placing */
+  let POSA=null,lato=null;
+  const lati=(m,P,G)=>{const sx=P[0]<G.W/2?'l':'r';if(m.pos==='angolo')return (P[1]<G.H/2?'t':'b')+sx;return sx};
+  function iniziaPosa(id){POSA=id;lato=null;avviso('Muovi la penna verso il lato del foglio e tocca per posare il cartiglio · Esc annulla');richiedi('sopra')}
+  const area=$('cSopra');
+  area.addEventListener('pointermove',e=>{if(!POSA||!IMPAG)return;const t=tavAtt();if(!t)return;const P=s2w(...pos(e)),m=modelliCart().find(q=>q.id===POSA);if(!m)return;
+    const G=tavGeo(Object.assign({},t,{mod:POSA,mgp:t.mgp||mg8}));const s=lati(m,P,G);if(s!==lato){lato=s;richiedi('sopra')}},true);
+  area.addEventListener('pointerdown',e=>{if(!POSA||!IMPAG)return;e.preventDefault();e.stopImmediatePropagation();const t=tavAtt();if(!t)return;const P=s2w(...pos(e)),m=modelliCart().find(q=>q.id===POSA);if(!m){POSA=null;return}
+    const G=tavGeo(Object.assign({},t,{mod:POSA,mgp:t.mgp||mg8})),s=lati(m,P,G),id=POSA;POSA=null;lato=null;tvMod({mod:id,cside:s})},true);
+  ['pointerup','click'].forEach(ev=>area.addEventListener(ev,e=>{if(POSA&&IMPAG){e.stopImmediatePropagation()}},true));
+  document.addEventListener('keydown',e=>{if(POSA&&e.key==='Escape'){e.preventDefault();e.stopPropagation();POSA=null;lato=null;richiedi('sopra')}},true);
+  const _dt=disegnaTavola;disegnaTavola=function(x){_dt(x);if(!IMPAG||!POSA||!lato)return;const t=tavAtt();if(!t)return;
+    const G=tavGeo(Object.assign({},t,{mod:POSA,cside:lato,mgp:t.mgp||mg8}));vista(x);x.save();x.fillStyle='#3D6B7D';x.globalAlpha=.14;x.fillRect(G.cx,G.cy,G.cw,G.ch);x.globalAlpha=1;
+    x.setLineDash([6/V.s,4/V.s]);x.strokeStyle='#3D6B7D';x.lineWidth=1.6/V.s;x.strokeRect(G.cx,G.cy,G.cw,G.ch);x.restore()};
+  /* the section of the cartiglio in Proprietà */
+  const _rt=rendiTavole;rendiTavole=function(...a){const v=_rt(...a);try{sezCart()}catch(e){console.warn(e)}return v};
+  function sezCart(){const B=$('tavB'),t=tavAtt();if(!t||!B)return;const s=B.querySelector('select[aria-label="Modello del cartiglio"]');if(!s||B.querySelector('.imPosa'))return;
+    const riga=s.closest('.pr'),m=modelloDi(t),ha=m.pos!=='nessuno';
+    /* the list chooses what to place; «Nessun cartiglio» takes it away */
+    s.onchange=()=>{const v=s.value;if(v==='nessuno'){tvMod({mod:'nessuno'});return}s.value=t.mod||'nessuno';iniziaPosa(v)};
+    const mk=(et,...els)=>{const r=document.createElement('div');r.className='pr';const k=document.createElement('span');k.className='k';k.textContent=et;r.appendChild(k);els.forEach(e=>r.appendChild(e));return r};
+    const b=(n,fn,cl)=>{const x=bottone(n,fn);if(cl)x.classList.add(cl);return x};
+    const r1=mk('Posa',b(ha?'Sposta':'Posa cartiglio',()=>iniziaPosa(ha?m.id:(foglio().cartDef||'laterale')),'prim'));if(ha)r1.appendChild(b('Togli',()=>tvMod({mod:'nessuno'})));
+    r1.appendChild(b('Nuovo cartiglio',()=>{const base=MODELLI_BASE.find(q=>q.id==='laterale');nuovoModello(base);const L=foglio().cartigli||[],nu=L[L.length-1];if(nu)modAgg(nu.id,q=>{q.nome='Cartiglio '+(L.length)})}));
+    r1.classList.add('imPosa');riga.after(r1);
+    if(ha){const bb=t.cartB||{on:true,lw:0.5,c:'scuro'},set=p=>tvMod({cartB:Object.assign({},bb,p)});
+      const sc=(opz,val,fn,et)=>{const x=scelta(opz,val,fn);x.className='cs';x.setAttribute('aria-label',et);return x};
+      const r2=mk('Bordo',sc(PESI.concat([1]).map(p=>[String(p),fmt(p,2)+' mm']),String(bb.lw),v=>set({lw:+v}),'Spessore del bordo del cartiglio'),sc([['scuro','Petrolio scuro'],['petrolio','Petrolio'],['nero','Nero'],['grigio','Grigio'],['terracotta','Terracotta']],bb.c||'scuro',v=>set({c:v}),'Colore del bordo del cartiglio'));
+      r1.after(r2)}}
+  /* IM7: a double tap on a field writes in place */
+  const CAMPI={opera:[['opera','Opera']],elaborato:[['elab','Elaborato'],['cont','Contenuto']],oggetto:[['ogg','Oggetto']],dati:[['comm','Committente'],['prog','Progetto']],codice:[['cod','Codice']],revisioni:[['rev','Revisione'],['data','Data'],['red','Redazione']]};
+  function zone(t,G){const m=G.mod,Z=[];if(!G.cw)return Z;let y=G.cy;const w=G.cw;
+    m.alto.forEach(k=>{if(typeof attivo==='function'&&!attivo(t,k))return;const h=altBlocco(k,t,w,m.leg);const f=CAMPI[k];if(f){const hh=h/f.length;f.forEach(([c,n],i)=>Z.push({c,n,x:G.cx,y:y+i*hh,w,h:hh}))}y+=h});
+    const altB={dati:6+2*5.5,firme:6+27,revisioni:17,codice:w<80?18.6:9.3};let yb=G.cy+G.ch;[...m.basso].reverse().forEach(k=>{if(typeof attivo==='function'&&!attivo(t,k))return;const h=altB[k]||altBlocco(k,t,w,m.leg);yb-=h;const f=CAMPI[k];if(f){const hh=h/f.length;f.forEach(([c,n],i)=>Z.push({c,n,x:G.cx,y:yb+i*hh,w,h:hh}))}});return Z}
+  let ed=null;
+  function apriCampo(z){chiudiCampo();const t=tavAtt();if(!t)return;const a=w2s(z.x,z.y),b=w2s(z.x+z.w,z.y+z.h),r=$('wrap').getBoundingClientRect();
+    const ta=document.createElement('textarea');ta.className='imCampo';ta.value=(t.cart||{})[z.c]||'';ta.setAttribute('aria-label',z.n);ta.placeholder=z.n;
+    Object.assign(ta.style,{left:(r.left+Math.min(a[0],b[0]))+'px',top:(r.top+Math.min(a[1],b[1]))+'px',width:Math.max(140,Math.abs(b[0]-a[0]))+'px',height:Math.max(34,Math.abs(b[1]-a[1]))+'px'});
+    const salvaC=()=>{if(!ed)return;const v=ta.value.trim(),k=z.c;ed=null;ta.remove();const t2=tavAtt();if(t2&&((t2.cart||{})[k]||'')!==v){tavSet({cart:{[k]:v}});if(typeof BG!=='undefined')BG.key='';rendiTavole();richiedi()}};
+    ta.onkeydown=e=>{e.stopPropagation();if(e.key==='Escape'){ed=null;ta.remove()}else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();salvaC()}};ta.onblur=salvaC;
+    document.body.appendChild(ta);ed=ta;setTimeout(()=>{ta.focus();ta.select()},0)}
+  function chiudiCampo(){if(ed){const x=ed;ed=null;x.blur&&x.remove()}}
+  area.addEventListener('dblclick',e=>{if(!IMPAG||POSA)return;const t=tavAtt();if(!t)return;const G=tavGeo(t),P=s2w(...pos(e));const z=zone(t,G).find(z=>P[0]>=z.x&&P[0]<=z.x+z.w&&P[1]>=z.y&&P[1]<=z.y+z.h);
+    if(z){e.preventDefault();e.stopImmediatePropagation();apriCampo(z)}},true);
+  /* a double tap with the pen comes as two quick taps */
+  let ult=null;area.addEventListener('pointerup',e=>{if(!IMPAG||POSA||e.pointerType==='mouse')return;const now=performance.now(),p=pos(e);
+    if(ult&&now-ult.t<380&&Math.hypot(p[0]-ult.p[0],p[1]-ult.p[1])<14){const t=tavAtt();if(t){const G=tavGeo(t),P=s2w(...p),z=zone(t,G).find(z=>P[0]>=z.x&&P[0]<=z.x+z.w&&P[1]>=z.y&&P[1]<=z.y+z.h);if(z){ult=null;apriCampo(z);return}}}
+    ult={t:now,p}},true);
+  const st=document.createElement('style');st.textContent='.imCampo{position:fixed;z-index:70;box-sizing:border-box;padding:6px 8px;border:1.5px solid #3D6B7D;border-radius:6px;background:#FFFFFF;color:#1A1A1A;font:400 14px var(--sans);resize:none;box-shadow:0 6px 18px rgba(15,35,44,.18)}';
+  document.head.appendChild(st);
+  window.__gestoCT={fissa:(id,s)=>tvMod({mod:id,cside:s||'r'}),posa:id=>iniziaPosa(id),attiva:()=>POSA,zone:()=>{const t=tavAtt();return t?zone(t,tavGeo(t)):[]},campo:c=>{const t=tavAtt();const z=zone(t,tavGeo(t)).find(q=>q.c===c);if(z)apriCampo(z);return !!z}};
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
