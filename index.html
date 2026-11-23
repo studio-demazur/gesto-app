@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.87';
+const VERSIONE_GESTO='0.88';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8977,6 +8977,62 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
   /* the class sits on the canvas, not on the body: observers of the body class must not wake on every pen move */
   const c=$('cSopra'),seg=e=>{const p=e.pointerType==='pen';if(p!==c.classList.contains('stilo'))c.classList.toggle('stilo',p)};
   if(c){c.addEventListener('pointerover',seg,true);c.addEventListener('pointermove',seg,true)}
+})();
+
+/* ---------- 89. Corners at 15 px also in the installed app; the logo turns once (owner, 23.11.2026) ----------
+   AN2 (revised) In the installed app without title bar the column of the logo starts at the same 10 px line as in
+       the browser: the keys of the window stand only at the top right, so on the left nothing is under them.
+       The logo is 22 px from the left edge and from the top, the north disc 22 px from the left edge and from the bottom.
+       Only what stands on the side of the window keys (Proprietà and the panels) stays under them.
+       Distance from the edges 22 px, about half the diameter of the logo, as in Lab Disegno: the whole left column
+       floats 17 px from the left and from the top, the logo 5 px inside it.
+       The other panels keep the same 17 px from the edges: Proprietà from the right and the top, every panel from the
+       bottom. Under the window keys of the installed app Proprietà starts below them, the only part that cannot go up.
+       The pen strip under the tools ends 10 px above the north disc, so the disc is never under it.
+   AN3 A tap on the logo, showing or hiding the tools, turns the logo once around itself. */
+(()=>{const st=document.createElement('style');st.textContent=
+  /* the line and the edge of the left column, 17 px in every mode on the computer; the right side keeps --T under the window keys; the phone keeps its layout */
+  ':root{--TL:17px;--LL:17px}@media not (display-mode: window-controls-overlay){:root{--T:17px}}'+
+  '@media (min-width:721px){'+
+  'body:not(.mancino) #logoPan,body:not(.mancino) .rail{left:max(var(--LL),env(safe-area-inset-left,0px))!important}'+
+  'body:not(.mancino) #logo{left:calc(var(--LL) + 4px)!important}'+
+  'body:not(.mancino) #impCol,body:not(.mancino) #icApri{left:max(calc(var(--LL) + 60px),calc(env(safe-area-inset-left,0px) + 60px))!important}'+
+  'body:not(.mancino) #logoPan{top:var(--TL)!important}'+
+  'body:not(.mancino) #logo{top:calc(var(--TL) + 4px)!important}'+
+  'body:not(.mancino) .rail{top:calc(var(--TL) + 55px)!important}'+
+  'body:not(.mancino) #impCol,body:not(.mancino) #icApri{top:var(--TL)!important}'+
+  'body:not(.mancino) .pan,body:not(.mancino) #pEsporta{right:max(var(--LL),env(safe-area-inset-right,0px))!important}'+
+  '.pan,#pEsporta,#pp{max-height:calc(100% - var(--T) - var(--LL))!important}body:not(.mancino) #impCol{bottom:var(--LL)!important}'+
+  'body:not(.mancino) .rail{max-height:calc(100% - var(--TL) - 55px - var(--LL) - 57px);overflow-y:auto;overflow-x:hidden;scrollbar-width:none}'+
+  /* a soft fade on the side where more tools wait */
+  '.rail.railGiu::after,.rail.railSu::before{content:"";grid-column:1/-1;position:sticky;height:24px;pointer-events:none;z-index:2}'+
+  '.rail.railGiu::after{bottom:-5px;margin-top:-24px;background:linear-gradient(transparent,var(--panel) 85%)}'+
+  '.rail.railSu::before{top:-5px;margin-bottom:-24px;background:linear-gradient(var(--panel) 15%,transparent)}'+
+  'body:not(.mancino) .lmenu{top:calc(var(--TL) + 2px)!important;left:calc(var(--LL) + 60px)!important}}'+
+  '@media (min-width:721px){#orienta{left:calc(var(--LL) - 16px)!important;bottom:calc(var(--TL) + 2px)!important}}'+
+  /* the strip that moves the window must not take the taps of what now lies over it */
+  '#logoPan,.rail,#impCol,#icApri,.lmenu,.rzH{-webkit-app-region:no-drag;app-region:no-drag}';
+  document.head.appendChild(st);
+  /* AN3: one full turn, 0.7 s, on every change of the tools; none for whoever asked the system for less motion */
+  const svg=document.querySelector('#logo svg');let era=document.body.classList.contains('senzaStr');
+  const giro=()=>{if(!svg||!svg.animate||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    svg.animate([{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:700,easing:'cubic-bezier(.45,.05,.25,1)'})};
+  new MutationObserver(()=>{const ora=document.body.classList.contains('senzaStr');if(ora!==era){era=ora;giro()}}).observe(document.body,{attributes:true,attributeFilter:['class']});
+  /* the pen strip ends above the north disc when they share the left side (same rule as phase 76, with the disc kept free) */
+  const _posPL89=posPennaLato;
+  posPennaLato=function(){if(window.innerWidth<=720||S.mano==='sx')return _posPL89();
+    pstrip.classList.add('sotto');const H=$('wrap').clientHeight,n=orienta.querySelector('path.nord');
+    const B=n?Math.max(10,Math.round(H-n.getBoundingClientRect().top+$('wrap').getBoundingClientRect().top+10)):10;
+    rail0.style.maxHeight='';const rt=rail0.offsetTop,rw=rail0.offsetWidth,l=rail0.offsetLeft;
+    pstrip.style.maxHeight='none';prScorri.style.maxHeight='none';const nat=pstrip.offsetHeight;prScorri.style.maxHeight='';
+    let top=rt+rail0.offsetHeight+8;const min=PR.chiusa?nat:Math.min(nat,150);
+    if(H-B-top<min){rail0.style.maxHeight=Math.max(120,H-B-min-8-rt)+'px';top=rt+rail0.offsetHeight+8}
+    pstrip.style.bottom='';pstrip.style.top=top+'px';pstrip.style.width=rw+'px';pstrip.style.maxHeight=Math.max(30,H-B-top)+'px';
+    pstrip.style.right='';pstrip.style.left=l+'px';prAggTesta();requestAnimationFrame(prFade);erPosCol()};
+  if(!pstrip.hidden)setTimeout(posPennaLato,0);
+  /* fade of the column of the tools when it scrolls */
+  const sf=()=>{const r=rail0;if(!r)return;const g=r.scrollHeight-r.clientHeight>1;r.classList.toggle('railSu',g&&r.scrollTop>1);r.classList.toggle('railGiu',g&&r.scrollTop<r.scrollHeight-r.clientHeight-1)};
+  rail0.addEventListener('scroll',sf,{passive:true});addEventListener('resize',sf);new ResizeObserver(sf).observe(rail0);setTimeout(sf,0);
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
