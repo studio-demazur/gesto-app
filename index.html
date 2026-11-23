@@ -5447,7 +5447,7 @@ function scalaGrafica(spm,maxPx){const L=tondo125((maxPx||132)/spm),e=L>=1000?[L
   return {px:L*spm,unita:e[1],nodi:['0',num(e[0]/2),num(e[0])]}}
 const orienta=document.createElementNS('http://www.w3.org/2000/svg','svg');orienta.id='orienta';orienta.setAttribute('aria-label','Nord e scala grafica');$('wrap').appendChild(orienta);
 const misuraT=document.createElement('canvas').getContext('2d');
-function disegnaOrienta(){const M=22,R=19,B=132,A=6,D=4,C=11,NS='http://www.w3.org/2000/svg',font=getComputedStyle(document.documentElement).getPropertyValue('--sans')||'sans-serif';
+function disegnaOrienta(){const M=22,R=20,B=132,A=6,D=4,C=11,NS='http://www.w3.org/2000/svg',font=getComputedStyle(document.documentElement).getPropertyValue('--sans')||'sans-serif';
   misuraT.font='400 '+C+'px '+font;const largo=t=>misuraT.measureText(t).width,el=(n,a)=>{const o=document.createElementNS(NS,n);for(const k in a)o.setAttribute(k,a[k]);return o};
   const g=scalaGrafica(V.s*1000,B),cx=M+R,cy=M+R,alto=M+R*2+4,ris=largo(g.unita+' ')+largo('0')*0.5,xa=cx+R+M*0.8*0.6+ris,xb=xa+g.px,ya=cy-A/2,passo=g.px/D,lar=Math.ceil(xb+largo(g.nodi[2])+M);
   orienta.textContent='';orienta.setAttribute('width',lar);orienta.setAttribute('height',alto);orienta.setAttribute('viewBox','0 0 '+lar+' '+alto);
@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.86';
+const VERSIONE_GESTO='0.87';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8951,6 +8951,33 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
   '.rb[aria-pressed="true"],.fstrip .b[aria-pressed="true"]{background:transparent!important;color:var(--fg)!important;box-shadow:inset 0 0 0 1.5px var(--fg)!important}'+
   '.rb[aria-pressed="true"]:hover{background:var(--on)!important}';
   document.head.appendChild(st)})();
+
+/* ---------- 88. Corners in step; a dot under the pen (owner, 23.11.2026) ----------
+   AN1 The logo and the north disc are twins: the same size (42 px, ring included) and the same ring, in weight and colour.
+   AN2 Both sit at the same distance from the edges: the logo from the left edge and from the top line, the north
+       disc from the left edge and from the bottom edge. In the browser the three distances are equal (15 px);
+       in the installed app without title bar the top line lies under the band of the window keys, and the north
+       disc rises by the same amount, so top and bottom stay equal.
+   PT1 Drawing with the pen, the pointer is a dot, not a cross: light on the petrol sheet, petrol on the white one.
+       The mouse keeps its pointer. */
+(()=>{
+  const dot=(f,h)=>'url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="2.3" fill="'+f+'" stroke="'+h+'" stroke-width="1.3"/></svg>')+'") 6 6, crosshair';
+  const chiaro=dot('#1E3F4C','#FFFFFF'),scuro=dot('#FCF8F4','#1E3F4C');
+  const st=document.createElement('style');st.textContent=
+  /* AN1–AN2: the logo ring 5 px inside its panel on both sides, 15 px from the edges */
+  '#logo{top:calc(var(--T) + 4px)!important}'+
+  '@media (min-width:721px){#orienta{left:max(-6px,calc(env(safe-area-inset-left,0px) - 6px))!important;bottom:calc(var(--T) + 2px)!important}}'+
+  /* AN1: the north disc drawn with the same ring as the logo, weight and colour */
+  '#orienta .nord{stroke:var(--anello)!important;stroke-width:2!important}'+
+  /* PT1 */
+  '#cSopra.stilo{cursor:'+chiaro+'}:root[data-theme="dark"] #cSopra.stilo{cursor:'+scuro+'}'+
+  '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #cSopra.stilo{cursor:'+scuro+'}}';
+  document.head.appendChild(st);
+  /* the north disc: R 20 px, ring 2 px centred on it, outer edge 42 px, the same visual size as the logo */
+  /* the class sits on the canvas, not on the body: observers of the body class must not wake on every pen move */
+  const c=$('cSopra'),seg=e=>{const p=e.pointerType==='pen';if(p!==c.classList.contains('stilo'))c.classList.toggle('stilo',p)};
+  if(c){c.addEventListener('pointerover',seg,true);c.addEventListener('pointermove',seg,true)}
+})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
