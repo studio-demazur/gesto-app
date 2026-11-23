@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.91';
+const VERSIONE_GESTO='0.92';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9059,6 +9059,26 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
   'min-height:55px;box-sizing:border-box;align-items:center;max-width:calc(100% - var(--LL) - 60px - 340px)!important}}'+
   '.ctx.dock{-webkit-app-region:no-drag;app-region:no-drag}';
   document.head.appendChild(st)})();
+
+/* ---------- 92. The drawing bar in line; no system ring on the tools (owner, 23.11.2026) ----------
+   AN6 The bar that appears while drawing (confirm, cancel and the options of the tool) stands like the bar of the
+       selection: 8 px right of the last panel on the left, on the same top line, 55 px high.
+   VS4 (completed) The chosen tool shows only its thin outline: the ring the system draws around a focused button is
+       gone; with the keyboard a thin ring in the colour of the ink marks the focus. */
+(()=>{const st=document.createElement('style');st.textContent=
+  '.rb:focus,.rb:focus-visible,#rail button:focus,#rail button:focus-visible,.ctx button:focus,.fstrip .b:focus{outline:none}'+
+  'body.tastiera .rb:focus-visible,body.tastiera #rail button:focus-visible,body.tastiera .ctx button:focus-visible,body.tastiera .fstrip .b:focus-visible{outline:1.5px solid var(--fg);outline-offset:2px}'+
+  '@media (min-width:721px){body:not(.mancino) .ctx[data-su]{min-height:55px;box-sizing:border-box;align-items:center}}';
+  document.head.appendChild(st);
+  const _pc=posCtx;posCtx=function(){_pc();const c=$('ctx');if(!c||!c.dataset.su||TEL()||document.body.classList.contains('mancino'))return;
+    const w=$('wrap').getBoundingClientRect(),cs=getComputedStyle(document.documentElement);let R=0;
+    ['logoPan','rail','impCol'].forEach(i=>{const e=$(i);if(!e||e.hidden)return;const s=getComputedStyle(e);if(s.display==='none'||s.visibility==='hidden'||+s.opacity===0)return;
+      const r=e.getBoundingClientRect();if(r.width&&r.top-w.top<80)R=Math.max(R,r.right-w.left)});
+    const L=Math.round(R?R+8:parseFloat(cs.getPropertyValue('--LL'))+60);
+    c.style.left=L+'px';c.style.top=(parseFloat(cs.getPropertyValue('--TL'))||17)+'px';
+    c.style.maxWidth=Math.max(220,w.width-L-340)+'px'};
+  posImp=function(){posCtx()};
+})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
