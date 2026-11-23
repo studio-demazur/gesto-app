@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.89';
+const VERSIONE_GESTO='0.90';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9034,6 +9034,22 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
   const sf=()=>{const r=rail0;if(!r)return;const g=r.scrollHeight-r.clientHeight>1;r.classList.toggle('railSu',g&&r.scrollTop>1);r.classList.toggle('railGiu',g&&r.scrollTop<r.scrollHeight-r.clientHeight-1)};
   rail0.addEventListener('scroll',sf,{passive:true});addEventListener('resize',sf);new ResizeObserver(sf).observe(rail0);setTimeout(sf,0);
 })();
+
+/* ---------- 90. The window keys on the colour of the sheet (owner, 23.11.2026) ----------
+   UI6 In the installed app the keys of the window («…», reduce, enlarge, close) stand on the colour of what lies under
+       them: the sheet in the model, the table in the layout. Edge paints their box with the theme colour of the page and
+       chooses light keys on a dark colour and dark keys on a light one, so the box disappears into the sheet.
+       A transparent box is not possible: Edge ignores the transparency of the theme colour. */
+(()=>{const m=document.querySelector('meta[name="theme-color"]');if(!m)return;
+  /* the model: the colour of the sheet; the layout: the colour of the table, read where the keys stand */
+  const hex=d=>'#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase();
+  const calcola=()=>{let c='';if(document.body.classList.contains('impagina')){const f=$('cFondo');
+      try{const d=f.getContext('2d').getImageData(f.width-6,6,1,1).data;if(d[3]===255)c=hex(d)}catch(e){}}
+    if(!c)c=(getComputedStyle(document.documentElement).getPropertyValue('--paper')||'').trim();if(c&&m.content!==c)m.content=c};
+  let tm=0;const ora=()=>{clearTimeout(tm);tm=setTimeout(calcola,160)};
+  new MutationObserver(ora).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','class','style']});
+  new MutationObserver(ora).observe(document.body,{attributes:true,attributeFilter:['class']});
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',ora);setTimeout(ora,0)})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
