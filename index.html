@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.73';
+const VERSIONE_GESTO='0.74';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8199,6 +8199,123 @@ try{const a=COMANDI.find(c=>c.k==='openpdf'),b=COMANDI.find(c=>c.k==='exportpdf'
 window.__gestoDC={open:(u8,name,dir)=>dcApriPdf(new File([u8],name||'documento.pdf',{type:'application/pdf'}),dir),folders:()=>dcCartelle(),newFolder:p=>{dcNuovaCartella(p);return dcCartelle().slice(-1)[0].id},
   rename:(id,n)=>dcSalvaCartelle(dcCartelle().map(x=>x.id===id?Object.assign({},x,{nome:n}):x)),move:(ids,dir,prima)=>dcSposta(ids,dir,prima),sheets:()=>ordineTav().map(t=>({id:t.id,nome:t.nome,dir:t.dir,o:t.o,pdf:t.pdf?{d:t.pdf.d,p:t.pdf.p,nm:t.pdf.nm}:null})),
   exportFolder:(id,one)=>dcEsporta(dcSequenza(id),dcNomeCartella(id),one),split:d=>dcSepara(d),renameDoc:(d,n)=>dcRinominaDoc(d,n),removeDoc:d=>dcTogliDoc(d),delFolder:id=>dcEliminaCartella(id),seq:id=>dcSequenza(id).map(v=>v.k==='tav'?v.t.id:v.ts.map(t=>t.id))};
+
+/* ---------- 75. Ergonomics of the work on pages (owner, 23.11.2026) ----------
+   ER1 The left column and the right panel hide and reopen with one tap each; «Schermo pieno» hides both, and Gesto remembers it.
+   ER2 The page fits in three ways: whole, full width, full height; a tap on the indicator passes from one to the next.
+   ER3 The pages of a document lie one under the other and scroll continuously, as in a PDF reader; one writes on the page in front.
+   ER4 A quiet indicator shows «2 / 3» and leads to the previous or next page; Page Up and Page Down do the same.
+   ER5 The tools stay in a vertical bar on the left; the logo shows and hides it (phase 56).
+   ER6 The pen bar (colours, widths, stroke) sits on the left, at the top by the logo, next to the tools, in model and layout.
+   ER7 Panels and bars always open vertically at the sides, the same in model and layout.
+   ER8 For the left hand everything mirrors: tools on the right, panels on the left. */
+const ER={full:false,fit:'intera',fitV:null,salto:false};
+try{ER.full=localStorage.getItem('gesto.full')==='1';ER.fit=localStorage.getItem('gesto.fit')||'intera'}catch(e){}
+const ER_GAP=8,ER_M=12;
+(()=>{const st=document.createElement('style');st.textContent=
+  /* ER6: the pen bar slides out to its own side */
+  'body.senzaStr .fstrip.penna{transform:translateX(calc(-100% - 90px))}body.senzaStr.mancino .fstrip.penna{transform:translateX(calc(100% + 90px))}'+
+  '.fstrip.penna{transition:transform .18s ease,opacity .18s ease}#impCol{transition:left .18s ease,right .18s ease}'+
+  /* ER8: mirrored layout on wide screens */
+  '@media (min-width:721px){body.mancino .pan{right:auto!important;left:max(12px,env(safe-area-inset-left,0px))!important}body.mancino.impagina #impCol{left:auto;right:max(70px,calc(env(safe-area-inset-right,0px) + 60px))}body.mancino #icApri{left:auto;right:70px}body.mancino.impagina:not(.colChiusa) .pan:not(#pEsporta):not(#pp){transform:none}}'+
+  /* ER4: the indicator */
+  '#dcNav{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:2px;padding:3px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:10px;box-shadow:0 4px 14px rgba(15,35,44,.12);font:500 12px var(--sans);white-space:nowrap}'+
+  '#dcNav[hidden]{display:none!important}#dcNav button{height:30px;min-width:30px;border:0;background:transparent;color:var(--fg);border-radius:7px;padding:0 8px;font:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center}'+
+  '#dcNav button:hover{background:var(--on)}#dcNav button[disabled]{opacity:.35;cursor:default;background:transparent}#dcNav button svg{width:16px;height:16px}#dcNav .sep{width:1px;height:18px;background:var(--line);margin:0 4px}#dcNav .pg{min-width:54px;font-variant-numeric:tabular-nums}'+
+  '#dcNav button[aria-pressed="true"]{background:var(--on);color:var(--acc)}'+
+  /* ER1: the panel comes back with one tap */
+  '@media (min-width:721px){body.impagina .aiuto{bottom:calc(58px + env(safe-area-inset-bottom,0px))}}'+
+  '#panApri{display:none;position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:13px;z-index:4;width:40px;height:40px;border-radius:10px;background:var(--panel);border:1px solid var(--line);box-shadow:0 6px 18px rgba(15,35,44,.12);color:var(--fg);align-items:center;justify-content:center;cursor:pointer;padding:0}'+
+  '#panApri svg{width:18px;height:18px}body.impagina #panApri.vis{display:flex}body.mancino #panApri{right:auto;left:70px}';document.head.appendChild(st)})();
+
+/* ---- ER6: the pen bar on the side of the hand, at the top, next to the tools; the column of sheets makes room ---- */
+posPennaLato=function(){/* the place of the tools without their sliding (offsets ignore transforms) */const W=$('wrap').clientWidth,l=rail0.offsetLeft,t=rail0.offsetTop,r=l+rail0.offsetWidth,sx=S.mano==='sx';
+  pstrip.style.bottom='';pstrip.style.top=Math.max(10,t)+'px';
+  if(sx){pstrip.style.left='';pstrip.style.right=Math.round(W-l+8)+'px'}else{pstrip.style.right='';pstrip.style.left=Math.round(r+8)+'px'}
+  erPosCol()};
+function erPosCol(){const col=$('impCol');if(!col)return;const vis=!pstrip.hidden&&!S.nasc&&window.innerWidth>720;
+  const w=pstrip.offsetWidth||48;if(S.mano==='sx'){col.style.left='';col.style.right=vis?(70+w+8)+'px':''}else{col.style.right='';col.style.left=vis?(70+w+8)+'px':''}
+  const a=$('icApri');if(a){a.style.left=S.mano!=='sx'&&vis?(70+w+8)+'px':'';a.style.right=S.mano==='sx'&&vis?(70+w+8)+'px':''}}
+{const _ag=aggPenna;aggPenna=function(){_ag();if(pstrip.hidden)erPosCol()}}
+{const _an=aggNasc;aggNasc=function(){_an();try{erPosCol()}catch(e){}}}
+
+/* ---- ER2: fitting the page in the free part of the screen ---- */
+function erLibero(){const w=$('wrap').getBoundingClientRect(),W=w.width,H=w.height;let L=ER_M,R=W-ER_M,T=ER_M,B=H-ER_M;
+  const els=[rail0,pstrip,$('impCol'),$('icApri'),$('logo'),$('dcNav'),$('panApri'),...document.querySelectorAll('.pan')];
+  els.forEach(el=>{if(!el||el.hidden)return;const cs=getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden'||+cs.opacity===0||cs.pointerEvents==='none'&&el!==$('logo'))return;
+    const r=el.getBoundingClientRect();if(r.width<2||r.height<2)return;const x0=r.left-w.left,x1=r.right-w.left,y0=r.top-w.top;
+    if(el===$('dcNav')){B=Math.min(B,y0-8);return}if(x1<=0||x0>=W)return;
+    if((x0+x1)/2<W/2)L=Math.max(L,x1+ER_M);else R=Math.min(R,x0-ER_M)});
+  if(R-L<200){L=ER_M;R=W-ER_M}return {L,R,T,B}}
+adattaCartaVista=function(){const G=vsCarta();if(!G)return;const F=erLibero(),w=F.R-F.L,h=F.B-F.T;let s;
+  if(ER.fit==='larghezza')s=w/G.W;else if(ER.fit==='altezza')s=h/G.H;else s=Math.min(w/G.W,h/G.H);
+  V.s=Math.max(0.05,s);V.ox=F.L+(w-G.W*V.s)/2;V.oy=ER.fit==='larghezza'&&G.H*V.s>h?F.T:F.T+(h-G.H*V.s)/2;
+  cambioVista();ER.fitV={s:V.s,ox:V.ox,oy:V.oy,id:S.tav}};
+/* when the column or the screen changes and the page was fitted, it is fitted again; panels and tools never move the page under the pen */
+function erRifit(){const f=ER.fitV;if(!IMPAG||!f||f.id!==S.tav)return;if(Math.abs(f.s-V.s)>1e-9||Math.abs(f.ox-V.ox)>0.5||Math.abs(f.oy-V.oy)>0.5)return;requestAnimationFrame(()=>requestAnimationFrame(()=>adattaCartaVista()))}
+
+/* ---- ER1: full screen and the panel that comes back ---- */
+const panApri=document.createElement('button');panApri.id='panApri';panApri.title='Apri il pannello';panApri.setAttribute('aria-label','Apri il pannello');
+panApri.innerHTML=SV('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/>');panApri.onclick=()=>pannello('pEsporta');$('wrap').appendChild(panApri);
+function erPanApri(){const aperto=[...document.querySelectorAll('.pan')].some(p=>!p.hidden&&p.id!=='pp');panApri.classList.toggle('vis',!!IMPAG&&!aperto)}
+{const _p=pannello;pannello=function(...a){const r=_p(...a);erPanApri();erNav();return r}}
+function erSchermoPieno(v){ER.full=v==null?!ER.full:!!v;try{localStorage.setItem('gesto.full',ER.full?'1':'0')}catch(e){}
+  if(ER.full){document.body.classList.add('colChiusa');pannello(null)}else document.body.classList.remove('colChiusa');
+  erPanApri();erNav();requestAnimationFrame(()=>{if(IMPAG)adattaCartaVista()})}
+{const _e=entraImpag;entraImpag=function(...a){const r=_e(...a);if(IMPAG&&ER.full){document.body.classList.add('colChiusa');pannello(null)}erPanApri();erNav();erPosCol();if(IMPAG)requestAnimationFrame(()=>adattaCartaVista());return r}}
+{const _x=esciImpag;esciImpag=function(...a){const r=_x(...a);erPanApri();erNav();return r}}
+(()=>{const c=$('icChiudi'),a=$('icApri');if(c){const f=c.onclick;c.onclick=e=>{f&&f(e);erRifit()}}if(a){const f=a.onclick;a.onclick=e=>{f&&f(e);if(ER.full){ER.full=false;try{localStorage.setItem('gesto.full','0')}catch(_){}}erNav();erRifit()}}})();
+
+/* ---- ER3: the pages of a document one under the other ---- */
+function erDoc(){const t=IMPAG&&tavAtt();if(!t||!t.pdf)return null;const ts=dcDocTs(t.pdf.d),i=ts.findIndex(q=>q.id===t.id);if(i<0)return null;
+  const G=q=>{const g=tavGeo(q);return [g.W,g.H]},[Wc,Hc]=G(t),out=[];
+  let y=Hc+ER_GAP;for(let j=i+1;j<ts.length&&j<=i+3;j++){const [W,H]=G(ts[j]);out.push({t:ts[j],x:(Wc-W)/2,y,W,H,k:j});y+=H+ER_GAP}
+  y=-ER_GAP;for(let j=i-1;j>=0&&j>=i-3;j--){const [W,H]=G(ts[j]);y-=H;out.push({t:ts[j],x:(Wc-W)/2,y,W,H,k:j});y-=ER_GAP}
+  return {t,i,n:ts.length,W:Wc,H:Hc,vic:out,next:out.find(q=>q.k===i+1)||null,prev:out.find(q=>q.k===i-1)||null}}
+const ER_NB=new Map();
+const erInk=t=>{let n=0;for(const q of tratti.values())if(q.tv===t.id)n++;for(const e of MOS.cad.values())if(e.tv===t.id)n++;return n};
+async function erVicino(q,px){const t=q.t,key=t.id+'|'+t.pdf.a+'#'+t.pdf.p+'|'+JSON.stringify(t.pdf.im||[])+'|'+erInk(t)+'|'+Math.round(px*4),o=ER_NB.get(t.id);
+  if(o&&(o.key===key||o.busy===key))return;ER_NB.set(t.id,Object.assign({},o||{},{busy:key}));
+  try{const pg=await pfPage(t.pdf.a,t.pdf.p),c=document.createElement('canvas');c.width=Math.max(1,Math.round(q.W*px));c.height=Math.max(1,Math.round(q.H*px));
+    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);await pg.render({canvasContext:x,viewport:pg.getViewport({scale:c.width/t.pdf.W})}).promise;
+    const ov=await pfOverlay(pfHold(t));if(ov){const lib=await libPdf(),d=await lib.getDocument({data:ov,isEvalSupported:false}).promise,p1=await d.getPage(1);
+      await p1.render({canvasContext:x,viewport:p1.getViewport({scale:c.width/p1.getViewport({scale:1}).width}),background:'rgba(0,0,0,0)'}).promise;d.destroy()}
+    ER_NB.set(t.id,{key,c});richiedi('fondo')}catch(e){console.warn(e);ER_NB.delete(t.id)}}
+{const _f=disegnaFondo;disegnaFondo=function(){_f();const D=erDoc();if(!D)return;const {x}=L.fondo,R=rettVista(),px=Math.min(V.s*V.dpr,2400/Math.max(D.W,D.H));vista(x);
+  D.vic.forEach(q=>{if(q.x+q.W<R.x0||q.x>R.x1||q.y+q.H<R.y0||q.y>R.y1)return;
+    x.save();x.shadowColor='rgba(15,35,44,.18)';x.shadowBlur=10*V.dpr;x.fillStyle='#FFFFFF';x.fillRect(q.x,q.y,q.W,q.H);x.restore();
+    const o=ER_NB.get(q.t.id);if(o&&o.c)x.drawImage(o.c,q.x,q.y,q.W,q.H);
+    if(!o||!o.c||Math.abs(o.c.width/q.W-px)/px>0.25||o.key&&o.key.split('|')[3]!==String(erInk(q.t)))erVicino(q,px);
+    const h={x:q.x,y:q.y,w:q.W,h:q.H,pdf:q.t.pdf};(q.t.pdf.fl||[]).forEach(f=>{const v=(q.t.pdf.v||{})[f.n];if(v!=null&&v!==''&&v!==false)pfTesto(x,h,f,v)})});
+  schermo(x)}}
+/* the page in front becomes the page one writes on; the view does not move */
+function erSalta(q){ER.salto=true;try{const p0=w2s(q.x,q.y);V_IMP.set(S.tav,{s:V.s,ox:V.ox,oy:V.oy});S.tav=q.t.id;S.finAtt=null;salvaPref();sel.clear();PARTI=[];
+    const p1=w2s(0,0);V.ox+=p0[0]-p1[0];V.oy+=p0[1]-p1[1];const nb=ER_NB.get(q.t.id);BG.c=nb&&nb.c?nb.c:null;BG.key=nb&&nb.c?q.t.id+'|vicino':'';BG.pk=null;
+    if(ER.fitV)ER.fitV=null;cambioVista();ricomponi();rendiCol();richiedi()}finally{ER.salto=false}}
+function erControlla(){if(!IMPAG||ER.salto||ptr||(typeof pinch!=='undefined'&&pinch)||(typeof rac!=='undefined'&&rac))return;const D=erDoc();if(!D)return;
+  const [,cy]=s2w(V.W/2,V.H/2);if(D.next&&cy>D.H+ER_GAP/2)erSalta(D.next);else if(D.prev&&cy<-ER_GAP/2)erSalta(D.prev)}
+let erT=0;{const _cv=cambioVista;cambioVista=function(){_cv();if(IMPAG&&!ER.salto){clearTimeout(erT);erT=setTimeout(erControlla,60)}}}
+addEventListener('pointerup',()=>{if(IMPAG){clearTimeout(erT);erT=setTimeout(erControlla,80)}},true);
+
+/* ---- ER4: the indicator and the keys ---- */
+const dcNav=document.createElement('div');dcNav.id='dcNav';dcNav.hidden=true;$('wrap').appendChild(dcNav);
+const ER_FIT={intera:['Pagina intera','<rect x="6" y="3" width="12" height="18" rx="1"/>'],larghezza:['Larghezza','<path d="M3 12h18M6 9l-3 3 3 3M18 9l3 3-3 3"/>'],altezza:['Altezza','<path d="M12 3v18M9 6l3-3 3 3M9 18l3 3 3-3"/>']};
+function erPagina(k){const D=erDoc();if(D){const q=k>0?D.next:D.prev;if(!q)return;erSalta(q);const F=erLibero(),p=w2s(0,0);V.oy+=F.T-p[1];cambioVista();return}
+  const L=ordineTav(),i=L.findIndex(t=>t.id===S.tav),n=L[i+k];if(n)vaiTavola(n.id)}
+function erNav(){if(!IMPAG){dcNav.hidden=true;return}const D=erDoc();dcNav.textContent='';
+  const b=(svg,tit,fn,dis)=>{const x=document.createElement('button');x.title=tit;x.setAttribute('aria-label',tit);x.innerHTML=svg?SV(svg):'';if(dis)x.disabled=true;x.onclick=fn;dcNav.appendChild(x);return x};
+  if(D){b('<path d="M15 6l-6 6 6 6"/>','Pagina precedente (Pagina su)',()=>erPagina(-1),!D.prev);const p=b('','Pagina',()=>{});p.className='pg';p.textContent=(D.i+1)+' / '+D.n;b('<path d="M9 6l6 6-6 6"/>','Pagina successiva (Pagina giù)',()=>erPagina(1),!D.next);
+    const s=document.createElement('span');s.className='sep';dcNav.appendChild(s)}
+  const f=ER_FIT[ER.fit]||ER_FIT.intera,ks=Object.keys(ER_FIT);b(f[1],f[0]+': tocca per cambiare',()=>{ER.fit=ks[(ks.indexOf(ER.fit)+1)%ks.length];try{localStorage.setItem('gesto.fit',ER.fit)}catch(e){}adattaCartaVista();erNav()}).insertAdjacentText('beforeend',' '+f[0]);
+  const fs=b(ER.full?'<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>':'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',ER.full?'Esci dallo schermo pieno':'Schermo pieno',()=>erSchermoPieno());fs.setAttribute('aria-pressed',String(ER.full));
+  dcNav.hidden=false}
+{const _rc=rendiCol;rendiCol=function(){_rc();erNav();erPanApri()}}
+addEventListener('keydown',e=>{if(!IMPAG||(e.key!=='PageDown'&&e.key!=='PageUp'))return;const tg=e.target;if(tg&&(tg.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)))return;
+  e.preventDefault();erPagina(e.key==='PageDown'?1:-1)},true);
+addEventListener('resize',()=>{erPosCol();erRifit()});
+try{COMANDI.push({k:'fullscreen',n:'Schermo pieno',en:'Full screen',ab:'SPN',f:()=>{if(!IMPAG)entraImpag();erSchermoPieno()},al:['schermo pieno','pagina intera']})}catch(e){}
+window.__gestoER={full:v=>{if(v!=null)erSchermoPieno(v);return ER.full},fit:m=>{if(m){ER.fit=m;adattaCartaVista();erNav()}return ER.fit},page:k=>erPagina(k),doc:()=>{const D=erDoc();return D&&{i:D.i,n:D.n,vic:D.vic.map(q=>[q.k,Math.round(q.y)])}},free:()=>erLibero(),nb:()=>[...ER_NB.entries()].map(([k,v])=>[k,!!v.c])};
+setTimeout(()=>{erPosCol();erPanApri();erNav()},0);
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
