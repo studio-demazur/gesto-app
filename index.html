@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.93';
+const VERSIONE_GESTO='0.94';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9085,6 +9085,96 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
    fonts.ready and setTimeout before the later phases wrapped it), so the disc came up without its touch area until the
    next change of view. The current version is called again after those two, so the touch area is always there. */
 (()=>{const d=()=>disegnaOrienta();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(d);setTimeout(d,0);setTimeout(d,400)})();
+
+/* ---------- 94. Properties of the tool, before drawing (owner, 23.11.2026) ----------
+   PS1 Choosing a drawing tool, Proprietà shows at once the values of the next element (layer, collection, colour,
+       line, thickness) and the parameters of the tool (pattern of the hatch, kind of dimension, sides of the polygon…).
+   PS2 Layer, collection, colour, line and thickness are common to all the tools, like the current state of a CAD;
+       the parameters of a tool stay with that tool and are remembered.
+   PS3 With something chosen, Proprietà shows the choice; with nothing chosen and a drawing tool, the tool; with the
+       pointer and nothing chosen it stays closed.
+   PS4 The pen strip and Proprietà show the same colour and thickness: a change in one shows in the other.
+   PS5 A Proprietà put away by the owner is not reopened by the choice of a tool; its tab stays.
+   The parameters of the tool are the controls of the bar of the tool, mirrored in the panel: while the panel shows them
+   the bar keeps only what serves the stroke in progress (confirm, cancel). */
+(()=>{
+  PREF.push('nSt','nCol');try{const m=JSON.parse(localStorage.getItem('gesto.prefs')||'{}');['nSt','nCol'].forEach(k=>{if(m[k]!==undefined)S[k]=m[k]})}catch(e){}
+  /* PS2: the next element takes the current collection and style */
+  const _ne=nuovaEnt;nuovaEnt=function(k,g){const e=_ne(k,g);if(!e)return e;let mod=false;
+    if(S.nCol&&MOS.collezioni.has(S.nCol)){e.col=S.nCol;mod=true}
+    if(S.nSt&&Object.keys(S.nSt).length){e.st=Object.assign({},S.nSt);mod=true}
+    return mod?fattaEnt(e):e};
+  const st=document.createElement('style');st.textContent=
+    'body.strPP #ctx [data-pp]{display:none!important}body.strPP #ctx.soloPP{display:none!important}'+
+    '#pp .strSeg{display:flex;flex-wrap:wrap;gap:4px}#pp .strSeg button{height:30px;padding:0 10px;border:1px solid var(--hair);border-radius:15px;background:transparent;color:var(--fg);font:400 12.5px var(--sans);cursor:pointer}'+
+    '#pp .strSeg button[aria-pressed="true"]{box-shadow:inset 0 0 0 1.5px var(--fg);border-color:transparent}'+
+    '#pp .strB{height:30px;padding:0 12px;border:1px solid var(--hair);border-radius:15px;background:transparent;color:var(--fg);font:400 12.5px var(--sans);cursor:pointer}'+
+    '#pp .strB[aria-pressed="true"]{box-shadow:inset 0 0 0 1.5px var(--fg);border-color:transparent}';
+  document.head.appendChild(st);
+  const ctx=$('ctx');let mostra=false;
+  const nomeStr=()=>{const b=$(STRUMENTI[S.tool]);return b?(b.getAttribute('aria-label')||b.title||'').replace(/\s*\(.*$/,'').replace(/:.*$/,''):''};
+  /* gesto.strpp '0' turns the panel of the tool off (used by the older tests, whose strokes fall where the panel stands) */
+  let spento=false;try{spento=localStorage.getItem('gesto.strpp')==='0'}catch(e){}
+  const vuole=()=>!spento&&ppAttivo()&&!PR.nasc&&!IMPAG&&(DISEGNO.has(S.tool)||S.tool==='penna')&&!selEnts().length;
+  function rendiStr(){mostra=vuole();document.body.classList.toggle('strPP',mostra);
+    ctx.querySelectorAll('[data-pp]').forEach(x=>x.removeAttribute('data-pp'));ctx.classList.remove('soloPP');
+    if(!mostra)return;
+    const ae=document.activeElement;if(ae&&pp.contains(ae)&&ae.tagName==='SELECT'&&!pp.hidden)return;
+    pp.hidden=false;pp.textContent='';
+    const h=document.createElement('div');h.className='ph';h.textContent=nomeStr();if(typeof pnRiponiBtn==='function')h.appendChild(pnRiponiBtn());pp.appendChild(h);
+    const sez=t=>{const d=document.createElement('div');d.className='sez';d.textContent=t;pp.appendChild(d)};
+    const riga=(k,...els)=>{const r=document.createElement('div');r.className='pr';if(k!=null){const a=document.createElement('span');a.className='k';a.textContent=k;r.appendChild(a)}els.forEach(x=>r.appendChild(x));pp.appendChild(r);return r};
+    const sc=(opz,val,fn)=>{const s=scelta(opz,val,fn);s.className='cs';return s};
+    sez('Prossimo elemento');
+    if(S.tool==='penna'){
+      riga('Colore',sc(COLORI.map(c=>[c[0],NOMI_COL[c[0]]]),S.col,v=>{S.col=v;salvaPref();segna();rendiStr()}));
+      riga('Spessore',sc(SPESSORI.map((w,i)=>[String(w),['Fine','Medio','Spesso'][i]]),String(S.w),v=>{S.w=+v;salvaPref();segna();rendiStr()}));
+    }else{
+      const lys=[...layers.values()].sort((a,b)=>(a.o||0)-(b.o||0));
+      riga('Layer',sc(lys.map(l=>[l.id,l.nome]),S.layerAtt,v=>{S.layerAtt=v;salvaPref();if(typeof aggLayer==='function')aggLayer();if(typeof rendiLayer==='function')rendiLayer(true);rendiStr()}));
+      const cols=[...MOS.collezioni.values()];if(S.nCol&&!MOS.collezioni.has(S.nCol))S.nCol='';
+      riga('Collezione',sc([['','Nessuna']].concat(cols.map(k=>[k.id,k.nome||'Collezione'])),S.nCol||'',v=>{S.nCol=v;salvaPref()}));
+      const ns=S.nSt||{},set=(k,v)=>{const o=Object.assign({},S.nSt||{});if(v==='')delete o[k];else o[k]=k==='lw'?+v:v;S.nSt=o;salvaPref()};
+      riga('Colore',sc([['','Del layer']].concat(COLORI.map(k=>[k[0],NOMI_COL[k[0]]])),ns.c||'',v=>set('c',v)));
+      riga('Linea',sc([['','Del layer']].concat(Object.entries(TIPI).map(([k,t])=>[k,t.n])),ns.lt||'',v=>set('lt',v)));
+      riga('Spessore',sc([['','Del layer']].concat(PESI.map(p=>[String(p),fmt(p,2)+' mm'])),ns.lw!=null?String(ns.lw):'',v=>set('lw',v)));
+    }
+    /* the parameters of the tool, from its bar */
+    const salta=/^(conferma|annulla|fine|chiudi|ok)\b/i;const voci=[];
+    [...ctx.children].forEach(x=>{if(x.tagName==='SELECT'||x.classList.contains('seg')||(x.tagName==='BUTTON'&&x.classList.contains('pb')&&!salta.test((x.getAttribute('aria-label')||x.textContent||'').trim())))voci.push(x)});
+    const ETI={retino:['Motivo'],polig:['Lati'],quota:['Tipo','Serie','Unità'],libera:['Curva','Tolleranza','Converti'],raccordo:['Modo'],testo:['Stili','Ricerca']}[S.tool]||[];
+    if(voci.length){sez('Strumento');
+      voci.forEach((x,i)=>{const et=ETI[i]||null;x.setAttribute('data-pp','');
+        if(x.tagName==='SELECT'){const s=x.cloneNode(true);s.className='cs';s.value=x.value;s.removeAttribute('id');s.onchange=()=>{x.value=s.value;x.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(rendiStr,0)};
+          riga(et||x.getAttribute('aria-label')||null,s)}
+        else if(x.classList.contains('seg')){const w=document.createElement('div');w.className='strSeg';
+          [...x.querySelectorAll('button')].forEach(b=>{const c=document.createElement('button');c.type='button';c.textContent=b.textContent;c.title=b.title||'';c.setAttribute('aria-pressed',b.getAttribute('aria-pressed')||'false');c.onclick=()=>{b.click();setTimeout(rendiStr,0)};w.appendChild(c)});
+          riga(et,w)}
+        else{const c=document.createElement('button');c.type='button';c.className='strB';c.textContent=x.textContent.trim()||x.getAttribute('aria-label')||'';c.title=x.title||x.getAttribute('aria-label')||'';
+          if(x.hasAttribute('aria-pressed'))c.setAttribute('aria-pressed',x.getAttribute('aria-pressed'));c.onclick=()=>{x.click();setTimeout(rendiStr,0)};riga(et,c)}})}
+    /* the bar of the tool keeps only what is not in the panel; empty, it goes */
+    if(![...ctx.children].some(x=>!x.hasAttribute('data-pp')&&getComputedStyle(x).display!=='none'))ctx.classList.add('soloPP');
+    if(typeof pnPieghe==='function')pnPieghe(pp)}
+  const _r=rendiPP;rendiPP=function(...a){const v=_r(...a);if(pp.hidden||!selEnts().length)rendiStr();else{document.body.classList.remove('strPP');ctx.classList.remove('soloPP')}return v};
+  const _s=strumento;strumento=function(...a){const v=_s(...a);rendiPP();return v};
+  let tm=0;new MutationObserver(()=>{if(!mostra)return;clearTimeout(tm);tm=setTimeout(rendiStr,40)}).observe(ctx,{childList:true});
+  setTimeout(rendiPP,0);
+})();
+
+/* AN4 (fix) In the layout there is no north disc: the column of the tools reaches the bottom margin. Before, the hidden
+   disc measured 0 and the column shrank to 120 px whatever the space. */
+(()=>{const st=document.createElement('style');st.textContent='@media (min-width:721px){body.impagina:not(.mancino) .rail{max-height:calc(100% - var(--TL) - 55px - var(--LL))}}';document.head.appendChild(st);
+  const _pl=posPennaLato;posPennaLato=function(){if(window.innerWidth<=720||S.mano==='sx')return _pl();
+    pstrip.classList.add('sotto');const H=$('wrap').clientHeight,n=orienta.querySelector('path.nord'),nr=n&&n.getBoundingClientRect();
+    const B=nr&&nr.height?Math.max(10,Math.round(H-nr.top+$('wrap').getBoundingClientRect().top+10)):parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--LL'))||17;
+    rail0.style.maxHeight='';const rt=rail0.offsetTop,rw=rail0.offsetWidth,l=rail0.offsetLeft;
+    pstrip.style.maxHeight='none';prScorri.style.maxHeight='none';const nat=pstrip.offsetHeight;prScorri.style.maxHeight='';
+    let top=rt+rail0.offsetHeight+8;const min=PR.chiusa?nat:Math.min(nat,150);
+    if(H-B-top<min){rail0.style.maxHeight=Math.max(120,H-B-min-8-rt)+'px';top=rt+rail0.offsetHeight+8}
+    pstrip.style.bottom='';pstrip.style.top=top+'px';pstrip.style.width=rw+'px';pstrip.style.maxHeight=Math.max(30,H-B-top)+'px';
+    pstrip.style.right='';pstrip.style.left=l+'px';prAggTesta();requestAnimationFrame(prFade);erPosCol()};
+  const sv=()=>{rail0.style.maxHeight='';if(!pstrip.hidden)posPennaLato()};
+  new MutationObserver(m=>{if(m.some(x=>x.attributeName==='class'))setTimeout(sv,0)}).observe(document.body,{attributes:true,attributeFilter:['class']});})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
