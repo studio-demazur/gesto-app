@@ -957,7 +957,7 @@ let orig=()=>foglio().o||[0,0];
 let den=()=>foglio().sc||50;
 function fogliSet(patch){
   const f=foglio();Object.assign(f,patch);haFoglio=true;
-  const b={nome:f.nome||'Foglio 1',t:f.t||Date.now()};if(f.sc)b.sc=f.sc;if(f.o)b.o=f.o;if(f.qu)b.qu=f.qu;if(f.ts)b.ts=f.ts;else delete f.ts;if(f.formati&&f.formati.length)b.formati=f.formati;if(f.cartigli&&f.cartigli.length)b.cartigli=f.cartigli;if(f.cartDef)b.cartDef=f.cartDef;if(f.dp)b.dp=f.dp;if(f.uuid)b.uuid=f.uuid;if(Array.isArray(f.viste)&&f.viste.length)b.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)b.cartelle=f.cartelle;tsVer++;
+  const b={nome:f.nome||'Foglio 1',t:f.t||Date.now()};if(f.sc)b.sc=f.sc;if(f.o)b.o=f.o;if(f.qu)b.qu=f.qu;if(f.ts)b.ts=f.ts;else delete f.ts;if(f.formati&&f.formati.length)b.formati=f.formati;if(f.cartigli&&f.cartigli.length)b.cartigli=f.cartigli;if(f.cartDef)b.cartDef=f.cartDef;if(f.dp)b.dp=f.dp;if(f.uuid)b.uuid=f.uuid;if(Array.isArray(f.viste)&&f.viste.length)b.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)b.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)b.strutture=f.strutture;tsVer++;
   if(db)traccia('fogli/'+f.id,()=>db.doc('fogli/'+f.id).set(b)).catch(()=>{});
   aggScala();datiVer++;indiceCad=null;richiedi();
 }
@@ -3852,8 +3852,8 @@ function avviaArchivio(d){
   db=d;
   db.collection('fogli').onSnapshot(snap=>{
     const loc=fogli.find(f=>f.id===foglioId);
-    fogli=snap.docs.map(x=>{const b=x.data()||{};return {id:x.id,nome:b.nome,t:b.t||0,sc:b.sc,o:b.o,qu:b.qu,ts:b.ts||undefined,formati:Array.isArray(b.formati)?b.formati:undefined,cartigli:Array.isArray(b.cartigli)?b.cartigli:undefined,cartDef:b.cartDef||undefined,dp:b.dp||undefined,uuid:b.uuid||undefined,viste:Array.isArray(b.viste)?b.viste:undefined,cartelle:Array.isArray(b.cartelle)?b.cartelle:undefined,esiste:true}}).sort((a,b)=>a.t-b.t);
-    if(loc&&catene.has('fogli/'+loc.id)){const i=fogli.findIndex(f=>f.id===loc.id);if(i>=0)fogli[i]=Object.assign(fogli[i],{sc:loc.sc,o:loc.o,qu:loc.qu,ts:loc.ts,formati:loc.formati,cartigli:loc.cartigli,cartDef:loc.cartDef,dp:loc.dp,uuid:loc.uuid,viste:loc.viste,cartelle:loc.cartelle});else fogli.push(loc)}
+    fogli=snap.docs.map(x=>{const b=x.data()||{};return {id:x.id,nome:b.nome,t:b.t||0,sc:b.sc,o:b.o,qu:b.qu,ts:b.ts||undefined,formati:Array.isArray(b.formati)?b.formati:undefined,cartigli:Array.isArray(b.cartigli)?b.cartigli:undefined,cartDef:b.cartDef||undefined,dp:b.dp||undefined,uuid:b.uuid||undefined,viste:Array.isArray(b.viste)?b.viste:undefined,cartelle:Array.isArray(b.cartelle)?b.cartelle:undefined,strutture:Array.isArray(b.strutture)?b.strutture:undefined,esiste:true}}).sort((a,b)=>a.t-b.t);
+    if(loc&&catene.has('fogli/'+loc.id)){const i=fogli.findIndex(f=>f.id===loc.id);if(i>=0)fogli[i]=Object.assign(fogli[i],{sc:loc.sc,o:loc.o,qu:loc.qu,ts:loc.ts,formati:loc.formati,cartigli:loc.cartigli,cartDef:loc.cartDef,dp:loc.dp,uuid:loc.uuid,viste:loc.viste,cartelle:loc.cartelle,strutture:loc.strutture});else fogli.push(loc)}
     if(fogli.some(f=>f.id===foglioId))haFoglio=true;
     else if(fogli.length&&!tratti.size&&!(snap.metadata&&snap.metadata.fromCache)&&foglioId==='f1'){foglioId=fogli[0].id;apriFoglio(foglioId)}
     menuFogli();aggScala();tsVer++;datiVer++;richiedi();
@@ -3898,7 +3898,7 @@ async function datiSfondo(b){
 }
 async function esportaFoglio(){
   const f=foglio(),o={formato:'lavagna-demazur',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
-  if(f.sc)o.foglio.sc=f.sc;if(f.o)o.foglio.o=f.o;if(f.qu)o.foglio.qu=f.qu;if(f.ts)o.foglio.ts=f.ts;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;if(f.cartDef)o.foglio.cartDef=f.cartDef;if(f.dp)o.foglio.dp=f.dp;if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;let n=0,persi=0;
+  if(f.sc)o.foglio.sc=f.sc;if(f.o)o.foglio.o=f.o;if(f.qu)o.foglio.qu=f.qu;if(f.ts)o.foglio.ts=f.ts;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;if(f.cartDef)o.foglio.cartDef=f.cartDef;if(f.dp)o.foglio.dp=f.dp;if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;let n=0,persi=0;
   RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
   if(!n){notaEx('Il foglio è vuoto');return}
   notaEx('Preparo il file del foglio…');
@@ -3933,7 +3933,7 @@ async function importaFoglio(file){
   for(const tv of (o.rami.tavole||[])){const a=tv.cart&&tv.cart.kp;if(!a)continue;if(!mappa.has(a)){const dati=o.immagini&&o.immagini[a];if(dati&&assets)try{const q=daData(dati),r=await assets.upload(q,{type:q.type});mappa.set(a,r.id);immagine(r.id,r.url)}catch(e){persi++}}
     if(mappa.has(a))tv.cart.kp=mappa.get(a);else{delete tv.cart.kp;delete tv.cart.kpOn}}
   const base=(o.foglio&&o.foglio.nome)||'Foglio';let nome=base,k=1;while(fogli.some(f=>f.nome===nome)){nome=base+(k===1?' (copia)':' (copia '+k+')');k++}
-  const id=idCasuale('f'),nf={id,nome,t:Date.now()};if(o.foglio){if(o.foglio.sc)nf.sc=o.foglio.sc;if(o.foglio.o)nf.o=o.foglio.o;if(o.foglio.qu)nf.qu=o.foglio.qu;if(o.foglio.ts)nf.ts=o.foglio.ts;if(Array.isArray(o.foglio.formati))nf.formati=o.foglio.formati;if(Array.isArray(o.foglio.cartigli))nf.cartigli=o.foglio.cartigli;if(o.foglio.cartDef)nf.cartDef=o.foglio.cartDef;if(o.foglio.dp)nf.dp=o.foglio.dp;if(Array.isArray(o.foglio.viste)){nf.viste=o.foglio.viste;setTimeout(()=>vsWarn(nf.viste),0)}if(Array.isArray(o.foglio.cartelle))nf.cartelle=o.foglio.cartelle;}if(o._doc&&!fogli.some(q=>q.uuid===o._doc))nf.uuid=o._doc;
+  const id=idCasuale('f'),nf={id,nome,t:Date.now()};if(o.foglio){if(o.foglio.sc)nf.sc=o.foglio.sc;if(o.foglio.o)nf.o=o.foglio.o;if(o.foglio.qu)nf.qu=o.foglio.qu;if(o.foglio.ts)nf.ts=o.foglio.ts;if(Array.isArray(o.foglio.formati))nf.formati=o.foglio.formati;if(Array.isArray(o.foglio.cartigli))nf.cartigli=o.foglio.cartigli;if(o.foglio.cartDef)nf.cartDef=o.foglio.cartDef;if(o.foglio.dp)nf.dp=o.foglio.dp;if(Array.isArray(o.foglio.viste)){nf.viste=o.foglio.viste;setTimeout(()=>vsWarn(nf.viste),0)}if(Array.isArray(o.foglio.cartelle))nf.cartelle=o.foglio.cartelle;if(Array.isArray(o.foglio.strutture))nf.strutture=o.foglio.strutture;}if(o._doc&&!fogli.some(q=>q.uuid===o._doc))nf.uuid=o._doc;
   fogli.push(nf);foglioId=id;menuFogli();apriFoglio(id);fogliSet({});
   const add=[];let n=0;
   RAMI.forEach(r=>(o.rami[r]||[]).forEach(d=>{if(!d||!d.id)return;const c=Object.assign({},d);delete c.id;
@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.79';
+const VERSIONE_GESTO='0.80';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -6809,7 +6809,7 @@ logo.innerHTML=GESTO_SVG;
   /* ---- il contenuto del foglio corrente, letto subito: il cambio di foglio durante la lettura delle immagini non lo altera ---- */
   async function contenuto(){
     const f=foglio(),o={formato:'lavagna-demazur',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
-    ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
+    ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
     let n=0,persi=0;RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
     const imm=[...elencoSfondi()];elencoSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a});if(tv.pdf&&tv.pdf.a)imm.push({a:tv.pdf.a})});
     if(!f.uuid)fogliSet({uuid:uuid7()});const u=f.uuid,nome=f.nome||'Foglio';
@@ -6844,7 +6844,7 @@ logo.innerHTML=GESTO_SVG;
     const add=[];RAMI.forEach(r=>(o.rami[r]||[]).forEach(d=>{if(!d||!d.id)return;const c=Object.assign({},d);delete c.id;
       if(r==='sfondi'){if(!mappa.has(c.a))return;c.a=mappa.get(c.a);if(c.pdf&&c.pdf.a){if(mappa.has(c.pdf.a))c.pdf=Object.assign({},c.pdf,{a:mappa.get(c.pdf.a)});else delete c.pdf}}if(r==='tavole'&&c.pdf&&c.pdf.a){if(mappa.has(c.pdf.a))c.pdf=Object.assign({},c.pdf,{a:mappa.get(c.pdf.a)});else delete c.pdf}if(r==='tavole'&&c.cart&&c.cart.kp){if(mappa.has(c.cart.kp))c.cart.kp=mappa.get(c.cart.kp);else{delete c.cart.kp;delete c.cart.kpOn}}
       const x=PARSE[r](d.id,c);if(!x)return;if(r!=='tratti')x._r=r;add.push(x)}));
-    silenzio=true;if(o.foglio){const p={};['sc','o','qu','ts','cartDef','dp','formati','cartigli','viste','cartelle'].forEach(k=>{if(o.foglio[k]!=null)p[k]=o.foglio[k]});fogliSet(p);vsWarn(o.foglio.viste)}
+    silenzio=true;if(o.foglio){const p={};['sc','o','qu','ts','cartDef','dp','formati','cartigli','viste','cartelle','strutture'].forEach(k=>{if(o.foglio[k]!=null)p[k]=o.foglio[k]});fogliSet(p);vsWarn(o.foglio.viste)}
     silenzio=true;try{esegui({add,del},false)}finally{setTimeout(()=>{silenzio=false},0)}clearTimeout(pausa);return persi}
   async function apriHandle(h){
     const {fl,o:grezzo}=await leggiFile(h);const o=grezzo&&apriDmz(grezzo);
@@ -8686,6 +8686,58 @@ try{COMANDI.push({k:'issue',n:'Emetti revisione',en:'Issue revision',ab:'REV',f:
 window.__gestoRV={issue:d=>rvEmetti(d),inForce:d=>rvVigente(d),original:d=>rvOriginale(d),revs:f=>rvDocs(f).map(L=>Object.assign({d:L[0].pdf.d,dir:L[0].dir||null},(({rev,em,ro,vig,sup,nm})=>({rev,em,ro,vig,sup,nm}))(L[0].pdf)))};
 /* a page reached from the tree shows its fields at once, not at the next movement of the view */
 {const _v=vaiTavola;vaiTavola=function(...a){const r=_v(...a);setTimeout(()=>{try{pfSync()}catch(e){}},60);return r}}
+
+/* ---------- 81. A free structure of the project documents (owner, 23.11.2026) ----------
+   ST1 The structure is free: folders and subfolders are created, renamed, deleted and dragged into other folders,
+       or before and after them, at any depth.
+   ST2 Any folder is saved as a «struttura tipo» under its name (folders only, no documents); «Nuovo cantiere» offers the saved
+       structures beside the standard one.
+   ST3 The standard structures stay on the device and inside the .dmz that uses them, so every computer opening that project has them. */
+const ST={drag:null,cartella:null};
+/* ---- ST1: dragging a folder ---- */
+function stMuovi(id,p,prima,dopo){const L=dcCartelle().slice(),i=L.findIndex(c=>c.id===id);if(i<0)return;
+  if(p&&dcSotto(id).includes(p)){avviso('Una cartella non entra in sé stessa');return}
+  const c=Object.assign({},L[i]);L.splice(i,1);if(p)c.p=p;else delete c.p;
+  let j=L.length;if(prima){const k=L.findIndex(x=>x.id===prima);if(k>=0)j=k}else if(dopo){const k=L.findIndex(x=>x.id===dopo);if(k>=0)j=k+1}
+  L.splice(j,0,c);if(p)DC.chiuse.delete(p);dcSalvaCartelle(L)}
+(()=>{const L=$('dcL');if(!L)return;const pul=()=>{L.querySelectorAll('.sopra,.dcPrima,.dcDopo').forEach(x=>x.classList.remove('sopra','dcPrima','dcDopo'));const r=document.querySelector('#impCol .dcRoot');if(r)r.classList.remove('sopra')};
+  L.addEventListener('pointerdown',e=>{if(e.target.closest('.dcM,.dcTw,input'))return;const it=e.target.closest('.dcF');ST.drag=it?{it,x0:e.clientX,y0:e.clientY,pid:e.pointerId,mosso:false,meta:null}:null},true);
+  L.addEventListener('pointermove',e=>{const d=ST.drag;if(!d||e.pointerId!==d.pid)return;if(!d.mosso&&Math.hypot(e.clientX-d.x0,e.clientY-d.y0)<8)return;
+    if(!d.mosso){d.mosso=true;try{L.setPointerCapture(e.pointerId)}catch(_){}d.it.classList.add('trasc');d.it.style.pointerEvents='none'}
+    pul();d.meta=null;const el=document.elementFromPoint(e.clientX,e.clientY),q=el&&el.closest('.dcF,.dcRoot,.dcVuoto'),id=d.it.dataset.f;if(!q||q===d.it)return;
+    if(q.classList.contains('dcRoot')){q.classList.add('sopra');d.meta={p:''};return}
+    const f=q.classList.contains('dcVuoto')?q.dataset.vuota:q.dataset.f;if(!f||dcSotto(id).includes(f))return;
+    if(q.classList.contains('dcVuoto')){const h=L.querySelector('.dcF[data-f="'+f+'"]');if(h)h.classList.add('sopra');d.meta={p:f};return}
+    const r=q.getBoundingClientRect(),y=(e.clientY-r.top)/r.height,c=dcCartelle().find(x=>x.id===f),par=c&&dcEsiste(c.p)?c.p:'';
+    if(y<.28){q.classList.add('dcPrima');d.meta={p:par,prima:f}}else if(y>.72){q.classList.add('dcDopo');d.meta={p:par,dopo:f}}else{q.classList.add('sopra');d.meta={p:f}}
+    e.stopImmediatePropagation()},true);
+  const fine=e=>{const d=ST.drag;if(!d||e.pointerId!==d.pid)return;ST.drag=null;d.it.classList.remove('trasc');d.it.style.pointerEvents='';pul();if(!d.mosso)return;
+    e.stopImmediatePropagation();e.preventDefault();if(d.meta)stMuovi(d.it.dataset.f,d.meta.p,d.meta.prima,d.meta.dopo)};
+  L.addEventListener('pointerup',fine,true);L.addEventListener('pointercancel',fine,true)})();
+
+/* ---- ST2, ST3: standard structures ---- */
+const stLeggi=()=>{try{const a=JSON.parse(localStorage.getItem('gesto.strutture')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}};
+function stScrivi(a){try{localStorage.setItem('gesto.strutture',JSON.stringify(a))}catch(e){}}
+function stAlbero(id){return dcFigli(id).map(c=>({nome:c.nome,figli:stAlbero(c.id)}))}
+function stSalva(id){const c=dcCartelle().find(x=>x.id===id);if(!c)return;const s={nome:c.nome.trim(),figli:stAlbero(id)},t=Date.now();s.t=t;
+  const dev=stLeggi().filter(x=>x.nome!==s.nome).concat([s]);stScrivi(dev);const f=foglio();const fs=(Array.isArray(f.strutture)?f.strutture:[]).filter(x=>x.nome!==s.nome).concat([s]);fogliSet({strutture:fs});
+  avviso('Struttura tipo «'+s.nome+'» salvata: la trovi in «Nuovo cantiere»')}
+function stElimina(nome){stScrivi(stLeggi().filter(x=>x.nome!==nome));const f=foglio();if(Array.isArray(f.strutture))fogliSet({strutture:f.strutture.filter(x=>x.nome!==nome)});avviso('Struttura tipo «'+nome+'» eliminata')}
+/* a project that carries structures gives them to the device */
+function stDalFoglio(){const f=foglio&&foglio();if(!f||!Array.isArray(f.strutture)||!f.strutture.length)return;const dev=stLeggi();let cambio=false;
+  f.strutture.forEach(s=>{const i=dev.findIndex(x=>x.nome===s.nome);if(i<0||(s.t||0)>(dev[i].t||0)){if(i<0)dev.push(s);else dev[i]=s;cambio=true}});if(cambio)stScrivi(dev)}
+function stApplica(s){if(!IMPAG)entraImpag();const L=dcCartelle().slice(),id=idCasuale('cr');let nome=s.nome,k=2;while(L.some(c=>!c.p&&c.nome===nome))nome=s.nome+' '+(k++);
+  L.push({id,nome});const giu=(figli,p)=>figli.forEach(n=>{const c={id:idCasuale('cr'),nome:n.nome,p};L.push(c);DC.chiuse.add(c.id);giu(n.figli||[],c.id)});giu(s.figli||[],id);
+  DC.chiuse.delete(id);DC.cart=id;DC.rinomina='f:'+id;dcSalvaCartelle(L);return id}
+const _gcNC=gcNuovoCantiere;
+gcNuovoCantiere=function(el){stDalFoglio();const a=stLeggi();if(!a.length||!el)return _gcNC();
+  const v=[['Struttura di base',()=>_gcNC()]];a.forEach(s=>v.push([s.nome,()=>stApplica(s)]));a.forEach(s=>v.push(['Elimina «'+s.nome+'»',()=>stElimina(s.nome),true]));dcMenu(el,v)};
+(()=>{const b=document.querySelector('#impCol .pm button[title="Nuovo cantiere"]');if(b)b.onclick=()=>gcNuovoCantiere(b)})();
+{const _mc=dcMenuCartella;dcMenuCartella=function(id,el){ST.cartella=id;try{return _mc(id,el)}finally{ST.cartella=null}}}
+{const _m=dcMenu;dcMenu=function(el,v){if(ST.cartella){const id=ST.cartella;v=v.slice();let i=v.length;while(i>0&&v[i-1][2])i--;v.splice(i,0,['Salva come struttura tipo',()=>stSalva(id)])}return _m(el,v)}}
+{const _ap=apriFoglio;apriFoglio=function(...a){const r=_ap.apply(this,a);setTimeout(()=>{try{stDalFoglio()}catch(e){}},500);return r}}
+setTimeout(()=>{try{stDalFoglio()}catch(e){}},1500);
+window.__gestoST={move:(id,p,prima,dopo)=>stMuovi(id,p,prima,dopo),save:id=>stSalva(id),list:()=>stLeggi(),apply:n=>{const s=stLeggi().find(x=>x.nome===n);return s?stApplica(s):null},remove:n=>stElimina(n)};
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
