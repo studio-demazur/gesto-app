@@ -6776,7 +6776,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.70';
+const VERSIONE_GESTO='0.71';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -7471,12 +7471,118 @@ function bottoniPartiFree(c){const P=PARTI.filter(r=>r.k),t=document.createEleme
   else if(C.size)row(null,el('span','num',C.size+(C.size===1?' spigolo G0':' spigoli G0')+' · scegli un punto per cambiarlo'));place()}catch(err){console.error(err)}}}
 
 {const st=document.createElement('style');st.textContent='body.addPt #wrap canvas{cursor:copy}';document.head.appendChild(st)}
-try{COMANDI.push({k:'addpoint',n:'Aggiungi punto',en:'Add point',ab:'AP',f:()=>addPointMode(true),al:['aggiungi punto','inserisci punto']});
-  COMANDI.push({k:'removepoint',n:'Togli punto',en:'Remove point',ab:'RP',f:()=>removeChosenPoints(),al:['togli punto','rimuovi punto']})}catch(e){}
+try{COMANDI.push({k:'addpoint',n:'Aggiungi punto',en:'Add point',ab:'APT',f:()=>addPointMode(true),al:['aggiungi punto','inserisci punto']});
+  COMANDI.push({k:'removepoint',n:'Togli punto',en:'Remove point',ab:'RPT',f:()=>removeChosenPoints(),al:['togli punto','rimuovi punto']})}catch(e){}
 window.__gestoPT={preview:(e,x,y)=>{const r=pointAdded(e,[x,y]);return r?r.n:null},removedPreview:(e,idx)=>{const r=pointsRemoved(e,new Set(idx));return r.err?null:r.n},clear:()=>{PARTI=[];aggCtx()},add:(id,x,y)=>{const e=MOS.cad.get(id);return e?addPointAt(e,[x,y]):false},remove:()=>removeChosenPoints(),mode:on=>addPointMode(on),parts:()=>PARTI.slice(),
   choose:(id,k)=>{sel.add(id);PARTI.push({e:id,k});aggCtx();try{rendiPP()}catch(e){}},setG:(id,G)=>setSplineG(MOS.cad.get(id),G),corners:(id,idx,on)=>setCorners(MOS.cad.get(id),idx,on),
   segs:id=>{const e=MOS.cad.get(id);return e?segmentiBez(e):null},interp:(Q,closed,deg)=>bsInterp(Q,closed,deg),bez:(Q,closed,deg)=>{const c=bsInterp(Q,closed,deg);return c?bsToBez(c,0.005):null},
   eval:(Q,closed,deg,u)=>{const c=bsInterp(Q,closed,deg);if(!c)return null;let x=u;const sp=bsFindSpan(c.U,c.p,c.n,x);return bsEval(c,x,sp)},geff:id=>splineGEff(MOS.cad.get(id).g)};
+
+/* ---------- 72 automatic points (PA1-PA6; owner 23.11.2026) ----------
+   PA1 «Infittisci» adds a point in the middle of every stretch; repeated, it doubles them again.
+   PA2 «Semplifica» removes the points whose absence moves the shape less than the tolerance.
+   PA3 With chosen points both act only on the stretch between them, otherwise on the whole element.
+   PA4 The tolerance is in mm of paper, 0.2 by default, set in the properties: at 1:50 it is 1 cm of model.
+   PA5 Ends, G0 corners and points tied to constraints or dimensions are never removed automatically.
+   PA6 «Infittisci» keeps the shape of polylines and Bézier curves, and puts spline points on the present curve;
+       after «Semplifica» Gesto states the largest deviation and how many points went, and Ctrl+Z goes back. */
+if(!PREF.includes('ptTol'))PREF.push('ptTol');
+function ptTolPaper(){const v=+S.ptTol;return v>0&&isFinite(v)?v:0.2}
+function ptTolModel(){return ptTolPaper()*den()}
+
+/* range of a chosen stretch: indices of the chosen points on this element, when at least two */
+function chosenRange(e){const I=PARTI.filter(r=>r.e===e.id&&r.k).map(r=>partIndex(e,r.k)).filter(i=>i!=null);if(I.length<2)return null;return [Math.min(...I),Math.max(...I)]}
+
+/* samples of a geometry, for deviations */
+function samplesOf(k,g){const e={k,g},o=[];
+  if(k==='linea'){o.push(g.a.slice(),g.b.slice());return o}
+  if(k==='spline'||k==='curva'){const sg=segmentiBez(e),m=sg.length>40?8:24;sg.forEach((q,i)=>{for(let s=i?1:0;s<=m;s++)o.push(bezPoint(q,s/m))});return o}
+  const p=g.p,n=p.length>>1,ns=k==='poli'?nSeg(g):n-1;
+  for(let i=0;i<ns;i++){const z=k==='poli'?segPoli(g,i):{k:'s',a:[p[2*i],p[2*i+1]],b:[p[2*i+2],p[2*i+3]]};if(!z)continue;
+    if(z.k==='a'){const m=Math.max(8,Math.ceil(Math.abs(z.sw)/DUEPI*72));for(let s=i?1:0;s<=m;s++){const a=z.a0+z.sw*s/m;o.push([z.c[0]+z.r*Math.cos(a),z.c[1]+z.r*Math.sin(a)])}}
+    else{if(!i)o.push(z.a.slice());o.push(z.b.slice())}}
+  return o}
+/* largest distance between two sampled shapes, both ways; Infinity as soon as it exceeds lim (grid of cells of side lim) */
+function devGrid(Y,cs){const grid=new Map();for(let k=0;k+1<Y.length;k++){const a=Y[k],b=Y[k+1],i0=Math.floor(Math.min(a[0],b[0])/cs),i1=Math.floor(Math.max(a[0],b[0])/cs),j0=Math.floor(Math.min(a[1],b[1])/cs),j1=Math.floor(Math.max(a[1],b[1])/cs);
+    if((i1-i0+1)*(j1-j0+1)>4096)continue;for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){const kk=i*1000003+j;let L=grid.get(kk);if(!L){L=[];grid.set(kk,L)}L.push(k)}}return {grid,cs,Y}}
+function devOne(X,G,lim){const {grid,cs,Y}=G;let mx=0;for(const P of X){const ci=Math.floor(P[0]/cs),cj=Math.floor(P[1]/cs);let best=Infinity;
+    for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++){const L=grid.get(i*1000003+j);if(L)for(const k of L){const r=projSeg(Y[k],Y[k+1],P);if(r.d<best)best=r.d}}
+    if(best>lim)return Infinity;if(best>mx)mx=best}return mx}
+/* largest distance between two sampled shapes, both ways; Infinity as soon as it exceeds lim */
+function deviation(A,B,lim,GA){if(A.length<2||B.length<2)return Infinity;if(!isFinite(lim))return Math.max(devOneSlow(A,B),devOneSlow(B,A));const cs=Math.max(lim,1e-9);
+  const a=devOne(B,GA||devGrid(A,cs),lim);if(!isFinite(a))return Infinity;const b=devOne(A,devGrid(B,cs),lim);return isFinite(b)?Math.max(a,b):Infinity}
+function devOneSlow(X,Y){let mx=0;for(const P of X){let best=Infinity;for(let k=0;k+1<Y.length;k++){const r=projSeg(Y[k],Y[k+1],P);if(r.d<best)best=r.d}if(best>mx)mx=best}return mx}
+
+/* points tied to constraints or associated dimensions */
+function tiedKeys(eid){const s=new Set();vincoliE().forEach(v=>(v.r||[]).forEach(r=>{if(r.e===eid&&r.k)s.add(r.k)}));
+  MOS.cad.forEach(q=>{if(q.k!=='quota')return;['ra','rb'].forEach(rk=>{const r=q.g[rk];if(r&&r.id===eid&&r.k)s.add(r.k)})});return s}
+const ptKey=(e,i)=>(e.k==='spline'?'f':'v')+i;
+
+/* ---- PA1: densify ---- */
+function densified(e){const g=e.g,rg=chosenRange(e),inR=(a,b)=>!rg||(a>=rg[0]&&b<=rg[1]&&b>a);
+  if(e.k==='linea'){if(rg)return null;const M=[(g.a[0]+g.b[0])/2,(g.a[1]+g.b[1])/2];return {k:'poli',g:{p:[...g.a,...M,...g.b],ch:false},map:k=>k==='a'?'v0':k==='b'?'v2':null}}
+  const n=countPoints(e),ch=closedE(e),ns=ch?n:n-1,old2new=new Array(n).fill(0);let added=0;
+  if(e.k==='poli'||e.k==='dir'){const p=g.p,np=[],bu=[];
+    for(let i=0;i<n;i++){old2new[i]=np.length>>1;np.push(p[2*i],p[2*i+1]);if(i>=ns)continue;const j=(i+1)%n,b=e.k==='poli'&&g.bu?(g.bu[i]||0):0;
+      if(!inR(i,j===0?n:j)){bu.push(b);continue}
+      if(b){const z=segPoli(g,i),a=z.a0+z.sw/2;np.push(z.c[0]+z.r*Math.cos(a),z.c[1]+z.r*Math.sin(a));const h=Math.tan(Math.atan(b)/2);bu.push(h,h)}
+      else{np.push((p[2*i]+p[2*j])/2,(p[2*i+1]+p[2*j+1])/2);bu.push(0,0)}added++}
+    if(!added)return null;const ng=Object.assign({},g,{p:np});if(e.k==='poli'&&bu.some(x=>x))ng.bu=bu;else delete ng.bu;
+    return {k:e.k,g:ng,map:k=>{const v=keyIdx(k,'v');return v==null?(keyIdx(k,'m')!=null||keyIdx(k,'c')!=null?null:k):'v'+old2new[v]}}}
+  if(e.k==='curva'){const S=[];for(let j=0;j+7<g.p.length;j+=6)S.push(g.p.slice(j,j+8));const out=[];
+    S.forEach((q,j)=>{old2new[j]=out.length;const b=(j+1)%(ch?S.length:S.length+1);if(inR(j,ch&&b===0?S.length:j+1)){const [a,c]=bezSplit(q,0.5);out.push(a,c);added++}else out.push(q)});
+    if(!ch)old2new[S.length]=out.length;if(!added)return null;const np=[];out.forEach((q,i)=>{if(!i)np.push(q[0],q[1]);np.push(...q.slice(2))});
+    return {k:'curva',g:Object.assign({},g,{p:np}),map:k=>{const v=keyIdx(k,'v');return v==null?(keyIdx(k,'h')!=null?null:k):'v'+old2new[v]}}}
+  if(e.k==='spline'){const segs=segmentiBez(e),poly=[],cum=[0];segs.forEach((q,si)=>{for(let s=si?1:0;s<=32;s++){const P=bezPoint(q,s/32);if(poly.length)cum.push(cum[cum.length-1]+dist(P,poly[poly.length-1]));poly.push(P)}});
+    const L=cum[cum.length-1];if(!(L>0))return null;
+    const proj=X=>{let bs=0,bd=Infinity;for(let k=0;k+1<poly.length;k++){const r=projSeg(poly[k],poly[k+1],X);if(r.d<bd){bd=r.d;bs=cum[k]+r.t*(cum[k+1]-cum[k])}}return bs};
+    const at=s=>{s=((s%L)+L)%L;let k=0;while(k+1<cum.length-1&&cum[k+1]<s)k++;const t=(s-cum[k])/((cum[k+1]-cum[k])||1);return [poly[k][0]+(poly[k+1][0]-poly[k][0])*t,poly[k][1]+(poly[k+1][1]-poly[k][1])*t]};
+    const sF=[];for(let i=0;i<n;i++)sF.push(proj([g.f[2*i],g.f[2*i+1]]));const f=[];
+    for(let i=0;i<n;i++){old2new[i]=f.length>>1;f.push(g.f[2*i],g.f[2*i+1]);if(i>=ns)continue;const j=(i+1)%n;if(!inR(i,j===0?n:j))continue;
+      let a=sF[i],b=sF[j];if(ch&&j===0||b<=a)b+=L;const M=at((a+b)/2);f.push(M[0],M[1]);added++}
+    if(!added)return null;const ng=Object.assign({},g,{f});if(g.G0&&g.G0.length)ng.G0=g.G0.map(i=>old2new[i]);
+    return {k:'spline',g:ng,map:k=>{const v=keyIdx(k,'f');return v==null?k:'f'+old2new[v]}}}
+  return null}
+function densify(){const es=selEnts().filter(e=>e.g&&PT_KINDS.has(e.k)&&!e.bk);if(!es.length){avviso('Scegli l’elemento da infittire');return}
+  const add=[],del=[];let n0=0,n1=0,dv=0;es.forEach(e=>{const r=densified(e);if(!r)return;const ne=fattaEnt(Object.assign({},e,{k:r.k,g:arrotondaG(r.g)})),fr=followRefs(e.id,r.map,null);
+    if(e.k==='spline')dv=Math.max(dv,deviation(samplesOf(e.k,e.g),samplesOf(ne.k,ne.g),1e12));n0+=countPoints(e);n1+=countPoints(ne);add.push(ne,...fr.add);del.push(e,...fr.del)});
+  if(!add.length){avviso('Niente da infittire qui');return}PARTI=[];esegui({add,del});aggCtx();richiedi('sopra');
+  avviso('Punti da '+n0+' a '+n1+(dv>0.001?' · la curva si sposta al massimo di '+fmt(dv,2)+' mm sul disegno, '+fmt(dv/den(),3)+' mm sulla carta · Ctrl+Z torna indietro':' · la forma non cambia'))}
+
+/* ---- PA2: simplify within the tolerance ---- */
+function simplifiedOne(e,tol){const n=countPoints(e),ch=closedE(e),rg=chosenRange(e),tied=tiedKeys(e.id),ref=samplesOf(e.k,e.g),GA=devGrid(ref,Math.max(tol,1e-9)),corners=e.k==='spline'?new Set(splineCorners(e.g,n)):new Set();
+  const fixed=i=>(!ch&&(i===0||i===n-1))||corners.has(i)||tied.has(ptKey(e,i))||(rg&&(i<=rg[0]||i>=rg[1]));
+  const minKeep=ch?3:2,removed=new Set();let worst=0;
+  const test=set=>{if(n-set.size<minKeep)return null;const r=pointsRemoved(e,set);if(r.err)return null;const dv=deviation(ref,samplesOf(r.n.k,r.n.g),tol,GA);return isFinite(dv)?{r,dv}:null};
+  /* rounds: every candidate is tried once, then the best ones that are not neighbours go together; if together they exceed the tolerance, half of them */
+  for(let round=0;round<64;round++){const scored=[];for(let i=0;i<n;i++){if(removed.has(i)||fixed(i))continue;const s=new Set(removed);s.add(i);const t=test(s);if(t)scored.push({i,dv:t.dv})}
+    if(!scored.length)break;scored.sort((a,b)=>a.dv-b.dv);
+    const kept=[];for(let i=0;i<n;i++)if(!removed.has(i))kept.push(i);const pos=new Map(kept.map((v,j)=>[v,j])),taken=new Set(),pick=[];
+    for(const c of scored){const j=pos.get(c.i);const nb=[kept[(j-1+kept.length)%kept.length],kept[(j+1)%kept.length]];if(nb.some(x=>taken.has(x)))continue;taken.add(c.i);pick.push(c.i)}
+    let take=pick.length,done=false;while(take>=1){const s=new Set(removed);pick.slice(0,take).forEach(i=>s.add(i));const t=test(s);if(t){pick.slice(0,take).forEach(i=>removed.add(i));worst=t.dv;done=true;break}take=take>1?Math.floor(take/2):0}
+    if(!done)break}
+  if(!removed.size)return null;const r=pointsRemoved(e,removed);return {r,removed:removed.size,dev:worst}}
+function simplify(){const es=selEnts().filter(e=>e.g&&PT_KINDS.has(e.k)&&e.k!=='linea'&&!e.bk);if(!es.length){avviso('Scegli l’elemento da semplificare');return}
+  const tol=ptTolModel(),add=[],del=[];let tot=0,dev=0,big=false;
+  es.forEach(e=>{if(countPoints(e)>160){big=true;return}const o=simplifiedOne(e,tol);if(!o)return;const ne=fattaEnt(Object.assign({},e,{k:o.r.n.k,g:arrotondaG(o.r.n.g)})),fr=followRefs(e.id,o.r.mapKey,o.r.mapSeg);
+    add.push(ne,...fr.add);del.push(e,...fr.del);tot+=o.removed;dev=Math.max(dev,o.dev)});
+  if(!add.length){avviso(big?'Elemento con più di 160 punti: semplifica un tratto alla volta, scegliendone gli estremi':'Nessun punto si toglie entro '+fmt(ptTolPaper(),2)+' mm di carta');return}
+  PARTI=[];esegui({add,del});aggCtx();richiedi('sopra');
+  avviso('Tolti '+tot+(tot===1?' punto':' punti')+' · scarto massimo '+fmt(dev,2)+' mm sul disegno, '+fmt(dev/den(),3)+' mm sulla carta · Ctrl+Z torna indietro')}
+
+/* ---- properties: «Infittisci», «Semplifica», tolerance ---- */
+{const _rp=rendiPP;rendiPP=function(){_rp();try{if(pp.hidden)return;const es=selEnts();if(es.length!==1)return;const e=es[0];if(!e.g||!PT_KINDS.has(e.k)||e.bk)return;
+  const sez=[...pp.querySelectorAll(':scope>.sez')].find(x=>x.textContent==='Punti');if(!sez)return;let row=sez.nextElementSibling;
+  const r=document.createElement('div');r.className='pr';r.appendChild(bottone('Infittisci',()=>densify()));if(e.k!=='linea')r.appendChild(bottone('Semplifica',()=>simplify()));
+  row.after(r);if(e.k==='linea')return;
+  const t=document.createElement('div');t.className='pr';const k=document.createElement('span');k.className='k';k.textContent='Tolleranza';const inp=document.createElement('input');inp.type='text';inp.inputMode='decimal';
+  inp.value=fmt(ptTolPaper(),2);inp.setAttribute('aria-label','Tolleranza di «Semplifica» in mm di carta');inp.title='mm di carta: a 1:'+den()+' valgono '+fmt(ptTolModel(),1)+' mm sul disegno';
+  inp.onchange=()=>{const v=parseFloat(String(inp.value).replace(',','.'));if(v>0&&isFinite(v)){S.ptTol=v;salvaPref()}inp.value=fmt(ptTolPaper(),2);inp.title='mm di carta: a 1:'+den()+' valgono '+fmt(ptTolModel(),1)+' mm sul disegno'};
+  inp.className='cmp';const u=document.createElement('span');u.className='u nw';u.textContent='mm carta';const cw=document.createElement('span');cw.className='cw';cw.append(inp,u);t.append(k,cw);r.after(t)}catch(err){console.error(err)}}}
+{const st=document.createElement('style');st.textContent='#pp .u.nw{white-space:nowrap;width:auto;flex:none;overflow:visible}#pp .cw:has(.u.nw) .cmp{flex:1;min-width:0;width:auto}';document.head.appendChild(st)}
+try{COMANDI.push({k:'densify',n:'Infittisci',en:'Densify',ab:'DNS',f:()=>densify(),al:['infittisci punti']});
+  COMANDI.push({k:'simplify',n:'Semplifica',en:'Simplify',ab:'SMP',f:()=>simplify(),al:['semplifica punti']})}catch(e){}
+Object.assign(window.__gestoPT,{densify:()=>densify(),simplify:()=>simplify(),tol:v=>{if(v!=null){S.ptTol=v;salvaPref()}return [ptTolPaper(),ptTolModel()]},deviation:(A,B,l)=>deviation(A,B,l),samples:id=>{const e=MOS.cad.get(id);return samplesOf(e.k,e.g)}});
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
