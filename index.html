@@ -957,7 +957,7 @@ let orig=()=>foglio().o||[0,0];
 let den=()=>foglio().sc||50;
 function fogliSet(patch){
   const f=foglio();Object.assign(f,patch);haFoglio=true;
-  const b={nome:f.nome||'Foglio 1',t:f.t||Date.now()};if(f.sc)b.sc=f.sc;if(f.o)b.o=f.o;if(f.qu)b.qu=f.qu;if(f.ts)b.ts=f.ts;else delete f.ts;if(f.formati&&f.formati.length)b.formati=f.formati;if(f.cartigli&&f.cartigli.length)b.cartigli=f.cartigli;if(f.cartDef)b.cartDef=f.cartDef;if(f.dp)b.dp=f.dp;if(f.uuid)b.uuid=f.uuid;if(Array.isArray(f.viste)&&f.viste.length)b.viste=f.viste;tsVer++;
+  const b={nome:f.nome||'Foglio 1',t:f.t||Date.now()};if(f.sc)b.sc=f.sc;if(f.o)b.o=f.o;if(f.qu)b.qu=f.qu;if(f.ts)b.ts=f.ts;else delete f.ts;if(f.formati&&f.formati.length)b.formati=f.formati;if(f.cartigli&&f.cartigli.length)b.cartigli=f.cartigli;if(f.cartDef)b.cartDef=f.cartDef;if(f.dp)b.dp=f.dp;if(f.uuid)b.uuid=f.uuid;if(Array.isArray(f.viste)&&f.viste.length)b.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)b.cartelle=f.cartelle;tsVer++;
   if(db)traccia('fogli/'+f.id,()=>db.doc('fogli/'+f.id).set(b)).catch(()=>{});
   aggScala();datiVer++;indiceCad=null;richiedi();
 }
@@ -3689,7 +3689,7 @@ let tavElim=null;
 function rendiTavole(){
   const p=$('pEsporta');if(!p||p.hidden)return;const B=$('tavB'),ae=document.activeElement;
   if(ae&&B.contains(ae)&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'))return;
-  const ts=[...MOS.tavole.values()].sort((a,b)=>(a.t||0)-(b.t||0));
+  const ts=[...MOS.tavole.values()].filter(t=>!t.pdf).sort((a,b)=>(a.t||0)-(b.t||0));
   if(!tavAtt()&&ts.length&&(caricato||!db)){S.tav=ts[0].id;salvaPref()}
   const ss=$('tavSel');ss.textContent='';if(!ts.length){const o=document.createElement('option');o.value='';o.textContent='Nessuna tavola';ss.appendChild(o)}
   ts.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=(t.nome||'Tavola')+' · '+nomeFmt(t)+' · 1:'+(t.sc||den());o.selected=t.id===S.tav;ss.appendChild(o)});
@@ -3852,8 +3852,8 @@ function avviaArchivio(d){
   db=d;
   db.collection('fogli').onSnapshot(snap=>{
     const loc=fogli.find(f=>f.id===foglioId);
-    fogli=snap.docs.map(x=>{const b=x.data()||{};return {id:x.id,nome:b.nome,t:b.t||0,sc:b.sc,o:b.o,qu:b.qu,ts:b.ts||undefined,formati:Array.isArray(b.formati)?b.formati:undefined,cartigli:Array.isArray(b.cartigli)?b.cartigli:undefined,cartDef:b.cartDef||undefined,dp:b.dp||undefined,uuid:b.uuid||undefined,viste:Array.isArray(b.viste)?b.viste:undefined,esiste:true}}).sort((a,b)=>a.t-b.t);
-    if(loc&&catene.has('fogli/'+loc.id)){const i=fogli.findIndex(f=>f.id===loc.id);if(i>=0)fogli[i]=Object.assign(fogli[i],{sc:loc.sc,o:loc.o,qu:loc.qu,ts:loc.ts,formati:loc.formati,cartigli:loc.cartigli,cartDef:loc.cartDef,dp:loc.dp,uuid:loc.uuid});else fogli.push(loc)}
+    fogli=snap.docs.map(x=>{const b=x.data()||{};return {id:x.id,nome:b.nome,t:b.t||0,sc:b.sc,o:b.o,qu:b.qu,ts:b.ts||undefined,formati:Array.isArray(b.formati)?b.formati:undefined,cartigli:Array.isArray(b.cartigli)?b.cartigli:undefined,cartDef:b.cartDef||undefined,dp:b.dp||undefined,uuid:b.uuid||undefined,viste:Array.isArray(b.viste)?b.viste:undefined,cartelle:Array.isArray(b.cartelle)?b.cartelle:undefined,esiste:true}}).sort((a,b)=>a.t-b.t);
+    if(loc&&catene.has('fogli/'+loc.id)){const i=fogli.findIndex(f=>f.id===loc.id);if(i>=0)fogli[i]=Object.assign(fogli[i],{sc:loc.sc,o:loc.o,qu:loc.qu,ts:loc.ts,formati:loc.formati,cartigli:loc.cartigli,cartDef:loc.cartDef,dp:loc.dp,uuid:loc.uuid,viste:loc.viste,cartelle:loc.cartelle});else fogli.push(loc)}
     if(fogli.some(f=>f.id===foglioId))haFoglio=true;
     else if(fogli.length&&!tratti.size&&!(snap.metadata&&snap.metadata.fromCache)&&foglioId==='f1'){foglioId=fogli[0].id;apriFoglio(foglioId)}
     menuFogli();aggScala();tsVer++;datiVer++;richiedi();
@@ -3898,12 +3898,13 @@ async function datiSfondo(b){
 }
 async function esportaFoglio(){
   const f=foglio(),o={formato:'lavagna-demazur',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
-  if(f.sc)o.foglio.sc=f.sc;if(f.o)o.foglio.o=f.o;if(f.qu)o.foglio.qu=f.qu;if(f.ts)o.foglio.ts=f.ts;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;if(f.cartDef)o.foglio.cartDef=f.cartDef;if(f.dp)o.foglio.dp=f.dp;if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;let n=0,persi=0;
+  if(f.sc)o.foglio.sc=f.sc;if(f.o)o.foglio.o=f.o;if(f.qu)o.foglio.qu=f.qu;if(f.ts)o.foglio.ts=f.ts;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;if(f.cartDef)o.foglio.cartDef=f.cartDef;if(f.dp)o.foglio.dp=f.dp;if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;let n=0,persi=0;
   RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
   if(!n){notaEx('Il foglio è vuoto');return}
   notaEx('Preparo il file del foglio…');
   for(const b of elencoSfondi()){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
   for(const b of elencoSfondi()){const a=b.pdf&&b.pdf.a;if(!a||o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
+  for(const tv of MOS.tavole.values()){const a=tv.pdf&&tv.pdf.a;if(!a||o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
   for(const tv of MOS.tavole.values()){const a=tv.cart&&tv.cart.kp;if(!a||o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
   const blob=new Blob([JSON.stringify(involucroDmz(o))],{type:'application/json'}),nome=nomeFile('dmz');
   if(downloads){try{await downloads.save({filename:nome,data:blob});notaEx('Salvato: '+nome)}
@@ -3928,10 +3929,11 @@ async function importaFoglio(file){
   for(const b of (o.rami.sfondi||[])){const a=b.pdf&&b.pdf.a;if(!a||mappa.has(a)||!(o.immagini&&o.immagini[a])||!assets)continue;try{const q=daData(o.immagini[a]),r=await assets.upload(q,{type:q.type});mappa.set(a,r.id)}catch(e){}}
   for(const b of (o.rami.sfondi||[])){if(mappa.has(b.a))continue;const dati=o.immagini&&o.immagini[b.a];if(!dati||!assets){persi++;continue}
     try{const q=daData(dati),r=await assets.upload(q,{type:q.type});mappa.set(b.a,r.id);immagine(r.id,r.url)}catch(e){persi++}}
+  for(const tv of (o.rami.tavole||[])){const a=tv.pdf&&tv.pdf.a;if(!a)continue;if(!mappa.has(a)&&o.immagini&&o.immagini[a]&&assets)try{const q=daData(o.immagini[a]),r=await assets.upload(q,{type:q.type});mappa.set(a,r.id)}catch(e){}if(mappa.has(a))tv.pdf=Object.assign({},tv.pdf,{a:mappa.get(a)});else delete tv.pdf}
   for(const tv of (o.rami.tavole||[])){const a=tv.cart&&tv.cart.kp;if(!a)continue;if(!mappa.has(a)){const dati=o.immagini&&o.immagini[a];if(dati&&assets)try{const q=daData(dati),r=await assets.upload(q,{type:q.type});mappa.set(a,r.id);immagine(r.id,r.url)}catch(e){persi++}}
     if(mappa.has(a))tv.cart.kp=mappa.get(a);else{delete tv.cart.kp;delete tv.cart.kpOn}}
   const base=(o.foglio&&o.foglio.nome)||'Foglio';let nome=base,k=1;while(fogli.some(f=>f.nome===nome)){nome=base+(k===1?' (copia)':' (copia '+k+')');k++}
-  const id=idCasuale('f'),nf={id,nome,t:Date.now()};if(o.foglio){if(o.foglio.sc)nf.sc=o.foglio.sc;if(o.foglio.o)nf.o=o.foglio.o;if(o.foglio.qu)nf.qu=o.foglio.qu;if(o.foglio.ts)nf.ts=o.foglio.ts;if(Array.isArray(o.foglio.formati))nf.formati=o.foglio.formati;if(Array.isArray(o.foglio.cartigli))nf.cartigli=o.foglio.cartigli;if(o.foglio.cartDef)nf.cartDef=o.foglio.cartDef;if(o.foglio.dp)nf.dp=o.foglio.dp;if(Array.isArray(o.foglio.viste)){nf.viste=o.foglio.viste;setTimeout(()=>vsWarn(nf.viste),0)}}if(o._doc&&!fogli.some(q=>q.uuid===o._doc))nf.uuid=o._doc;
+  const id=idCasuale('f'),nf={id,nome,t:Date.now()};if(o.foglio){if(o.foglio.sc)nf.sc=o.foglio.sc;if(o.foglio.o)nf.o=o.foglio.o;if(o.foglio.qu)nf.qu=o.foglio.qu;if(o.foglio.ts)nf.ts=o.foglio.ts;if(Array.isArray(o.foglio.formati))nf.formati=o.foglio.formati;if(Array.isArray(o.foglio.cartigli))nf.cartigli=o.foglio.cartigli;if(o.foglio.cartDef)nf.cartDef=o.foglio.cartDef;if(o.foglio.dp)nf.dp=o.foglio.dp;if(Array.isArray(o.foglio.viste)){nf.viste=o.foglio.viste;setTimeout(()=>vsWarn(nf.viste),0)}if(Array.isArray(o.foglio.cartelle))nf.cartelle=o.foglio.cartelle;}if(o._doc&&!fogli.some(q=>q.uuid===o._doc))nf.uuid=o._doc;
   fogli.push(nf);foglioId=id;menuFogli();apriFoglio(id);fogliSet({});
   const add=[];let n=0;
   RAMI.forEach(r=>(o.rami[r]||[]).forEach(d=>{if(!d||!d.id)return;const c=Object.assign({},d);delete c.id;
@@ -4853,7 +4855,7 @@ let fmtAperto=false;
    FI8 il disegno si modifica nel modello; doppio tocco su una finestra apre il modello in quel punto. FI9 una tavola esistente vale come tavola con una finestra.
    FI10 PDF, immagini e DXF riproducono le finestre. Titolo facoltativo «1 · Nome · 1:50»; bordo della finestra non stampato; «In grigio» per lo stato di fatto. */
 const r1m=v=>Math.round(v*10)/10;
-function finestre(t,G){if(!t)return [];if(t.fin&&t.fin.length)return t.fin.map((f,i)=>Object.assign({n:i+1},f));G=G||tavGeo(t);
+function finestre(t,G){if(!t||t.pdf)return [];if(t.fin&&t.fin.length)return t.fin.map((f,i)=>Object.assign({n:i+1},f));G=G||tavGeo(t);
   return [{id:'f1',n:1,x:G.ax0,y:G.ay0,w:G.aw,h:G.ah,c:t.c||[0,0],sc:G.sc,vis:t.vis,sost:t.sost,tit:t.tit,virt:true}]}
 const finGeo=f=>({mx0:f.c[0]-f.w*f.sc/2,my0:f.c[1]-f.h*f.sc/2,mw:f.w*f.sc,mh:f.h*f.sc});
 const finAtt=t=>{const L=finestre(t);return L.find(f=>f.id===S.finAtt)||L[0]||null};
@@ -5583,7 +5585,7 @@ const _disegnaTavola36=disegnaTavola;disegnaTavola=function(x){_disegnaTavola36(
 let IMPAG=null,IN_CONTORNO=0;
 const vsCarta=()=>{const t=tavAtt();return t?tavGeo(t):null};
 const ordineTav=()=>[...MOS.tavole.values()].sort((a,b)=>(a.o!=null?a.o:1e15+(a.t||0))-(b.o!=null?b.o:1e15+(b.t||0)));
-const numTav=t=>ordineTav().findIndex(x=>x.id===t.id)+1;
+const numTav=t=>ordineTav().filter(x=>!x.pdf||x.id===t.id).findIndex(x=>x.id===t.id)+1;
 function numerata(t){if(!t||!t.cart||!/#{2,4}/.test(t.cart.cod||''))return t;const n=numTav(t);return Object.assign({},t,{cart:Object.assign({},t.cart,{cod:t.cart.cod.replace(/#{2,4}/,m=>String(n).padStart(m.length,'0'))})})}
 /* il numero entra nel cartiglio e nel nome dei file */
 const _cartiglioPdf37=cartiglioPdf;cartiglioPdf=function(doc,G,t,logo){return _cartiglioPdf37(doc,G,numerata(t),logo)};
@@ -5630,7 +5632,7 @@ const _disegnaTavola37=disegnaTavola;disegnaTavola=function(x){_disegnaTavola37(
   _finestre37(t,tavGeo(t)).forEach(f=>{const a=w2s(f.x,f.y),b=w2s(f.x+f.w,f.y+f.h);x.strokeStyle=T.muted;x.lineWidth=1;x.setLineDash([4,4]);x.strokeRect(a[0]+.5,a[1]+.5,b[0]-a[0],b[1]-a[1]);x.setLineDash([])})};
 /* ---------- entrare e uscire ---------- */
 let V_MOD=null,V_IMP=new Map();
-function adattaCartaVista(){const G=vsCarta();if(!G)return;const L0=(document.body.classList.contains('colChiusa')?70:250),R0=sel.size?330:(!$('pEsporta').hidden?400:20),w=V.W-L0-R0-20,h=V.H-90;
+function adattaCartaVista(){const G=vsCarta();if(!G)return;const L0=(document.body.classList.contains('colChiusa')?70:290),R0=sel.size?330:(!$('pEsporta').hidden?400:20),w=V.W-L0-R0-20,h=V.H-90;
   V.s=Math.max(0.05,Math.min(w/G.W,h/G.H));V.ox=L0+10+(w-G.W*V.s)/2;V.oy=70+(h-G.H*V.s)/2;cambioVista()}
 function entraImpag(){if(IMPAG)return;if(bloccoMod){avviso('Chiudi prima la modifica del blocco');return}if(ED.on)chiudiEd(true);if(ptr)termina();
   normOrdine();if(!MOS.tavole.size)nuovaTavola();if(!tavAtt()){const p=ordineTav()[0];if(p){S.tav=p.id;salvaPref()}}
@@ -6778,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.72';
+const VERSIONE_GESTO='0.73';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -6807,9 +6809,9 @@ logo.innerHTML=GESTO_SVG;
   /* ---- il contenuto del foglio corrente, letto subito: il cambio di foglio durante la lettura delle immagini non lo altera ---- */
   async function contenuto(){
     const f=foglio(),o={formato:'lavagna-demazur',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
-    ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
+    ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
     let n=0,persi=0;RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
-    const imm=[...elencoSfondi()];elencoSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a})});
+    const imm=[...elencoSfondi()];elencoSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a});if(tv.pdf&&tv.pdf.a)imm.push({a:tv.pdf.a})});
     if(!f.uuid)fogliSet({uuid:uuid7()});const u=f.uuid,nome=f.nome||'Foglio';
     for(const b of imm){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
     const c=senzaNull(o);delete c.formato;delete c.versione;
@@ -6835,14 +6837,14 @@ logo.innerHTML=GESTO_SVG;
   const attendi=c=>new Promise(ok=>{const t0=Date.now();(function g(){if(c()||Date.now()-t0>8000)ok();else setTimeout(g,60)})()});
   async function mappaImmagini(o){const mappa=new Map();let persi=0;const una=async a=>{if(mappa.has(a))return;const dati=o.immagini&&o.immagini[a];if(!dati||!assets){persi++;return}
       try{const q=daData(dati),r=await assets.upload(q,{type:q.type});mappa.set(a,r.id);immagine(r.id,r.url)}catch(e){persi++}};
-    for(const b of (o.rami.sfondi||[])){await una(b.a);if(b.pdf&&b.pdf.a)await una(b.pdf.a)}for(const tv of (o.rami.tavole||[])){const a=tv.cart&&tv.cart.kp;if(a)await una(a)}return {mappa,persi}}
+    for(const b of (o.rami.sfondi||[])){await una(b.a);if(b.pdf&&b.pdf.a)await una(b.pdf.a)}for(const tv of (o.rami.tavole||[])){const a=tv.cart&&tv.cart.kp;if(a)await una(a);if(tv.pdf&&tv.pdf.a)await una(tv.pdf.a)}return {mappa,persi}}
   /* sostituisce il contenuto del foglio corrente con quello del file */
   async function ricarica(o){
     const {mappa,persi}=await mappaImmagini(o);const del=[];RAMI.forEach(r=>MOS[r].forEach(x=>{if(r!=='tratti')x._r=r;del.push(x)}));
     const add=[];RAMI.forEach(r=>(o.rami[r]||[]).forEach(d=>{if(!d||!d.id)return;const c=Object.assign({},d);delete c.id;
-      if(r==='sfondi'){if(!mappa.has(c.a))return;c.a=mappa.get(c.a);if(c.pdf&&c.pdf.a){if(mappa.has(c.pdf.a))c.pdf=Object.assign({},c.pdf,{a:mappa.get(c.pdf.a)});else delete c.pdf}}if(r==='tavole'&&c.cart&&c.cart.kp){if(mappa.has(c.cart.kp))c.cart.kp=mappa.get(c.cart.kp);else{delete c.cart.kp;delete c.cart.kpOn}}
+      if(r==='sfondi'){if(!mappa.has(c.a))return;c.a=mappa.get(c.a);if(c.pdf&&c.pdf.a){if(mappa.has(c.pdf.a))c.pdf=Object.assign({},c.pdf,{a:mappa.get(c.pdf.a)});else delete c.pdf}}if(r==='tavole'&&c.pdf&&c.pdf.a){if(mappa.has(c.pdf.a))c.pdf=Object.assign({},c.pdf,{a:mappa.get(c.pdf.a)});else delete c.pdf}if(r==='tavole'&&c.cart&&c.cart.kp){if(mappa.has(c.cart.kp))c.cart.kp=mappa.get(c.cart.kp);else{delete c.cart.kp;delete c.cart.kpOn}}
       const x=PARSE[r](d.id,c);if(!x)return;if(r!=='tratti')x._r=r;add.push(x)}));
-    silenzio=true;if(o.foglio){const p={};['sc','o','qu','ts','cartDef','dp','formati','cartigli','viste'].forEach(k=>{if(o.foglio[k]!=null)p[k]=o.foglio[k]});fogliSet(p);vsWarn(o.foglio.viste)}
+    silenzio=true;if(o.foglio){const p={};['sc','o','qu','ts','cartDef','dp','formati','cartigli','viste','cartelle'].forEach(k=>{if(o.foglio[k]!=null)p[k]=o.foglio[k]});fogliSet(p);vsWarn(o.foglio.viste)}
     silenzio=true;try{esegui({add,del},false)}finally{setTimeout(()=>{silenzio=false},0)}clearTimeout(pausa);return persi}
   async function apriHandle(h){
     const {fl,o:grezzo}=await leggiFile(h);const o=grezzo&&apriDmz(grezzo);
@@ -7605,8 +7607,8 @@ Object.assign(window.__gestoPT,{densify:()=>densify(),simplify:()=>simplify(),to
 let PF_SKIP=false;
 const PF_RASTER=2400,PF_MAX=30,PT_MM=25.4/72;
 const PF={docs:new Map(),bytes:new Map(),pages:new Map(),on:true,sel:[],place:null,img:new Map(),pick:null,drag:null,pend:null,tiles:new Map(),tileT:0};
-const pfPages=()=>elencoSfondi().filter(b=>b.pdf&&b.pdf.a);
-const pfDocPages=a=>[...sfondi.values()].filter(b=>b.pdf&&b.pdf.a===a).sort((x,y)=>x.pdf.p-y.pdf.p);
+let pfPages=()=>elencoSfondi().filter(b=>b.pdf&&b.pdf.a);
+let pfDocPages=a=>[...sfondi.values()].filter(b=>b.pdf&&b.pdf.a===a).sort((x,y)=>x.pdf.p-y.pdf.p);
 async function pfLib(){await libInterna('libPdflib',()=>!!window.PDFLib,'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js');return window.PDFLib}
 function pfBytes(a){
   if(!PF.bytes.has(a))PF.bytes.set(a,(async()=>{let q=null;
@@ -7774,7 +7776,7 @@ function pfFill(D,b){D.el.textContent='';D.fields=[];
     if(f.ro)el.disabled=true;el.title=f.n;D.el.appendChild(el);const q={el,f};pfShow(q,pfVal(b,f.n));D.fields.push(q)})}
 function pfToggle(b,f){if(f.ro)return;const v=pfVal(b,f.n);if(f.t==='cb')pfSet(b,f.n,!v,true);else pfSet(b,f.n,v===f.ev?'':f.ev,true)}
 function pfSync(){
-  const on=PF.on&&!IMPAG&&!document.body.classList.contains('incarta'),seen=new Set();
+  const on=PF.on&&!document.body.classList.contains('incarta'),seen=new Set();
   if(on)pfPages().forEach(b=>{const fl=b.pdf.fl;if(!fl||!fl.length)return;
     const O=w2s(b.x,b.y),X=w2s(b.x+b.w,b.y),Y=w2s(b.x,b.y+b.h),Z=w2s(b.x+b.w,b.y+b.h),xs=[O[0],X[0],Y[0],Z[0]],ys=[O[1],X[1],Y[1],Z[1]];
     if(Math.max(...xs)<0||Math.min(...xs)>V.W||Math.max(...ys)<0||Math.min(...ys)>V.H)return;
@@ -7784,7 +7786,7 @@ function pfSync(){
     const det=m[0]*m[3]-m[1]*m[2];D.m=m;D.inv=[m[3]/det,-m[1]/det,-m[2]/det,m[0]/det,(m[2]*m[5]-m[3]*m[4])/det,(m[1]*m[4]-m[0]*m[5])/det];
     D.el.style.transform='matrix('+m.map(v=>+v.toFixed(6)).join(',')+')';D.el.hidden=false;D.b=b;seen.add(b.id)});
   PFD.forEach((D,id)=>{if(!seen.has(id)){if(D.el.contains(document.activeElement))document.activeElement.blur();D.el.hidden=true}
-    if(!sfondi.has(id)){D.el.remove();PFD.delete(id)}})}
+    if(!pfGet(id)){D.el.remove();PFD.delete(id)}})}
 function pfFieldAt(sx,sy){for(const D of PFD.values()){if(D.el.hidden||!D.inv)continue;const I=D.inv,u=I[0]*sx+I[2]*sy+I[4],v=I[1]*sx+I[3]*sy+I[5];
     for(let i=D.fields.length-1;i>=0;i--){const q=D.fields[i],r=q.f.r;if(u>=r[0]&&u<=r[0]+r[2]&&v>=r[1]&&v<=r[1]+r[3])return Object.assign({D},q)}}return null}
 const _disegnaFondo73=disegnaFondo;disegnaFondo=function(){_disegnaFondo73();try{pfSync()}catch(e){console.warn(e)}};
@@ -7849,8 +7851,8 @@ async function pfOverlay(b){if(!pfCiSonoSegni(b))return null;
   PF_SKIP=true;try{pdfModello(doc,f,-b.x*f,-b.y*f,false)}finally{PF_SKIP=false}
   for(const m of (b.pdf.im||[])){const o=pfImg(m.k);if(!o.ok)continue;try{doc.addImage(o.data,o.fmt,m.x*PT_MM,m.y*PT_MM,m.w*PT_MM,m.h*PT_MM,undefined,'FAST')}catch(e){console.warn(e)}}
   doc.restoreGraphicsState();return new Uint8Array(await pdfFinale(doc).arrayBuffer())}
-async function pfEsporta(ids){
-  const P=ids.map(id=>sfondi.get(id)).filter(b=>b&&b.pdf);if(!P.length){avviso('Scegli le pagine del PDF con il riquadro');return}
+async function pfEsporta(ids,opt){opt=opt||{};
+  const P=ids.map(id=>pfGet(id)).filter(b=>b&&b.pdf);if(!P.length){avviso('Scegli le pagine del PDF con il riquadro');return}
   if(document.activeElement&&document.activeElement.classList&&document.activeElement.classList.contains('pff'))document.activeElement.blur();
   avviso('Preparo il PDF compilato…');const L=await pfLib(),gruppi=new Map();P.forEach(b=>{if(!gruppi.has(b.pdf.a))gruppi.set(b.pdf.a,[]);gruppi.get(b.pdf.a).push(b)});
   await Promise.all(['firma','timbro'].map(k=>new Promise(r=>{const o=pfImg(k);if(o.ok||o.none)return r();setTimeout(r,400)})));
@@ -7858,7 +7860,7 @@ async function pfEsporta(ids){
   for(const [a,sel] of gruppi){const note=[];let bytes;try{bytes=await pfBytes(a)}catch(e){avviso('Il PDF originale non è su questo dispositivo');continue}
     let doc;try{doc=await L.PDFDocument.load(bytes,{updateMetadata:false})}
     catch(e){try{doc=await L.PDFDocument.load(bytes,{updateMetadata:false,ignoreEncryption:true});note.push('il PDF è protetto: verifica il risultato')}catch(e2){avviso('Il PDF non si può modificare');continue}}
-    const tutte=pfDocPages(a),vals={};tutte.forEach(b=>Object.assign(vals,b.pdf.v||{}));const fix=sel.some(b=>b.pdf.fx);
+    const tutte=pfDocPages(a),vals={};tutte.forEach(b=>Object.assign(vals,b.pdf.v||{}));const fix=opt.fix||sel.some(b=>b.pdf.fx);
     let form=null;try{form=doc.getForm()}catch(e){}
     if(form){
       try{if(form.hasXFA()){form.deleteXFA();note.push('dati XFA rimossi')}}catch(e){}
@@ -7887,8 +7889,8 @@ async function pfEsporta(ids){
     doc.getPages().forEach(pg=>{const A=pg.node.lookup(L.PDFName.of('Annots'));if(!(A instanceof L.PDFArray))return;for(let i=A.size()-1;i>=0;i--){const r=A.get(i);if(r instanceof L.PDFRef&&!doc.context.lookup(r))A.remove(i)}});
     const out=await doc.save({updateFieldAppearances:false,useObjectStreams:false}),nm=sel[0].pdf.nm,parte=sel.length<sel[0].pdf.n?' p. '+sel.map(b=>b.pdf.p).sort((x,y)=>x-y).join(','):'';
     const nome=(nm+' - compilato'+parte).replace(/[\\\/:*?"<>|]+/g,' ').trim()+'.pdf';
-    await salvaFile(nome,new Blob([out],{type:'application/pdf'}));esiti.push(nome+(note.length?' ('+[...new Set(note)].join('; ')+')':''))}
-  if(esiti.length)avviso('PDF compilato: '+esiti.join(' · '));PF.last=esiti}
+    if(opt.bytes)(opt.out=opt.out||[]).push({nome,out});else await salvaFile(nome,new Blob([out],{type:'application/pdf'}));esiti.push(nome+(note.length?' ('+[...new Set(note)].join('; ')+')':''))}
+  if(esiti.length&&!opt.bytes)avviso('PDF compilato: '+esiti.join(' · '));PF.last=esiti;return opt.out}
 
 /* ---- the panel ---- */
 const _rendiSf73=rendiSf;rendiSf=function(){_rendiSf73();try{pfPanel()}catch(e){console.warn(e)}};
@@ -7913,9 +7915,290 @@ try{COMANDI.push({k:'openpdf',n:'Apri PDF da compilare',en:'Open PDF to fill in'
   COMANDI.push({k:'exportpdf',n:'Esporta PDF compilato',en:'Export filled PDF',ab:'EPC',f:()=>{const b=sfondi.get(selSf);
     const ids=PF.sel.length?PF.sel.slice():b&&b.pdf?pfDocPages(b.pdf.a).map(q=>q.id):[];if(!ids.length){avviso('Scegli le pagine del PDF con il riquadro');return}pfEsporta(ids)},al:['esporta pdf compilato','salva pdf compilato']})}catch(e){}
 window.__gestoPF={open:(u8,name)=>pfApri(new File([u8],name||'modulo.pdf',{type:'application/pdf'})),pages:()=>pfPages().map(b=>({id:b.id,x:b.x,y:b.y,w:b.w,h:b.h,pdf:b.pdf})),
-  set:(id,n,v)=>pfSet(sfondi.get(id),n,v,true),export:ids=>pfEsporta(ids||PF.sel),sel:()=>PF.sel.slice(),on:v=>{if(v!=null){PF.on=!!v;richiedi('fondo')}return PF.on},
-  place:(id,k,u,v)=>{const b=sfondi.get(id),o=pfImg(k);if(!b||!o.ok)return false;const w=(k==='firma'?45:30)/PT_MM,h=w*o.h/o.w;pfSalvaIm(b,(b.pdf.im||[]).concat([{k,x:u-w/2,y:v-h/2,w,h}]));return true},
+  set:(id,n,v)=>pfSet(pfGet(id),n,v,true),export:ids=>pfEsporta(ids||PF.sel),sel:()=>PF.sel.slice(),on:v=>{if(v!=null){PF.on=!!v;richiedi('fondo')}return PF.on},
+  place:(id,k,u,v)=>{const b=pfGet(id),o=pfImg(k);if(!b||!o.ok)return false;const w=(k==='firma'?45:30)/PT_MM,h=w*o.h/o.w;pfSalvaIm(b,(b.pdf.im||[]).concat([{k,x:u-w/2,y:v-h/2,w,h}]));return true},
   field:(sx,sy)=>{const q=pfFieldAt(sx,sy);return q?q.f.n:null},tile:id=>{const T=PF.tiles.get(id);return T&&T.c?[T.c.width,T.c.height,T.q.k]:null},last:()=>PF.last,mat:pfMat};
+
+/* ---------- 74. Documents and folders in the layout (owner, 23.11.2026) ----------
+   DC1 A PDF opens also straight into the layout: every page becomes a sheet with the exact size of the page, in the order of the document.
+   DC2 The pages of a PDF stay together as one document, moved, renamed and exported whole; they can also be separated.
+   DC3 In the layout one fills, writes and signs straight on the page, with the PF rules (phase 73).
+   DC4 The layout is ordered in folders and subfolders; sheets and documents are dragged from one folder to another.
+   DC5 One exports a page, a document, a folder (and, in the model, what the box chooses).
+   DC6 A received document leaves identical to the original; Gesto sheets leave as today.
+   DC7 A folder leaves as one PDF or as separate PDFs (a zip), by choice.
+   DC8 Everything stays in the file of the sheet, which opens from any workstation (one writer at a time).
+   Data: a PDF page sheet is a sheet record with fmt 'P:pdf' and pdf = {a,d,nm,p,n,W,H,T,fl,v,im,fx} as in phase 73;
+   folders are foglio.cartelle = [{id,nome,p}] and a sheet sits in folder t.dir (none = top level). */
+const PT_R1=v=>Math.round(v*10)/10;
+function dcFmtNome(W,H){const S=[['A0',841,1189],['A1',594,841],['A2',420,594],['A3',297,420],['A4',210,297],['A5',148,210]],a=Math.min(W,H),b=Math.max(W,H);
+  const s=S.find(q=>Math.abs(q[1]-a)<2&&Math.abs(q[2]-b)<2);return (s?(s[0]+(H>W?' vert.':'')):(Math.round(W)+' × '+Math.round(H)))+' · PDF'}
+/* a page sheet has no window: the preview of the sheet falls back to no filter */
+const _filtroFin74=filtroFin;filtroFin=(t,f)=>f?_filtroFin74(t,f):null;
+const _formatoDi74=formatoDi;formatoDi=function(t){if(t&&t.pdf){const W=PT_R1(t.pdf.W*PT_MM),H=PT_R1(t.pdf.H*PT_MM);return [W,H,dcFmtNome(W,H)]}return _formatoDi74(t)};
+
+/* ---- a page sheet seen by the PF functions: page in mm of paper, origin at its top-left corner ---- */
+function pfHold(t){if(!t||!t.pdf)return null;const G=tavGeo(t),id=t.id;
+  return {id,_r:'tavole',x:0,y:0,w:G.W,h:G.H,o:1,get pdf(){const q=MOS.tavole.get(id)||t;return q.pdf},set pdf(v){const q=MOS.tavole.get(id)||t;q.pdf=v}}}
+pfPages=()=>{if(IMPAG){const h=pfHold(tavAtt());return h?[h]:[]}return elencoSfondi().filter(b=>b.pdf&&b.pdf.a)};
+pfDocPages=a=>[...sfondi.values()].filter(b=>b.pdf&&b.pdf.a===a).concat([...MOS.tavole.values()].filter(t=>t.pdf&&t.pdf.a===a).map(pfHold)).sort((x,y)=>x.pdf.p-y.pdf.p);
+function pfGet(id){const b=sfondi.get(id);if(b&&b.pdf)return b;return pfHold(MOS.tavole.get(id))}
+function pfSave(b){if(b._r==='tavole'){const t=MOS.tavole.get(b.id);if(!t)return;salva('tavole',b.id,'set',Object.assign({},t,{pdf:b.pdf}));return}salva('sfondi',b.id,'set',b)}
+function pfRefresh(){rendiSf();if(IMPAG)rendiTavole()}
+pfSet=function(b,n,val,persist){pfDocPages(b.pdf.a).forEach(p=>{if(!(p.pdf.fl||[]).some(f=>f.n===n))return;p.pdf=Object.assign({},p.pdf,{v:Object.assign({},p.pdf.v,{[n]:val})});if(persist)pfSave(p)});
+  PFD.forEach(D=>D.fields.forEach(q=>{if(q.f.n===n&&!(q.f.t==='tx'&&q.el===document.activeElement))pfShow(q,val)}))};
+pfSalvaIm=function(b,L){b.pdf=Object.assign({},b.pdf,{im:L});pfSave(b);richiedi('fondo')};
+pfImScala=function(k){const p=PF.pick,b=p&&pfGet(p.id);if(!b)return;const L=b.pdf.im.map(q=>Object.assign({},q)),m=L[p.i];if(!m)return;
+  const cx=m.x+m.w/2,cy=m.y+m.h/2;m.w=pfR2(m.w*k);m.h=pfR2(m.h*k);m.x=pfR2(cx-m.w/2);m.y=pfR2(cy-m.h/2);pfSalvaIm(b,L)};
+pfImTogli=function(){const p=PF.pick,b=p&&pfGet(p.id);if(!b)return;const L=b.pdf.im.slice();L.splice(p.i,1);PF.pick=null;pfSalvaIm(b,L);pfRefresh()};
+const _rendiSf74=rendiSf;rendiSf=function(){_rendiSf74();if(IMPAG)try{rendiTavole()}catch(e){console.warn(e)}};
+
+/* ---- the overlay of a page sheet: the elements of its paper, signature and stamp ---- */
+const dcHaSegni=t=>(t.pdf.im||[]).length>0||haCarta(t);
+const _pfOverlay74=pfOverlay;
+pfOverlay=async function(b){if(b._r!=='tavole')return _pfOverlay74(b);const t=MOS.tavole.get(b.id);if(!t||!dcHaSegni(t))return null;
+  const W=b.pdf.W*PT_MM,H=b.pdf.H*PT_MM,doc=await nuovoPdf(W,H),k=W/b.w;
+  doc.saveGraphicsState();doc.rect(0,0,W,H,null);doc.clip();doc.discardPath();
+  TAV_FILTRO=filtroFin(t,{carta:true});try{pdfModello(doc,k,0,0,true)}finally{TAV_FILTRO=null}
+  for(const m of (b.pdf.im||[])){const o=pfImg(m.k);if(!o.ok)continue;try{doc.addImage(o.data,o.fmt,m.x*PT_MM,m.y*PT_MM,m.w*PT_MM,m.h*PT_MM,undefined,'FAST')}catch(e){console.warn(e)}}
+  doc.restoreGraphicsState();return new Uint8Array(await pdfFinale(doc).arrayBuffer())};
+
+/* ---- DC3: the page in the layout, drawn from the original (vector, at the resolution of the screen) ---- */
+const _rendiBG74=rendiBG;
+rendiBG=async function(){const t=IMPAG&&tavAtt();if(!t||!t.pdf)return _rendiBG74();
+  if(BG.busy){BG.pend=true;return}BG.busy=true;
+  try{const key=chiaveBG(),px=bgScala(),pk=t.id+'#'+t.pdf.a+'#'+t.pdf.p;
+    if(BG.pk===pk&&BG.c&&Math.abs(BG.px-px)/px<=0.2){BG.key=key;return}
+    const pg=await pfPage(t.pdf.a,t.pdf.p),G=tavGeo(t),c=document.createElement('canvas');c.width=Math.max(1,Math.round(G.W*px));c.height=Math.max(1,Math.round(G.H*px));
+    const x=c.getContext('2d');x.fillStyle='#FFFFFF';x.fillRect(0,0,c.width,c.height);
+    await pg.render({canvasContext:x,viewport:pg.getViewport({scale:c.width/(t.pdf.W)})}).promise;
+    const tt=tavAtt();if(!IMPAG||!tt||tt.id!==t.id)return;BG.c=c;BG.key=key;BG.px=px;BG.pk=pk;richiedi('fondo')}
+  catch(e){console.warn(e)}finally{BG.busy=false;if(BG.pend){BG.pend=false;rendiBG()}}};
+const _disegnaFondo74=disegnaFondo;
+disegnaFondo=function(){_disegnaFondo74();if(!IMPAG)return;const b=pfPages()[0];if(!b)return;const {x}=L.fondo;vista(x);
+  if(!PF.on)(b.pdf.fl||[]).forEach(f=>{const v=b.pdf.v[f.n];if(v!=null&&v!==''&&v!==false)pfTesto(x,b,f,v)});
+  (b.pdf.im||[]).forEach((m,i)=>{const o=pfImg(m.k),[X,Y]=pfP2W(b,m.x,m.y),[X1,Y1]=pfP2W(b,m.x+m.w,m.y+m.h);
+    if(o.ok)x.drawImage(o.img,X,Y,X1-X,Y1-Y);else{x.save();x.strokeStyle=T.line;x.lineWidth=1/V.s;x.setLineDash([5/V.s,4/V.s]);x.strokeRect(X,Y,X1-X,Y1-Y);x.restore()}
+    if(PF.pick&&PF.pick.id===b.id&&PF.pick.i===i){x.save();x.strokeStyle=T.acc;x.lineWidth=1.5/V.s;x.setLineDash([6/V.s,4/V.s]);x.strokeRect(X,Y,X1-X,Y1-Y);x.restore()}});
+  schermo(x)};
+/* other uses of the sheet as PDF (paper view, images, DXF): the page as a picture under the elements of the paper */
+const DC_RAST=new Map();
+async function dcRaster(t){const k=t.pdf.a+'#'+t.pdf.p;if(DC_RAST.has(k))return DC_RAST.get(k);const pg=await pfPage(t.pdf.a,t.pdf.p),s=Math.min(300/72,4000/Math.max(t.pdf.W,t.pdf.H)),vp=pg.getViewport({scale:s});
+  const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+  await pg.render({canvasContext:x,viewport:vp}).promise;const d=c.toDataURL('image/jpeg',0.9);DC_RAST.set(k,d);return d}
+const _docTavola74=docTavola;
+docTavola=async function(t,doc){if(!t||!t.pdf)return _docTavola74(t,doc);const G=tavGeo(t);if(!doc)doc=await nuovoPdf(G.W,G.H);
+  if(!t._bg){try{doc.addImage(await dcRaster(t),'JPEG',0,0,G.W,G.H,undefined,'FAST')}catch(e){console.warn(e)}}
+  doc.saveGraphicsState();doc.rect(0,0,G.W,G.H,null);doc.clip();doc.discardPath();TAV_FILTRO=filtroFin(t,{carta:true});try{pdfModello(doc,1,0,0,true)}finally{TAV_FILTRO=null}
+  for(const m of (t.pdf.im||[])){const o=pfImg(m.k);if(!o.ok)continue;try{doc.addImage(o.data,o.fmt,m.x*G.W/t.pdf.W,m.y*G.H/t.pdf.H,m.w*G.W/t.pdf.W,m.h*G.H/t.pdf.H,undefined,'FAST')}catch(e){}}
+  doc.restoreGraphicsState();return {doc,G}};
+const _pdfTavola74=pdfTavola;pdfTavola=function(t){if(t&&t.pdf)return pfEsporta([t.id]);return _pdfTavola74(t)};
+/* thumbnails of the pages straight from the original */
+const DC_MINI=new Map();
+const _miniature74=miniature;
+miniature=async function(){if(IMPAG&&!DC_MINI.busy){DC_MINI.busy=true;try{for(const t of ordineTav()){if(!t.pdf||!IMPAG)continue;const k=t.id+'|'+datiVer+'|'+numTav(t)+'|'+JSON.stringify(t),mi=MINI.get(t.id);if(mi&&mi.k===k)continue;
+      const pk=t.pdf.a+'#'+t.pdf.p;let c=DC_MINI.get(pk);
+      if(!c){try{const pg=await pfPage(t.pdf.a,t.pdf.p),px=280/Math.max(t.pdf.W,t.pdf.H)*(window.devicePixelRatio||1),vp=pg.getViewport({scale:px});c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+          const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);await pg.render({canvasContext:x,viewport:vp}).promise;DC_MINI.set(pk,c)}catch(e){console.warn(e);continue}}
+      MINI.set(t.id,{k,c})}rendiCol0()}finally{DC_MINI.busy=false}}return _miniature74()};
+
+/* ---- DC1: opening a PDF into the layout ---- */
+async function dcApriPdf(file,dir){
+  if(!db||!assets){avviso('Serve l’archivio della pagina');return}
+  if(!assets.locale){avviso('I PDF da compilare si aprono nell’app Gesto, così restano sul dispositivo');return}
+  avviso('Apro il PDF…');const lib=await libPdf(),bytes=new Uint8Array(await file.arrayBuffer());let doc;
+  try{doc=await lib.getDocument({data:bytes.slice(),isEvalSupported:false,disableFontFace:false}).promise}
+  catch(e){avviso(e&&e.name==='PasswordException'?'Il PDF chiede una password: va aperto e salvato senza protezione':'Il PDF non si apre');return}
+  let up;try{up=await assets.upload(new Blob([bytes],{type:'application/pdf'}),{type:'application/pdf'})}catch(e){avviso(erroreAsset(e));return}
+  PF.bytes.set(up.id,Promise.resolve(bytes));PF.docs.set(up.id,Promise.resolve(doc));
+  const N=doc.numPages,nm=file.name.replace(/\.pdf$/i,''),d=idCasuale('pd'),base=MOS.tavole.size,t0=Date.now();let first=null,nf=0,signed=0;
+  assicuraFoglio();normOrdine();
+  for(let n=1;n<=N;n++){if(N>3)avviso('Leggo la pagina '+n+' di '+N+'…');
+    const pg=await doc.getPage(n),v1=pg.getViewport({scale:1});let fl=[];try{fl=pfFields(await pg.getAnnotations({intent:'display'}),v1)}catch(e){console.warn(e)}
+    const v={};fl.forEach(q=>{const s=pfStartValue(q);if(s!==''&&s!==false)v[q.n]=s;if(q.signed)signed++;delete q.v0});nf+=fl.length;
+    const id=nuovoId('tavole'),t={id,_r:'tavole',nome:nm+(N>1?' · p. '+n:''),fmt:'P:pdf',sc:1,c:[0,0],cart:{},o:base+n-1,t:t0+n,
+      pdf:{a:up.id,d,nm,p:n,n:N,W:pfR2(v1.width),H:pfR2(v1.height),T:v1.transform.map(q=>Math.round(q*1e6)/1e6),fl,v,im:[],fx:1}};
+    if(dir)t.dir=dir;salva('tavole',id,'set',t);if(!first)first=t}
+  DC.aperti.add(d);ricomponi();if(!IMPAG)entraImpag();vaiTavola(first.id);adattaCartaVista();strumento('penna');/* DC3: on a document one writes and signs */
+  let xfa=false;try{xfa=!!(doc.isPureXfa||doc.allXfaHtml)}catch(e){}
+  const msg=['«'+nm+'»: '+N+(N===1?' pagina':' pagine'),nf?nf+(nf===1?' campo compilabile':' campi compilabili'):'nessun campo: si scrive sopra'];
+  if(xfa)msg.push('modulo XFA: si scrive sopra la pagina');if(signed)msg.push('contiene firme digitali, che una modifica rende non valide');avviso(msg.join(' · '))}
+function dcScegliPdf(dir){const i=document.createElement('input');i.type='file';i.accept='application/pdf,.pdf';i.multiple=true;
+  i.onchange=async()=>{for(const f of [...(i.files||[])])await dcApriPdf(f,dir).catch(e=>{console.warn(e);avviso('Il PDF non si apre')})};i.click()}
+
+/* ---- DC4: folders ---- */
+const DC={chiuse:new Set(),aperti:new Set(),cart:null,menu:null};
+const dcCartelle=()=>Array.isArray(foglio().cartelle)?foglio().cartelle:[];
+const dcEsiste=id=>!!id&&dcCartelle().some(c=>c.id===id);
+const dcDir=t=>dcEsiste(t.dir)?t.dir:'';
+function dcSalvaCartelle(L){fogliSet({cartelle:L});rendiCol()}
+function dcNuovaCartella(p){const L=dcCartelle().slice(),c={id:idCasuale('cr'),nome:'Nuova cartella'};if(p)c.p=p;L.push(c);if(p)DC.chiuse.delete(p);dcSalvaCartelle(L);DC.rinomina='f:'+c.id;rendiCol()}
+function dcFigli(p){return dcCartelle().filter(c=>(dcEsiste(c.p)?c.p:'')===(p||''))}
+function dcSotto(p){const o=[p];dcFigli(p).forEach(c=>o.push(...dcSotto(c.id)));return o}
+function dcEliminaCartella(id){const c=dcCartelle().find(x=>x.id===id);if(!c)return;const p=dcEsiste(c.p)?c.p:'';
+  ordineTav().filter(t=>t.dir===id).forEach(t=>{const n=Object.assign({},t);if(p)n.dir=p;else delete n.dir;salva('tavole',t.id,'set',n)});
+  dcSalvaCartelle(dcCartelle().filter(x=>x.id!==id).map(x=>x.p===id?Object.assign({},x,p?{p}:{p:undefined}):x));ricomponi()}
+/* the order: sheets of a folder in their order, then the subfolders; documents as runs of pages of the same d */
+function dcVoci(p){const out=[];let run=null;
+  ordineTav().filter(t=>dcDir(t)===(p||'')).forEach(t=>{if(t.pdf){if(run&&run.d===t.pdf.d){run.ts.push(t);return}run={k:'doc',d:t.pdf.d,ts:[t]};out.push(run)}else{run=null;out.push({k:'tav',t})}});return out}
+function dcSequenza(p){const o=[];dcVoci(p).forEach(v=>v.k==='tav'?o.push(v):o.push(v));dcFigli(p).forEach(c=>o.push(...dcSequenza(c.id)));return o}
+/* moving: the chosen sheets go before an item, or at the end of a folder; the order is written again */
+function dcSposta(ids,dir,prima){const L=ordineTav(),mv=L.filter(t=>ids.includes(t.id)),rest=L.filter(t=>!ids.includes(t.id));let i=prima?rest.findIndex(t=>t.id===prima):-1;
+  if(i<0){let last=-1;rest.forEach((t,j)=>{if(dcDir(t)===(dir||''))last=j});i=last+1;if(last<0){/* empty folder: after the last sheet of the folders before it */i=rest.length}}
+  const seq=rest.slice(0,i).concat(mv,rest.slice(i));
+  seq.forEach((t,j)=>{const m=ids.includes(t.id),n=Object.assign({},t,{o:j});if(m){if(dir)n.dir=dir;else delete n.dir}if(n.o!==t.o||m)salva('tavole',t.id,'set',n)});ricomponi();rendiCol()}
+function dcDocTs(d){return ordineTav().filter(t=>t.pdf&&t.pdf.d===d)}
+function dcRinominaDoc(d,nome){nome=(nome||'').trim();if(!nome)return;dcDocTs(d).forEach(t=>salva('tavole',t.id,'set',Object.assign({},t,{nome:nome+(t.pdf.n>1?' · p. '+t.pdf.p:''),pdf:Object.assign({},t.pdf,{nm:nome})})));ricomponi()}
+function dcSepara(d){dcDocTs(d).forEach(t=>{const nd=idCasuale('pd');salva('tavole',t.id,'set',Object.assign({},t,{pdf:Object.assign({},t.pdf,{d:nd})}));DC.aperti.add(nd)});ricomponi();avviso('Pagine separate: ora si spostano una per una')}
+function dcTogliDoc(d){const ts=dcDocTs(d),ids=new Set(ts.map(t=>t.id));if(ids.has(S.tav)){const alt=ordineTav().find(t=>!ids.has(t.id));if(alt)vaiTavola(alt.id)}
+  ts.forEach(t=>salva('tavole',t.id,'del',t));if(![...MOS.tavole.values()].some(t=>!ids.has(t.id)))esciImpag();ricomponi()}
+
+/* ---- DC5, DC7: exports ---- */
+function dcZip(files){const enc=new TextEncoder(),parts=[],cd=[],usati=new Set();let off=0;
+  for(const f of files){let nome=f.nome,k=2;while(usati.has(nome)){nome=f.nome.replace(/(\.[^.]+)$/,' ('+k+')$1');k++}usati.add(nome);
+    const n=enc.encode(nome),d=f.bytes,crc=CRC32T(d),h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(10,0,true);h.setUint16(12,0x21,true);h.setUint32(14,crc,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,n.length,true);
+    parts.push(new Uint8Array(h.buffer),n,d);
+    const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(14,0x21,true);c.setUint32(16,crc,true);c.setUint32(20,d.length,true);c.setUint32(24,d.length,true);c.setUint16(28,n.length,true);c.setUint32(42,off,true);
+    cd.push(new Uint8Array(c.buffer),n);off+=30+n.length+d.length}
+  const cdl=cd.reduce((s,x)=>s+x.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cdl,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cd,new Uint8Array(e.buffer)],{type:'application/zip'})}
+async function dcParti(seq,fix){const out=[];
+  for(const v of seq){if(v.k==='tav'){const t=tavPer(v.t,'PDF'),r=await docTavola(t);out.push({nome:nomeTav(t)+'.pdf',bytes:new Uint8Array(await pdfFinale(r.doc).arrayBuffer())})}
+    else{const o=await pfEsporta(v.ts.map(t=>t.id),{bytes:true,fix});(o||[]).forEach(q=>out.push({nome:q.nome,bytes:q.out}))}}
+  return out}
+async function dcEsporta(seq,nome,unico){if(!seq.length){avviso('Non c’è nulla da esportare');return}
+  avviso('Preparo '+(unico?'il PDF':'i PDF')+'…');let parti;try{parti=await dcParti(seq,unico)}catch(e){console.warn(e);avviso('Esportazione non riuscita');return}
+  nome=(nome||'Documenti').replace(/[\\\/:*?"<>|]+/g,' ').trim();
+  if(!unico){if(parti.length===1)await salvaFile(parti[0].nome,new Blob([parti[0].bytes],{type:'application/pdf'}));else await salvaFile(nome+'.zip',dcZip(parti));avviso(parti.length+(parti.length===1?' PDF esportato':' PDF esportati'));return}
+  const L=await pfLib(),M=await L.PDFDocument.create();
+  for(const q of parti){try{const src=await L.PDFDocument.load(q.bytes,{ignoreEncryption:true}),pp=await M.copyPages(src,src.getPageIndices());pp.forEach(p=>M.addPage(p))}catch(e){console.warn(e)}}
+  M.setTitle(nome);M.setCreator('Gesto di Lab DeMazur');M.setProducer('Gesto di Lab DeMazur');
+  await salvaFile(nome+'.pdf',new Blob([await M.save({useObjectStreams:false})],{type:'application/pdf'}));avviso('PDF esportato: '+nome+'.pdf · '+M.getPageCount()+' pagine')}
+const dcNomeCartella=id=>{const c=dcCartelle().find(x=>x.id===id);return c?c.nome:(foglio().nome||'Foglio')};
+
+/* ---- DC4: the column as a tree ---- */
+(()=>{const st=document.createElement('style');st.textContent=
+  '#icL{display:none!important}'+
+  '#dcL{flex:1;overflow-y:auto;padding:8px 8px 4px;display:flex;flex-direction:column;gap:8px;touch-action:pan-y}'+
+  '.dcF,.dcDh{display:flex;align-items:center;gap:4px;min-height:28px;border-radius:6px;cursor:pointer;-webkit-user-select:none;user-select:none;font:600 12px var(--sans);color:var(--fg)}'+
+  '.dcF{background:var(--head);padding:0 2px 0 4px}.dcDh{font-weight:500;padding:0 2px 0 4px;border:1px solid var(--line)}'+
+  '.dcF .dcN,.dcDh .dcN{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25;padding:5px 0;word-break:break-word}'+
+  '.dcF .dcC,.dcDh .dcC{font:400 11px var(--sans);color:var(--muted)}'+
+  '.dcTw,.dcM{flex:none;width:22px;height:22px;border:0;background:transparent;color:var(--fg);padding:0;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer}'+
+  '.dcTw svg,.dcM svg{width:14px;height:14px}.dcM:hover,.dcTw:hover{background:var(--on)}'+
+  '.dcK{display:flex;flex-direction:column;gap:8px;padding-left:6px;border-left:1px solid var(--line);margin-left:4px}'+'#impCol{width:216px}'+
+  '.dcK.pag{display:grid;grid-template-columns:1fr 1fr;gap:6px;border-left:0;margin-left:0;padding-left:0}'+
+  '.dcK.pag .icN{font-size:10px}'+
+  '.dcF.sopra,.dcRoot.sopra{box-shadow:0 0 0 2px var(--acc)}.dcPrima{box-shadow:0 -2px 0 0 var(--acc)}.dcDopo{box-shadow:0 2px 0 0 var(--acc)}'+
+  '.dcDh.att{border-color:var(--acc)}.dcN input{width:100%;font:inherit;border:1px solid var(--acc);border-radius:4px;padding:1px 4px;background:var(--panel);color:var(--fg)}'+
+  '#dcMenu{position:absolute;z-index:9;display:flex;flex-direction:column;gap:2px;min-width:190px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(15,35,44,.18)}'+
+  '#dcMenu button{text-align:left;border:0;background:transparent;color:var(--fg);font:500 12px var(--sans);padding:7px 10px;border-radius:6px;cursor:pointer}#dcMenu button:hover{background:var(--on)}#dcMenu button.arm{background:#AC7853;color:#fff}'+
+  '#impCol .pm{display:flex;gap:6px}#impCol .pm .pmB{flex:1;display:flex;align-items:center;justify-content:center}#impCol .pm .pmB svg{width:16px;height:16px}'+
+  '.dcVuoto{font:400 11px var(--sans);color:var(--muted);padding:2px 6px}';document.head.appendChild(st)})();
+const dcL=document.createElement('div');dcL.id='dcL';$('icL').after(dcL);
+(()=>{const pm=$('icPiu').parentNode;const mk=(svg,tit,fn)=>{const b=document.createElement('button');b.className='pb pmB';b.title=tit;b.setAttribute('aria-label',tit);b.innerHTML=SV(svg);b.onclick=fn;pm.appendChild(b);return b};
+  mk('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5h5"/>','Nuova cartella',()=>dcNuovaCartella(DC.cart||dcDir(tavAtt()||{})||''));
+  mk('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 14h6M13 11v6"/>','Apri PDF',()=>dcScegliPdf(DC.cart||dcDir(tavAtt()||{})||''));
+  const T=document.querySelector('#impCol .icT span');if(T){T.textContent='Documenti';T.classList.add('dcRoot')}})();
+const DCI={giu:'<path d="M6 9l6 6 6-6"/>',dx:'<path d="M9 6l6 6-6 6"/>',piu:'<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'};
+function dcCard(t,pag){const it=document.createElement('div');it.className='icI dcI';it.dataset.id=t.id;it.innerHTML='<div class="icM"><canvas></canvas></div><div class="icN"><b></b><span></span></div>';
+  it.querySelector('b').textContent=t.pdf?('p. '+t.pdf.p):String(numTav(t));it.querySelector('span').textContent=t.pdf?nomeFmt(t).replace(' · PDF',''):((t.nome||'Tavola')+' · '+nomeFmt(t));
+  const G=tavGeo(t),mi=MINI.get(t.id),cv=it.querySelector('canvas');if(mi&&mi.c){cv.width=mi.c.width;cv.height=mi.c.height;cv.getContext('2d').drawImage(mi.c,0,0);cv.dataset.k=mi.k}else{cv.width=156;cv.height=Math.round(156*G.H/G.W)}
+  if(t.id===S.tav)it.classList.add('att');return it}
+function dcRiga(cls,nome,conta,aperta,menu,dati){const r=document.createElement('div');r.className=cls;Object.assign(r.dataset,dati);
+  r.innerHTML='<button class="dcTw" tabindex="-1">'+SV(aperta?DCI.giu:DCI.dx)+'</button><span class="dcN"></span><span class="dcC"></span><button class="dcM" title="Azioni" aria-label="Azioni">'+SV(DCI.piu)+'</button>';
+  r.querySelector('.dcN').textContent=nome;r.querySelector('.dcN').title=nome;r.querySelector('.dcC').textContent=conta;r.querySelector('.dcM').onclick=e=>{e.stopPropagation();menu(r.querySelector('.dcM'))};return r}
+function dcFolderDom(c,box){const aperta=!DC.chiuse.has(c.id),n=ordineTav().filter(t=>dcSotto(c.id).includes(dcDir(t))).length;
+  const r=dcRiga('dcF',c.nome,n?String(n):'',aperta,el=>dcMenuCartella(c.id,el),{f:c.id});box.appendChild(r);if(DC.rinomina==='f:'+c.id)dcRinomina(r,v=>{const L=dcCartelle().map(x=>x.id===c.id?Object.assign({},x,{nome:v||x.nome}):x);dcSalvaCartelle(L)});
+  if(!aperta)return;const k=document.createElement('div');k.className='dcK';box.appendChild(k);dcRiempi(c.id,k);if(!k.children.length){const v=document.createElement('div');v.className='dcVuoto';v.textContent='Vuota: trascina qui tavole e documenti';v.dataset.vuota=c.id;k.appendChild(v)}}
+function dcRiempi(p,box){dcVoci(p).forEach(v=>{if(v.k==='tav'){box.appendChild(dcCard(v.t));return}
+    const t0=v.ts[0],aperto=DC.aperti.has(v.d)||v.ts.some(t=>t.id===S.tav),r=dcRiga('dcDh',t0.pdf.nm,String(v.ts.length),aperto,el=>dcMenuDoc(v.d,el),{d:v.d});
+    if(v.ts.some(t=>t.id===S.tav))r.classList.add('att');box.appendChild(r);if(DC.rinomina==='d:'+v.d)dcRinomina(r,nome=>dcRinominaDoc(v.d,nome));
+    if(aperto){const k=document.createElement('div');k.className='dcK pag';v.ts.forEach(t=>k.appendChild(dcCard(t,true)));box.appendChild(k)}});
+  dcFigli(p).forEach(c=>dcFolderDom(c,box))}
+function dcRinomina(r,fatto){const s=r.querySelector('.dcN'),i=document.createElement('input'),v0=s.textContent;i.value=v0;s.textContent='';s.appendChild(i);
+  let ok=false;const fine=salva_=>{if(ok)return;ok=true;DC.rinomina=null;dcChiave='';if(salva_&&i.value.trim()&&i.value.trim()!==v0)fatto(i.value.trim());rendiCol()};
+  i.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')fine(true);if(e.key==='Escape')fine(false)};i.onblur=()=>fine(true);i.onpointerdown=e=>e.stopPropagation();setTimeout(()=>{i.focus();i.select()},0)}
+let dcChiave='';
+rendiCol=function(){if(!IMPAG)return;const cur=tavAtt();if(cur&&cur.pdf)DC.aperti.add(cur.pdf.d);
+  if(cur){let p=dcDir(cur);while(p){DC.chiuse.delete(p);const c=dcCartelle().find(x=>x.id===p);p=c&&dcEsiste(c.p)?c.p:''}}
+  const key=JSON.stringify([ordineTav().map(t=>[t.id,t.nome,t.dir,t.fmt,t.pdf&&[t.pdf.d,t.pdf.nm,t.pdf.p]]),dcCartelle(),[...DC.chiuse],[...DC.aperti],S.tav,DC.rinomina]);
+  if(key!==dcChiave){dcChiave=key;dcL.textContent='';dcRiempi('',dcL);if(!dcL.children.length){const v=document.createElement('div');v.className='dcVuoto';v.textContent='Nessuna tavola';dcL.appendChild(v)}}
+  else dcL.querySelectorAll('.dcI').forEach(it=>it.classList.toggle('att',it.dataset.id===S.tav));
+  clearTimeout(miniT);miniT=setTimeout(miniature,700)};
+rendiCol0=function(){dcL.querySelectorAll('.dcI').forEach(it=>{const mi=MINI.get(it.dataset.id),cv=it.querySelector('canvas');if(mi&&mi.c&&cv.dataset.k!==mi.k){cv.width=mi.c.width;cv.height=mi.c.height;cv.getContext('2d').drawImage(mi.c,0,0);cv.dataset.k=mi.k}})};
+/* menus */
+function dcMenuChiudi(){if(DC.menu){DC.menu.remove();DC.menu=null}}
+function dcMenu(el,voci){dcMenuChiudi();const m=document.createElement('div');m.id='dcMenu';
+  voci.forEach(([t,fn,arma])=>{const b=document.createElement('button');b.textContent=t;b.onclick=e=>{e.stopPropagation();if(arma&&!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Conferma: '+t.toLowerCase();return}dcMenuChiudi();fn()};m.appendChild(b)});
+  $('wrap').appendChild(m);const r=el.getBoundingClientRect(),w=$('wrap').getBoundingClientRect();m.style.left=Math.min(r.right-w.left+4,w.width-m.offsetWidth-8)+'px';m.style.top=Math.min(r.top-w.top,w.height-m.offsetHeight-8)+'px';DC.menu=m}
+addEventListener('pointerdown',e=>{if(DC.menu&&!DC.menu.contains(e.target))dcMenuChiudi()},true);
+function dcMenuCartella(id,el){DC.cart=id;const seq=()=>dcSequenza(id);
+  dcMenu(el,[['Rinomina',()=>{DC.rinomina='f:'+id;dcChiave='';rendiCol()}],['Nuova sottocartella',()=>dcNuovaCartella(id)],['Apri PDF qui',()=>dcScegliPdf(id)],
+    ['Nuova tavola qui',()=>{const prima=new Set(MOS.tavole.keys());nuovaTavola();const nu=[...MOS.tavole.keys()].find(k=>!prima.has(k));if(nu)dcSposta([nu],id,null)}],
+    ['Esporta come un PDF',()=>dcEsporta(seq(),dcNomeCartella(id),true)],['Esporta PDF separati',()=>dcEsporta(seq(),dcNomeCartella(id),false)],['Elimina la cartella',()=>dcEliminaCartella(id),true]])}
+function dcMenuDoc(d,el){const ts=dcDocTs(d);const v=[['Rinomina',()=>{DC.rinomina='d:'+d;dcChiave='';rendiCol()}],['Esporta il documento',()=>pfEsporta(dcDocTs(d).map(t=>t.id))]];
+  if(ts.length>1)v.push(['Separa le pagine',()=>dcSepara(d)]);v.push(['Togli il documento',()=>dcTogliDoc(d),true]);dcMenu(el,v)}
+/* tap and drag in the tree */
+(()=>{let dr=null,seg=null;
+  const pulisci=()=>{dcL.querySelectorAll('.sopra,.dcPrima,.dcDopo').forEach(x=>x.classList.remove('sopra','dcPrima','dcDopo'));const r=document.querySelector('#impCol .dcRoot');if(r)r.classList.remove('sopra')};
+  dcL.addEventListener('pointerdown',e=>{if(e.target.closest('.dcM,input'))return;const it=e.target.closest('.dcI,.dcDh,.dcF');if(!it)return;dr={it,x0:e.clientX,y0:e.clientY,mosso:false,pid:e.pointerId}});
+  dcL.addEventListener('pointermove',e=>{if(!dr||e.pointerId!==dr.pid||dr.it.classList.contains('dcF'))return;if(!dr.mosso&&Math.hypot(e.clientX-dr.x0,e.clientY-dr.y0)<8)return;
+    if(!dr.mosso){dr.mosso=true;try{dcL.setPointerCapture(e.pointerId)}catch(_){}dr.it.classList.add('trasc');dr.it.style.pointerEvents='none'}
+    pulisci();const el=document.elementFromPoint(e.clientX,e.clientY),q=el&&el.closest('.dcF,.dcI,.dcDh,.dcVuoto,.dcRoot');seg=null;if(!q||q===dr.it)return;
+    if(q.classList.contains('dcF')){q.classList.add('sopra');seg={dir:q.dataset.f,prima:null}}
+    else if(q.classList.contains('dcVuoto')){const f=q.dataset.vuota;if(f){const h=dcL.querySelector('.dcF[data-f="'+f+'"]');if(h)h.classList.add('sopra');seg={dir:f,prima:null}}}
+    else if(q.classList.contains('dcRoot')){q.classList.add('sopra');seg={dir:'',prima:null}}
+    else{const r=q.getBoundingClientRect(),su=e.clientY<r.top+r.height/2,id=q.classList.contains('dcI')?q.dataset.id:dcDocTs(q.dataset.d)[0].id,t=MOS.tavole.get(id);if(!t)return;
+      let prima=id;if(!su){const L=ordineTav(),ids=q.classList.contains('dcDh')||(t.pdf&&q.closest('.pag'))?dcDocTs(t.pdf.d).map(x=>x.id):[id],last=L.findIndex(x=>x.id===ids[ids.length-1]),nx=L[last+1];prima=nx&&dcDir(nx)===dcDir(t)?nx.id:null}
+      q.classList.add(su?'dcPrima':'dcDopo');seg={dir:dcDir(t),prima}}});
+  const fine=e=>{if(!dr)return;const d=dr;dr=null;d.it.classList.remove('trasc');d.it.style.pointerEvents='';pulisci();
+    if(!d.mosso){if(d.it.classList.contains('dcI')){vaiTavola(d.it.dataset.id);return}
+      if(d.it.classList.contains('dcF')){const f=d.it.dataset.f;DC.cart=f;if(DC.chiuse.has(f))DC.chiuse.delete(f);else DC.chiuse.add(f);dcChiave='';rendiCol();return}
+      if(d.it.classList.contains('dcDh')){const k=d.it.dataset.d;if(DC.aperti.has(k)&&!dcDocTs(k).some(t=>t.id===S.tav))DC.aperti.delete(k);else{DC.aperti.add(k);vaiTavola(dcDocTs(k)[0].id)}dcChiave='';rendiCol();return}return}
+    if(!seg)return;let ids;if(d.it.classList.contains('dcDh'))ids=dcDocTs(d.it.dataset.d).map(t=>t.id);else ids=[d.it.dataset.id];if(seg.prima&&ids.includes(seg.prima))return;dcSposta(ids,seg.dir,seg.prima)};
+  dcL.addEventListener('pointerup',fine);dcL.addEventListener('pointercancel',fine);
+  const root=document.querySelector('#impCol .icT');if(root){root.addEventListener('pointerup',()=>{if(!dr||!dr.mosso)return})}
+  /* PDF files dropped on the column open in the folder under the pointer */
+  const col=$('impCol');col.addEventListener('dragover',e=>{if(e.dataTransfer&&[...e.dataTransfer.items||[]].some(i=>i.kind==='file')){e.preventDefault()}});
+  col.addEventListener('drop',async e=>{const fs=[...(e.dataTransfer&&e.dataTransfer.files||[])].filter(f=>/\.pdf$/i.test(f.name)||f.type==='application/pdf');if(!fs.length)return;e.preventDefault();
+    const q=document.elementFromPoint(e.clientX,e.clientY),h=q&&q.closest('.dcF'),dir=h?h.dataset.f:(DC.cart||'');for(const f of fs)await dcApriPdf(f,dir)})})();
+/* a new sheet goes into the folder in use */
+const _nuovaTavola74=nuovaTavola;nuovaTavola=function(){const prima=new Set(MOS.tavole.keys()),r=_nuovaTavola74(),nu=[...MOS.tavole.keys()].find(k=>!prima.has(k)),dir=DC.cart&&dcEsiste(DC.cart)?DC.cart:'';
+  if(nu&&dir){const t=MOS.tavole.get(nu);salva('tavole',nu,'set',Object.assign({},t,{dir}));ricomponi()}return r};
+
+/* ---- the panel of a page sheet in the layout ---- */
+function pfPanelIn(box,b,inImp){
+  const sz=document.createElement('div');sz.className='sez';sz.textContent=inImp?'Documento PDF':'PDF da compilare';box.appendChild(sz);
+  const riga=(...el)=>{const r=document.createElement('div');r.className='pr';el.forEach(x=>r.appendChild(x));box.appendChild(r);return r};
+  const nota=t=>{const d=document.createElement('div');d.className='nota';d.textContent=t;box.appendChild(d)};
+  const tg=(t,on,fn)=>{const x=bottone(t,fn);x.setAttribute('aria-pressed',String(!!on));return x};
+  const nf=(b.pdf.fl||[]).filter(f=>f.t!=='sig').length;
+  nota(b.pdf.nm+' · pagina '+b.pdf.p+' di '+b.pdf.n+' · '+(nf?nf+(nf===1?' campo':' campi'):'nessun campo'));
+  riga(tg('Campi attivi',PF.on,()=>{PF.on=!PF.on;if(!PF.on&&pfHot)pfHover(null);richiedi('fondo');pfRefresh()}),
+    tg('Fissa i campi',b.pdf.fx,()=>{const v=b.pdf.fx?0:1;pfDocPages(b.pdf.a).forEach(p=>{p.pdf=Object.assign({},p.pdf,{fx:v});pfSave(p)});setTimeout(pfRefresh,0)}));
+  riga(bottone('Posa firma',()=>pfPosa('firma')),bottone('Posa timbro',()=>pfPosa('timbro')));
+  const p=PF.pick&&PF.pick.id===b.id&&(b.pdf.im||[])[PF.pick.i];
+  if(p){const s=document.createElement('span');s.className='k';s.textContent=p.k==='firma'?'Firma':'Timbro';riga(s,bottone('−',()=>pfImScala(1/1.1)),bottone('+',()=>pfImScala(1.1)),bottone('Togli',()=>pfImTogli()))}
+  const docIds=inImp?dcDocTs(b.pdf.d).map(t=>t.id):pfDocPages(b.pdf.a).map(q=>q.id);
+  riga(bottone('Esporta la pagina',()=>pfEsporta([b.id])),bottone('Esporta il documento',()=>pfEsporta(docIds),'prim'));
+  nota('Sui campi si scrive a penna e il sistema la trasforma in testo; fuori dai campi l’inchiostro resta sulla pagina. Il PDF esce identico all’originale, con quanto scritto.')}
+pfPanel=function(){let box=$('pfBox');if(!box){box=document.createElement('div');box.id='pfBox';const c=$('ctrlSf');c.parentNode.insertBefore(box,c.nextSibling)}
+  box.textContent='';const b=sfondi.get(selSf);if(!b||!b.pdf){box.hidden=true;return}box.hidden=false;pfPanelIn(box,b,false)};
+const _rendiTavole74=rendiTavole;
+function dcRigaTavole(nasc){const s=$('tavSel'),r=s&&s.closest('.pr');if(r){r.hidden=nasc;const z=r.previousElementSibling;if(z&&z.classList.contains('sez')&&/Tavole/.test(z.textContent))z.hidden=nasc}}
+rendiTavole=function(){const t=IMPAG&&tavAtt();dcRigaTavole(!!(t&&t.pdf));if(!t||!t.pdf)return _rendiTavole74();const p=$('pEsporta');if(!p||p.hidden)return;
+  const B=$('tavB'),ae=document.activeElement;if(ae&&B.contains(ae)&&ae.tagName==='INPUT')return;B.textContent='';pfPanelIn(B,pfHold(t),true)};
+
+/* ---- commands ---- */
+try{const a=COMANDI.find(c=>c.k==='openpdf'),b=COMANDI.find(c=>c.k==='exportpdf');
+  if(a)a.f=()=>IMPAG?dcScegliPdf(DC.cart||dcDir(tavAtt()||{})||''):pfScegliFile();
+  if(b){const f0=b.f;b.f=()=>{const t=IMPAG&&tavAtt();if(t&&t.pdf)return pfEsporta(dcDocTs(t.pdf.d).map(x=>x.id));return f0()}}
+  COMANDI.push({k:'newfolder',n:'Nuova cartella',en:'New folder',ab:'NCR',f:()=>{if(!IMPAG)entraImpag();dcNuovaCartella(DC.cart||'')},al:['cartella','nuova cartella']})}catch(e){}
+window.__gestoDC={open:(u8,name,dir)=>dcApriPdf(new File([u8],name||'documento.pdf',{type:'application/pdf'}),dir),folders:()=>dcCartelle(),newFolder:p=>{dcNuovaCartella(p);return dcCartelle().slice(-1)[0].id},
+  rename:(id,n)=>dcSalvaCartelle(dcCartelle().map(x=>x.id===id?Object.assign({},x,{nome:n}):x)),move:(ids,dir,prima)=>dcSposta(ids,dir,prima),sheets:()=>ordineTav().map(t=>({id:t.id,nome:t.nome,dir:t.dir,o:t.o,pdf:t.pdf?{d:t.pdf.d,p:t.pdf.p,nm:t.pdf.nm}:null})),
+  exportFolder:(id,one)=>dcEsporta(dcSequenza(id),dcNomeCartella(id),one),split:d=>dcSepara(d),renameDoc:(d,n)=>dcRinominaDoc(d,n),removeDoc:d=>dcTogliDoc(d),delFolder:id=>dcEliminaCartella(id),seq:id=>dcSequenza(id).map(v=>v.k==='tav'?v.t.id:v.ts.map(t=>t.id))};
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
