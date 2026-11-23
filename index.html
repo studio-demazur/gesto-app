@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.74';
+const VERSIONE_GESTO='0.75';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8316,6 +8316,151 @@ addEventListener('resize',()=>{erPosCol();erRifit()});
 try{COMANDI.push({k:'fullscreen',n:'Schermo pieno',en:'Full screen',ab:'SPN',f:()=>{if(!IMPAG)entraImpag();erSchermoPieno()},al:['schermo pieno','pagina intera']})}catch(e){}
 window.__gestoER={full:v=>{if(v!=null)erSchermoPieno(v);return ER.full},fit:m=>{if(m){ER.fit=m;adattaCartaVista();erNav()}return ER.fit},page:k=>erPagina(k),doc:()=>{const D=erDoc();return D&&{i:D.i,n:D.n,vic:D.vic.map(q=>[q.k,Math.round(q.y)])}},free:()=>erLibero(),nb:()=>[...ER_NB.entries()].map(([k,v])=>[k,!!v.c])};
 setTimeout(()=>{erPosCol();erPanApri();erNav()},0);
+
+/* ---------- 76. Pen under the tools, page commands in the column, properties on the right (owner, 23.11.2026) ----------
+   PR1 The pen bar sits under the tools, in the same column; when the height is short it scrolls (wheel, finger or pen);
+       a fade on the edge shows there is more; one key closes and reopens it, and closed it shows the colour in use.
+   PR2 The column of documents has two parts: above the tree of sheets, documents and folders; below the commands of the page
+       in front (for a PDF fields, signature, stamp and exports; for a sheet its exports).
+   PR3 On the right a fixed panel of properties shows what is selected: an object (as before), a PDF field (name, type, value,
+       size), or, with nothing selected, the page (document, page, format, fields) or the sheet (format, scale, title block).
+   PR4 The panel of properties hides like the column, in model and layout, and stays hidden until the key at the top right
+       brings it back; full screen hides both; the page refits only then (rule of v0.74).
+   PR5 The old «Tavola» panel no longer opens as a window of its own: its contents went into PR2 and PR3. */
+const PR={chiusa:false,campo:null};
+try{PR.chiusa=localStorage.getItem('gesto.pstrip')==='0'}catch(e){}
+(()=>{const st=document.createElement('style');st.textContent=
+  /* PR1: the pen bar as a scrolling column under the tools */
+  '.fstrip.penna .prScorri{display:flex;align-items:center;gap:4px}.fstrip.penna .prTesta{display:none}'+
+  '@media (min-width:721px){.fstrip.penna.sotto{flex-direction:column;align-items:stretch;padding:0;gap:0;overflow:hidden;box-sizing:border-box}'+
+  '.fstrip.penna.sotto .prTesta{display:flex;align-items:center;justify-content:center;gap:5px;height:24px;flex:none;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;padding:0;border-radius:10px 10px 0 0}'+
+  '.fstrip.penna.sotto .prTesta:hover{background:var(--head);color:var(--fg)}.fstrip.penna.sotto .prTesta svg{width:14px;height:14px}'+
+  '.fstrip.penna.sotto .prTesta i{display:none;width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 1px var(--line)}'+
+  '.fstrip.penna.sotto.chiusa .prTesta{border-bottom:0;border-radius:10px;height:30px}.fstrip.penna.sotto.chiusa .prTesta i{display:block}'+
+  '.fstrip.penna.sotto.chiusa .prScorri{display:none}'+
+  '.fstrip.penna.sotto .prScorri{flex:1 1 auto;min-height:0;flex-direction:column;gap:6px;padding:6px 4px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;overscroll-behavior:contain;touch-action:pan-y}'+
+  '.fstrip.penna.sotto .prScorri::-webkit-scrollbar{display:none}.fstrip.penna.sotto .prScorri>*{flex:none}'+
+  '.fstrip.penna.sotto .prScorri.giu{-webkit-mask-image:linear-gradient(#000 calc(100% - 26px),transparent);mask-image:linear-gradient(#000 calc(100% - 26px),transparent)}'+
+  '.fstrip.penna.sotto .prScorri.su{-webkit-mask-image:linear-gradient(transparent,#000 26px);mask-image:linear-gradient(transparent,#000 26px)}'+
+  '.fstrip.penna.sotto .prScorri.su.giu{-webkit-mask-image:linear-gradient(transparent,#000 26px,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(transparent,#000 26px,#000 calc(100% - 26px),transparent)}}'+
+  /* PR2: the commands of the page under the tree */
+  '#dcPag{flex:none;max-height:46%;overflow-y:auto;border-top:1px solid var(--line);padding:0 0 4px;scrollbar-width:thin}#dcPag[hidden]{display:none}'+
+  '#dcPag .sez{padding:10px 12px 2px}#dcPag .pr{padding:6px 10px 0;gap:6px;flex-wrap:wrap}#dcPag .pb{flex:1 1 auto;min-width:0;padding:0 8px;font-size:12.5px}'+
+  '#dcPag .pr.fmt{gap:4px}#dcPag .pr.fmt .pb{flex:1 1 0;padding:0 2px;font-size:12px}#dcPag .k{width:auto;font-size:12px}'+
+  /* PR3: the page and the field in the panel of properties */
+  '#tavB .prK{padding:6px 14px 0;gap:8px}#tavB .prK .k{width:74px;flex:none}#tavB .prK .v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}'+
+  '#tavB .prK .cmp{flex:1;width:0;min-width:0}#tavB .prK:last-of-type{padding-bottom:4px}'+
+  /* left hand: the panel on the left stays under the logo */
+  '@media (min-width:721px){body.mancino.impagina #pEsporta,body.mancino #pp{top:70px!important;max-height:calc(100% - 80px)}}'+
+  /* PR4: the button that brings the properties back, in the model too */
+  '@media (min-width:721px){body:not(.impagina) #panApri.vis{display:flex}}#pp>.ph{display:flex;align-items:center;justify-content:space-between}';
+  document.head.appendChild(st)})();
+
+/* ---- PR1: the pen bar under the tools ---- */
+const prScorri=document.createElement('div');prScorri.className='prScorri';[...pstrip.children].forEach(c=>prScorri.appendChild(c));
+const prTesta=document.createElement('button');prTesta.type='button';prTesta.className='prTesta';
+pstrip.appendChild(prTesta);pstrip.appendChild(prScorri);
+function prColore(){const b=prScorri.querySelector('#colori [aria-pressed="true"]');if(!b)return '';const cs=getComputedStyle(b),c=cs.backgroundColor;
+  return c&&c!=='rgba(0, 0, 0, 0)'&&c!=='transparent'?c:(b.style.getPropertyValue('--c')||cs.color)}
+function prAggTesta(){const t=PR.chiusa?'Apri colori e spessori della penna':'Chiudi colori e spessori della penna';prTesta.title=t;prTesta.setAttribute('aria-label',t);prTesta.setAttribute('aria-expanded',String(!PR.chiusa));
+  prTesta.innerHTML='<i></i>'+SV(PR.chiusa?'<path d="M6 9l6 6 6-6"/>':'<path d="M6 15l6-6 6 6"/>');const i=prTesta.querySelector('i');if(i)i.style.background=prColore();pstrip.classList.toggle('chiusa',PR.chiusa)}
+prTesta.onclick=()=>{PR.chiusa=!PR.chiusa;try{localStorage.setItem('gesto.pstrip',PR.chiusa?'0':'1')}catch(e){}prAggTesta();posPennaLato()};
+function prFade(){const e=prScorri,sc=e.scrollHeight>e.clientHeight+1;e.classList.toggle('su',sc&&e.scrollTop>2);e.classList.toggle('giu',sc&&e.scrollTop+e.clientHeight<e.scrollHeight-2)}
+prScorri.addEventListener('scroll',prFade,{passive:true});
+/* pen and mouse drag the column; a drag never chooses a colour */
+(()=>{let d=null;
+  prScorri.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||!pstrip.classList.contains('sotto'))return;d={y:e.clientY,s:prScorri.scrollTop,mosso:false,id:e.pointerId}},true);
+  prScorri.addEventListener('pointermove',e=>{if(!d||e.pointerId!==d.id)return;const dy=e.clientY-d.y;if(!d.mosso&&Math.abs(dy)<6)return;
+    if(!d.mosso){if(prScorri.scrollHeight<=prScorri.clientHeight+1){d=null;return}d.mosso=true;try{prScorri.setPointerCapture(e.pointerId)}catch(_){}}
+    prScorri.scrollTop=d.s-dy;e.preventDefault()},true);
+  const fine=e=>{if(!d||e.pointerId!==d.id)return;const m=d.mosso;d=null;if(m){const stop=ev=>{ev.stopPropagation();ev.preventDefault()};prScorri.addEventListener('click',stop,{capture:true,once:true});setTimeout(()=>prScorri.removeEventListener('click',stop,true),60)}};
+  prScorri.addEventListener('pointerup',fine,true);prScorri.addEventListener('pointercancel',fine,true)})();
+const _posPL76=posPennaLato;
+posPennaLato=function(){if(window.innerWidth<=720){pstrip.classList.remove('sotto');pstrip.style.maxHeight='';pstrip.style.width='';rail0.style.maxHeight='';return _posPL76()}
+  pstrip.classList.add('sotto');const W=$('wrap').clientWidth,H=$('wrap').clientHeight,sx=S.mano==='sx';
+  rail0.style.maxHeight='';const rt=rail0.offsetTop,rw=rail0.offsetWidth,l=rail0.offsetLeft;
+  /* the natural height of the bar decides whether the tools must give way: at least 150 px stay for the colours */
+  pstrip.style.maxHeight='none';prScorri.style.maxHeight='none';const nat=pstrip.offsetHeight;prScorri.style.maxHeight='';
+  let top=rt+rail0.offsetHeight+8;const min=PR.chiusa?nat:Math.min(nat,150);
+  if(H-10-top<min){rail0.style.maxHeight=Math.max(120,H-10-min-8-rt)+'px';top=rt+rail0.offsetHeight+8}
+  pstrip.style.bottom='';pstrip.style.top=top+'px';pstrip.style.width=rw+'px';pstrip.style.maxHeight=Math.max(30,H-10-top)+'px';
+  if(sx){pstrip.style.left='';pstrip.style.right=Math.round(W-l-rw)+'px'}else{pstrip.style.right='';pstrip.style.left=l+'px'}
+  prAggTesta();requestAnimationFrame(prFade);erPosCol()};
+/* the column of documents no longer makes room: the pen bar lives in the column of the tools */
+erPosCol=function(){const col=$('impCol'),a=$('icApri');if(col){col.style.left='';col.style.right=''}if(a){a.style.left='';a.style.right=''}};
+{const _ag=aggPenna;aggPenna=function(){_ag();if(pstrip.hidden){rail0.style.maxHeight='';pstrip.classList.remove('sotto')}else{prAggTesta();if(!pstrip.classList.contains('lato'))posPennaLato()}}}
+/* a new colour shows on the closed key at once */
+pstrip.addEventListener('click',()=>setTimeout(prAggTesta,0));
+addEventListener('resize',()=>{if(!pstrip.hidden)posPennaLato()});
+
+/* ---- PR2: the commands of the page in the column ---- */
+const dcPag=document.createElement('div');dcPag.id='dcPag';dcPag.hidden=true;
+(()=>{const col=$('impCol'),pm=col&&col.querySelector('.pm');if(pm)col.insertBefore(dcPag,pm);else if(col)col.appendChild(dcPag)})();
+function prPdfPagina(b,t){const box=dcPag,riga=(...el)=>{const r=document.createElement('div');r.className='pr';el.forEach(x=>r.appendChild(x));box.appendChild(r);return r};
+  const tg=(n,on,fn)=>{const x=bottone(n,fn);x.setAttribute('aria-pressed',String(!!on));return x};
+  const sz=document.createElement('div');sz.className='sez';sz.textContent='Pagina';box.appendChild(sz);
+  riga(tg('Campi attivi',PF.on,()=>{PF.on=!PF.on;if(!PF.on&&pfHot)pfHover(null);richiedi('fondo');pfRefresh();prRendiPag()}),
+    tg('Fissa i campi',b.pdf.fx,()=>{const v=b.pdf.fx?0:1;pfDocPages(b.pdf.a).forEach(p=>{p.pdf=Object.assign({},p.pdf,{fx:v});pfSave(p)});setTimeout(()=>{pfRefresh();prRendiPag()},0)}));
+  riga(bottone('Posa firma',()=>pfPosa('firma')),bottone('Posa timbro',()=>pfPosa('timbro')));
+  const p=PF.pick&&PF.pick.id===b.id&&(b.pdf.im||[])[PF.pick.i];
+  if(p){const s=document.createElement('span');s.className='k';s.textContent=p.k==='firma'?'Firma':'Timbro';riga(s,bottone('−',()=>pfImScala(1/1.1)),bottone('+',()=>pfImScala(1.1)),bottone('Togli',()=>pfImTogli()))}
+  riga(bottone('Esporta la pagina',()=>pfEsporta([b.id])));
+  riga(bottone('Esporta il documento',()=>pfEsporta(dcDocTs(t.pdf.d).map(x=>x.id)),'prim'))}
+function prTavPagina(){const sz=document.createElement('div');sz.className='sez';sz.textContent='Esporta la tavola';dcPag.appendChild(sz);
+  const r=document.createElement('div');r.className='pr fmt';[['PDF','pdf'],['PNG','png'],['DXF','dxf'],['JPEG','jpeg'],['TIFF','tiff']].forEach(([n,f],i)=>{const b=bottone(n,()=>esportaTavola(f),i?'':'prim');b.title=n+' della tavola';r.appendChild(b)});dcPag.appendChild(r)}
+function prRendiPag(){if(!IMPAG){dcPag.hidden=true;return}const t=tavAtt();if(!t){dcPag.hidden=true;return}
+  if(dcPag.contains(document.activeElement)&&document.activeElement.tagName==='INPUT')return;
+  dcPag.textContent='';if(t.pdf)prPdfPagina(pfHold(t),t);else prTavPagina();dcPag.hidden=false}
+
+/* ---- PR3: the panel of properties ---- */
+const PR_TIPI={tx:'Testo',cb:'Casella',rb:'Opzione',ch:'Elenco',sig:'Firma digitale'};
+function prRiga(B,k,v){const r=document.createElement('div');r.className='pr prK';const a=document.createElement('span');a.className='k';a.textContent=k;r.appendChild(a);
+  if(v instanceof Node)r.appendChild(v);else{const s=document.createElement('span');s.className='v';s.textContent=v;s.title=v;r.appendChild(s)}B.appendChild(r);return r}
+function prSez(B,t){const d=document.createElement('div');d.className='sez';d.textContent=t;B.appendChild(d)}
+function prPdfProp(B,t){const b=pfHold(t),ts=dcDocTs(t.pdf.d),i=ts.findIndex(q=>q.id===t.id),nf=(t.pdf.fl||[]).filter(f=>f.t!=='sig').length;
+  prSez(B,'Pagina');prRiga(B,'Documento',t.pdf.nm||'PDF');prRiga(B,'Pagina',(i+1)+' di '+ts.length);prRiga(B,'Formato',nomeFmt(t));
+  prRiga(B,'Campi',nf?String(nf):'nessuno');prRiga(B,'Nel PDF',t.pdf.fx?'campi fissati':'campi compilabili');
+  const c=PR.campo&&PR.campo.id===t.id&&(t.pdf.fl||[]).find(f=>f.n===PR.campo.n);
+  if(c){prSez(B,'Campo');prRiga(B,'Nome',c.n);prRiga(B,'Tipo',PR_TIPI[c.t]||c.t);const v=pfVal(b,c.n);
+    if(c.t==='tx'&&!c.ro){const i=document.createElement('input');i.type='text';i.className='cmp';i.value=v==null?'':String(v);i.setAttribute('aria-label','Valore del campo');
+      i.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')i.blur()};i.oninput=()=>pfSet(b,c.n,i.value,false);i.onchange=()=>{pfSet(b,c.n,i.value,true);richiedi('fondo')};prRiga(B,'Valore',i)}
+    else prRiga(B,'Valore',c.t==='cb'?(v?'spuntata':'vuota'):c.t==='rb'?(v||'nessuna scelta'):(v==null||v===''?'vuoto':String(v)));
+    prRiga(B,'Corpo',c.fs?String(Math.round(c.fs*10)/10).replace('.',',')+' pt':'automatico');if(c.ml)prRiga(B,'Righe','più righe');if(c.ro)prRiga(B,'Modifica','sola lettura')}}
+const _rendiTavole76=rendiTavole;
+rendiTavole=function(){const t=IMPAG&&tavAtt();prRendiPag();const tb=$('impTabs');if(tb)tb.style.display=t&&t.pdf?'none':'';
+  if(!t||!t.pdf){_rendiTavole76();const B=$('tavB');if(IMPAG&&B)[...B.querySelectorAll('.pr')].forEach(r=>{const k=r.querySelector('.k');if(k&&k.textContent==='Esporta')r.hidden=true});return}
+  dcRigaTavole(true);const p=$('pEsporta');if(!p||p.hidden)return;const B=$('tavB'),ae=document.activeElement;if(ae&&B.contains(ae)&&ae.tagName==='INPUT')return;B.textContent='';prPdfProp(B,t)};
+/* the field in use is the field shown */
+(()=>{const L=$('pfLayer');if(!L)return;
+  L.addEventListener('focusin',e=>{const el=e.target,t=IMPAG&&tavAtt();if(!t||!t.pdf||!el||!el.title)return;PR.campo={id:t.id,n:el.title};rendiTavole()});
+  L.addEventListener('focusout',()=>setTimeout(()=>{const a=document.activeElement;if(a&&(L.contains(a)||$('pEsporta').contains(a)))return;if(PR.campo){PR.campo=null;rendiTavole()}},0))})();
+/* the head of the panel says what it is */
+{const _as=aggSpazi;aggSpazi=function(){_as();const h=$('pEsporta').querySelector('.ph');if(h&&h.firstChild&&h.firstChild.nodeType===3)h.firstChild.textContent=IMPAG?'Proprietà':'Esporta';
+  const pe=$('pEsporta');pe.setAttribute('aria-label',IMPAG?'Proprietà':'Esporta')}}
+panApri.title='Apri le proprietà';panApri.setAttribute('aria-label','Apri le proprietà');
+{const _rc=rendiCol;rendiCol=function(){_rc();prRendiPag()}}
+{const _x=esciImpag;esciImpag=function(...a){const r=_x(...a);dcPag.hidden=true;PR.campo=null;return r}}
+
+/* ---- PR4: the panel of properties hides and comes back, in model and layout ---- */
+try{PR.nasc=localStorage.getItem('gesto.prop')==='0'}catch(e){}
+function prSalvaNasc(){try{localStorage.setItem('gesto.prop',PR.nasc?'0':'1')}catch(e){}}
+function prNascondi(){PR.nasc=true;prSalvaNasc();pp.hidden=true;if(IMPAG&&!$('pEsporta').hidden)pannello(null);erPanApri();erRifit()}
+/* entering the layout opens the panel by itself: that opening respects the choice; an opening asked later clears it.
+   Callers may hold an older entraImpag, so the entry is recognised by the class of the body, seen one step late. */
+PR.eraImp=!!IMPAG;new MutationObserver(()=>{PR.eraImp=document.body.classList.contains('impagina')}).observe(document.body,{attributes:true,attributeFilter:['class']});
+{const _p=pannello;pannello=function(id,...a){if(id==='pEsporta'&&IMPAG){const auto=PR.auto||!PR.eraImp;if(auto&&PR.nasc)return;if(PR.nasc){PR.nasc=false;prSalvaNasc()}}return _p(id,...a)}}
+{const _e=entraImpag;entraImpag=function(...a){PR.auto=true;let r;try{r=_e(...a)}finally{PR.auto=false}if(PR.nasc&&!$('pEsporta').hidden)pannello(null);erPanApri();return r}}
+{const _r=rendiPP;rendiPP=function(...a){PR.auto=true;let r;try{r=_r(...a)}finally{PR.auto=false}
+  if(PR.nasc)pp.hidden=true;else if(!pp.hidden&&sel.size){const h=pp.querySelector(':scope>.ph');if(h&&!h.querySelector('.x')){const x=document.createElement('button');x.className='x';x.title='Nascondi le proprietà';x.setAttribute('aria-label','Nascondi le proprietà');x.textContent='×';x.onclick=e=>{e.stopPropagation();prNascondi()};h.appendChild(x)}}
+  erPanApri();return r}}
+(()=>{const x=$('pEsporta').querySelector('[data-chiudi]'),f=x.onclick;x.title='Nascondi';x.onclick=e=>{if(IMPAG){prNascondi();return}f&&f(e)}})();
+erPanApri=function(){const aperto=[...document.querySelectorAll('.pan')].some(p=>!p.hidden&&p.id!=='pp');
+  const vis=IMPAG?!aperto&&!(sel.size&&!pp.hidden):PR.nasc&&sel.size>0&&S.tool==='sel'&&ppAttivo();panApri.classList.toggle('vis',!!vis)};
+panApri.onclick=()=>{PR.nasc=false;prSalvaNasc();if(IMPAG&&!sel.size)pannello('pEsporta');else rendiPP();erPanApri();erRifit()};
+window.__gestoPR={strip:()=>{const r=pstrip.getBoundingClientRect(),q=rail0.getBoundingClientRect();return {strip:[Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)],rail:[Math.round(q.left),Math.round(q.top),Math.round(q.width),Math.round(q.height)],
+    scroll:[prScorri.scrollTop,prScorri.scrollHeight,prScorri.clientHeight],closed:PR.chiusa,fade:prScorri.className}},
+  hide:v=>{if(v===true)prNascondi();else if(v===false&&PR.nasc)panApri.click();return PR.nasc},close:v=>{if(v!=null&&!!v!==PR.chiusa)prTesta.click();return PR.chiusa},page:()=>dcPag.hidden?null:dcPag.innerText,props:()=>$('pEsporta').hidden?null:$('pEsporta').innerText,field:()=>PR.campo};
+setTimeout(()=>{aggSpazi();prAggTesta();if(!pstrip.hidden)posPennaLato();prRendiPag()},0);
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
