@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.83';
+const VERSIONE_GESTO='0.84';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8865,6 +8865,40 @@ window.__gestoRZ={handles:()=>[...RZH.entries()].map(([el,h])=>[el.id,h.hidden?n
     '.lmT .lmSep{color:var(--muted);font-size:12px}.lmT .lmVer{margin-left:auto}.lmT .lmDm{margin-left:4px}'+
     '@media (max-width:520px){.lmT .lmNome{order:1}.lmT .lmVer{order:2}.lmT .lmDm{order:3}.lmT .lmSep{display:none}.lmT .lmMotto{order:4;flex-basis:100%}}';
   document.head.appendChild(st)})();
+
+/* ---------- 85. A window without title bar; the logo heads the tools; one top line (owner, 23.11.2026) ----------
+   UI1 Installed, Gesto has no title bar: the app fills the window; at the top right only the keys of the system and «…»
+       (Window Controls Overlay, as in Lab Disegno); the empty strip at the top moves the window.
+   UI2 The logo is the head of the tools: one panel, the logo on top, the tools under it.
+   UI3 When the tools hide, the logo stays in its panel, reduced to the logo alone.
+   UI4 The panels at the top start on one line (tools, Documenti, Proprietà, windows); under the keys of the window the line
+       goes down as much as needed, for all.
+   UI5 In the browser the layout is the same, without the keys of the system. */
+const logoPan=document.createElement('div');logoPan.id='logoPan';logoPan.setAttribute('aria-hidden','true');$('wrap').appendChild(logoPan);
+const tbDrag=document.createElement('div');tbDrag.id='tbDrag';tbDrag.setAttribute('aria-hidden','true');document.body.appendChild(tbDrag);
+(()=>{const st=document.createElement('style');st.textContent=
+  ':root{--T:10px}#logoPan,#tbDrag{display:none}'+
+  /* UI1, UI4: under the keys of the window the line goes down */
+  '@media (display-mode: window-controls-overlay){:root{--T:calc(env(titlebar-area-y,0px) + env(titlebar-area-height,33px) + 6px)}'+
+  '#tbDrag{display:block;position:fixed;left:env(titlebar-area-x,0px);top:env(titlebar-area-y,0px);width:env(titlebar-area-width,100%);height:env(titlebar-area-height,33px);-webkit-app-region:drag;app-region:drag;z-index:1}}'+
+  '@media (min-width:721px){'+
+  /* UI2, UI3: the panel of the logo, joined to the tools */
+  '#logoPan{display:block;position:absolute;left:max(10px,env(safe-area-inset-left,0px));top:var(--T);width:52px;height:56px;box-sizing:border-box;background:var(--panel);border:1px solid var(--line);border-bottom-color:transparent;border-radius:10px 10px 0 0;box-shadow:0 6px 18px rgba(15,35,44,.12);z-index:3;transition:border-radius .18s,border-color .18s}'+
+  'body.senzaStr #logoPan{border-bottom-color:var(--line);border-radius:10px}body.mancino #logoPan{left:auto;right:max(10px,env(safe-area-inset-right,0px))}'+
+  '#logo{top:calc(var(--T) + 6px)!important;left:max(14px,calc(env(safe-area-inset-left,0px) + 4px))!important;-webkit-app-region:no-drag;app-region:no-drag}'+
+  'body.mancino #logo{left:auto!important;right:max(14px,calc(env(safe-area-inset-right,0px) + 4px))!important}'+
+  '.rail,body.mancino .rail{top:calc(var(--T) + 55px)!important;border-top-left-radius:0;border-top-right-radius:0;border-top-color:transparent;z-index:4}'+
+  'body.senzaStr #logoPan{box-shadow:0 6px 18px rgba(15,35,44,.12)}'+
+  /* UI4: one top line */
+  '#impCol,#icApri,.pan,#panApri.lingua,body.mancino.impagina #pEsporta,body.mancino #pp,body.mancino.impagina #pEsporta.pan{top:var(--T)!important}'+
+  '.pan,#pEsporta,#pp{max-height:calc(100% - var(--T) - 10px)!important}#impCol{bottom:10px}'+
+  'body.mancino.impagina #pEsporta.pan,body.mancino #pp.pan{left:max(10px,env(safe-area-inset-left,0px))!important;right:auto!important;transform:none!important}'+
+  '.ctx.dock,body.mancino .ctx.dock{top:calc(var(--T) + 3px)!important}body.mancino .ctx.dock{left:12px!important}'+
+  '.lmenu{top:calc(var(--T) + 2px)!important;left:70px!important}body.mancino .lmenu{left:auto!important;right:70px!important}'+
+  '}';document.head.appendChild(st)})();
+/* a moving window is told to the layout: the free part of the screen and the handles of the panels follow */
+if(navigator.windowControlsOverlay&&navigator.windowControlsOverlay.addEventListener)navigator.windowControlsOverlay.addEventListener('geometrychange',()=>{try{posPennaLato();rzPosiziona();if(IMPAG)erRifit()}catch(e){}});
+setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
