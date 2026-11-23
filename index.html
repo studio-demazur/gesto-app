@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.80';
+const VERSIONE_GESTO='0.81';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8738,6 +8738,50 @@ gcNuovoCantiere=function(el){stDalFoglio();const a=stLeggi();if(!a.length||!el)r
 {const _ap=apriFoglio;apriFoglio=function(...a){const r=_ap.apply(this,a);setTimeout(()=>{try{stDalFoglio()}catch(e){}},500);return r}}
 setTimeout(()=>{try{stDalFoglio()}catch(e){}},1500);
 window.__gestoST={move:(id,p,prima,dopo)=>stMuovi(id,p,prima,dopo),save:id=>stSalva(id),list:()=>stLeggi(),apply:n=>{const s=stLeggi().find(x=>x.nome===n);return s?stApplica(s):null},remove:n=>stElimina(n)};
+
+/* ---------- 82. Search in the building site (owner, 23.11.2026) ----------
+   GC6 One search covers the whole project: names of documents, sheets and folders, the folder they sit in, the date
+       (issue of a revision or creation) and the state (vigente, superata, emessa, documento, tavola, cartella).
+       Every word typed must be found; the results replace the tree until the field is emptied; a tap opens the result. */
+const CR={q:''};
+const crNorm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function crPercorso(dir){const C=dcCartelle(),o=[];let p=dir,n=0;while(p&&n++<50){const c=C.find(x=>x.id===p);if(!c)break;o.unshift(c.nome);p=dcEsiste(c.p)?c.p:''}return o}
+const crData=ms=>{try{const d=new Date(ms);return isNaN(d)?'':d.toLocaleDateString('it-IT')}catch(e){return ''}};
+function crVoci(){const out=[],visti=new Set();
+  ordineTav().forEach(t=>{if(t.pdf){const d=t.pdf.d;if(visti.has(d))return;visti.add(d);const ts=dcDocTs(d),q=t.pdf;
+      const stato=q.ro?(q.vig?'vigente':q.sup?'superata':'emessa'):'documento',data=q.em?crData(q.em):crData(t.t);
+      out.push({k:'doc',nome:q.nm||'Documento',dir:dcDir(t)||'',stato,data,id:ts[0].id,n:ts.length})}
+    else out.push({k:'tav',nome:t.nome||'Tavola',dir:dcDir(t)||'',stato:'tavola',data:crData(t.t),id:t.id})});
+  dcCartelle().forEach(c=>out.push({k:'dir',nome:c.nome,dir:dcEsiste(c.p)?c.p:'',stato:'cartella',data:'',id:c.id}));
+  out.forEach(v=>{v.per=crPercorso(v.dir);v.testo=crNorm([v.nome,v.per.join(' '),v.stato,v.data,v.data.replace(/\//g,'.')].join(' '))});return out}
+function crCerca(q){const w=crNorm(q).split(/\s+/).filter(Boolean);if(!w.length)return [];return crVoci().filter(v=>w.every(x=>v.testo.includes(x)))}
+const crBox=document.createElement('div');crBox.className='crBox';crBox.innerHTML='<input type="search" id="crQ" placeholder="Cerca nel progetto" aria-label="Cerca nel progetto" autocomplete="off" spellcheck="false">';
+const crRis=document.createElement('div');crRis.id='crRis';crRis.hidden=true;
+(()=>{const col=$('impCol'),h=col&&col.querySelector('.icT'),L=$('dcL');if(h)h.after(crBox);if(L)L.before(crRis)})();
+const crSt=document.createElement('style');crSt.textContent=
+  '.crBox{flex:none;padding:8px 10px 2px}.crBox input{width:100%;box-sizing:border-box;height:30px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--fg);font:400 12.5px var(--sans);padding:0 9px}'+
+  '.crBox input:focus{outline:none;border-color:var(--acc)}#crRis{flex:1;overflow-y:auto;padding:6px 8px 8px;display:flex;flex-direction:column;gap:3px}#crRis[hidden]{display:none}'+
+  '.crR{display:flex;flex-direction:column;gap:1px;padding:5px 7px;border-radius:6px;cursor:pointer;border:1px solid transparent}.crR:hover{background:var(--on)}.crR.att{border-color:var(--acc)}'+
+  '.crR .a{display:flex;align-items:center;gap:6px;font:500 12px var(--sans);color:var(--fg)}.crR .a span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+  '.crR .b{display:flex;align-items:center;gap:6px;font:400 10.5px var(--sans);color:var(--muted);min-width:0}.crR .b{flex-wrap:wrap;row-gap:1px}.crR .b em{font-style:normal;flex:1 1 100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+  '.crR .b i{flex:none;font-style:normal;font-weight:500}.crR .b i.vig{padding:0 6px;border-radius:8px;background:#264E5D;color:#fff}:root[data-theme="dark"] .crR .b i.vig{background:#3D6B7D}.crV{padding:10px 6px;font:400 12px var(--sans);color:var(--muted)}';
+document.head.appendChild(crSt);
+function crRendi(){const q=CR.q.trim(),L=$('dcL');if(!q){crRis.hidden=true;if(L)L.style.display='';return}if(L)L.style.display='none';crRis.hidden=false;crRis.textContent='';
+  const r=crCerca(q);if(!r.length){const v=document.createElement('div');v.className='crV';v.textContent='Nessun risultato per «'+q+'»';crRis.appendChild(v);return}
+  r.slice(0,200).forEach(v=>{const e=document.createElement('div');e.className='crR'+((v.k!=='dir'&&MOS.tavole.get(v.id)&&(v.id===S.tav||(MOS.tavole.get(S.tav)||{}).pdf&&dcDocTs((MOS.tavole.get(v.id).pdf||{}).d||'').some(t=>t.id===S.tav)))?' att':'');
+    e.innerHTML='<div class="a"><span></span></div><div class="b"><i></i><em></em></div>';e.querySelector('span').textContent=v.nome;const i=e.querySelector('i');i.textContent=v.stato+(v.data?' · '+v.data:'');if(v.stato==='vigente')i.className='vig';
+    e.querySelector('em').textContent=v.per.length?v.per.join(' › '):'Documenti';e.title=v.nome+'\n'+(v.per.length?v.per.join(' › '):'Documenti');
+    e.onclick=()=>{if(v.k==='dir'){let p=v.id;while(p){DC.chiuse.delete(p);const c=dcCartelle().find(x=>x.id===p);p=c&&dcEsiste(c.p)?c.p:''}DC.cart=v.id;crSvuota();dcChiave='';rendiCol();
+        setTimeout(()=>{const h=$('dcL').querySelector('.dcF[data-f="'+v.id+'"]');if(h)h.scrollIntoView({block:'center'})},60);return}
+      const t=MOS.tavole.get(v.id);if(t&&t.pdf){DC.docChiusi&&DC.docChiusi.delete(t.pdf.d);DC.aperti.add(t.pdf.d)}let p=v.dir;while(p){DC.chiuse.delete(p);const c=dcCartelle().find(x=>x.id===p);p=c&&dcEsiste(c.p)?c.p:''}
+      vaiTavola(v.id);crRendi()};crRis.appendChild(e)});
+  if(r.length>200){const v=document.createElement('div');v.className='crV';v.textContent='Altri '+(r.length-200)+' risultati: aggiungi una parola';crRis.appendChild(v)}}
+function crSvuota(){CR.q='';$('crQ').value='';crRendi()}
+$('crQ').addEventListener('input',e=>{CR.q=e.target.value;crRendi()});
+$('crQ').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){crSvuota();e.target.blur()}if(e.key==='Enter'){const f=crRis.querySelector('.crR');if(f)f.click()}});
+{const _rc=rendiCol;rendiCol=function(...a){const v=_rc(...a);if(CR.q.trim())crRendi();return v}}
+try{COMANDI.push({k:'searchproject',n:'Cerca nel progetto',en:'Search the project',ab:'CRC',f:()=>{if(!IMPAG)entraImpag();document.body.classList.remove('colChiusa');setTimeout(()=>$('crQ').focus(),60)},al:['cerca','cerca documento','trova documento']})}catch(e){}
+window.__gestoCR={search:q=>crCerca(q).map(v=>({k:v.k,nome:v.nome,per:v.per.join(' › '),stato:v.stato,data:v.data})),type:q=>{const i=$('crQ');i.value=q;i.dispatchEvent(new Event('input'));return crRis.innerText}};
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
