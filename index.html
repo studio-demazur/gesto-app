@@ -1329,7 +1329,7 @@ function trasformaE(e,T,nuovo){
   else if(e.k==='poli'){n.p=coppie(g.p);n.ch=g.ch;if(g.bu)n.bu=T.sp?g.bu.map(b=>-b):g.bu.slice()}
   else if(e.k==='punto')n.c=M(g.c);
   else if(e.k==='curva'){n.p=coppie(g.p);if(g.ch)n.ch=true}
-  else if(e.k==='spline'){n.f=coppie(g.f);if(g.ch)n.ch=true}
+  else if(e.k==='spline'){n.f=coppie(g.f);if(g.ch)n.ch=true;if(g.G)n.G=g.G;if(g.G0)n.G0=g.G0.slice()}
   else if(e.k==='retino'){Object.assign(n,g);if(T.r!=null)n.ang=r3((g.ang||0)-T.r*180/Math.PI);if(T.sp){const fu=-Math.atan2(T.uy,T.ux)*180/Math.PI;n.ang=r3(2*fu-90-(g.ang||0))}}
   else if(e.k==='quota'){Object.assign(n,g);n.p=M(g.p);if(g.a)n.a=M(g.a);if(g.b)n.b=M(g.b);if(g.c){n.c=M(g.c);if(g.r!=null)n.r=g.r*(T.k||1)}}
   else{n.c=M(g.c);n.r=g.r*(T.k||1);if(e.k==='arco'){if(T.sp){const ps=Math.atan2(T.uy,T.ux);n.a0=2*ps-g.a1;n.a1=2*ps-g.a0}else{n.a0=g.a0+(T.r||0);n.a1=g.a1+(T.r||0)}}}
@@ -5282,11 +5282,11 @@ setTimeout(()=>{if(MOS.vincoli.size)pgcs().then(()=>risolvi(null)).catch(e=>cons
    SP3 la barra propone i vincoli adatti alle parti scelte; SP4 spostare un punto sposta solo quel punto, il disegno vincolato lo segue; SP5 il segno sta sul punto o sul lato.
    Le parti si legano anche fra elementi lontani, pianta e sezione comprese. L'ordine dei tocchi resta nei dati del vincolo (servirà a RE2, chi comanda). */
 let PARTI=[];
-const chiaviPunti=e=>e.k==='linea'?['a','b']:e.k==='poli'?Array.from({length:e.g.p.length>>1},(_,i)=>'v'+i):e.k==='arco'?['c','a0','a1']:(e.k==='cerchio'||e.k==='punto')?['c']:[];
+const chiaviPunti=e=>e.k==='linea'?['a','b']:e.k==='poli'?Array.from({length:e.g.p.length>>1},(_,i)=>'v'+i):e.k==='arco'?['c','a0','a1']:(e.k==='cerchio'||e.k==='punto')?['c']:e.k==='spline'?Array.from({length:e.g.f.length>>1},(_,i)=>'f'+i):e.k==='curva'?Array.from({length:anchorsCurve(e.g)},(_,i)=>'v'+i):e.k==='dir'?Array.from({length:e.g.p.length>>1},(_,i)=>'v'+i):[];
 const stessaParte=(a,b)=>a.e===b.e&&(a.k||null)===(b.k||null)&&(a.s==null?null:a.s)===(b.s==null?null:b.s)&&!!a.cu===!!b.cu;
 function estremiSeg(r){const e=MOS.cad.get(r.e);if(!e)return null;if(e.k==='linea')return [['a',e.g.a],['b',e.g.b]];if(e.k!=='poli')return null;
   const n=e.g.p.length>>1,i=r.s||0,j=(i+1)%n;if(i>=nSeg(e.g))return null;return [['v'+i,[e.g.p[2*i],e.g.p[2*i+1]]],['v'+j,[e.g.p[2*j],e.g.p[2*j+1]]]]}
-function parteValida(r){const e=MOS.cad.get(r.e);if(!e||!vincolabile(e)||!sel.has(r.e))return false;if(r.k)return chiaviPunti(e).includes(r.k);if(r.s!=null)return !!estremiSeg(r);return !!r.cu&&(e.k==='cerchio'||e.k==='arco')}
+function parteValida(r){const e=MOS.cad.get(r.e);if(!e||!sel.has(r.e))return false;if(!vincolabile(e))return !!r.k&&pointsFree(e)&&chiaviPunti(e).includes(r.k);if(r.k)return chiaviPunti(e).includes(r.k);if(r.s!=null)return !!estremiSeg(r);return !!r.cu&&(e.k==='cerchio'||e.k==='arco')}
 function parteVicina(e,sx,sy){let best=null,bd=11;chiaviPunti(e).forEach(k=>{const P=puntoChiave(e,k);if(!P)return;const s=w2s(P[0],P[1]),d=Math.hypot(s[0]-sx,s[1]-sy);if(d<bd){bd=d;best={e:e.id,k}}});if(best)return best;
   if(e.k==='linea')return {e:e.id,s:0};if(e.k==='cerchio'||e.k==='arco')return {e:e.id,cu:1};if(e.k==='punto')return {e:e.id,k:'c'};
   if(e.k==='poli'){const W=s2w(sx,sy),p=e.g.p,n=p.length>>1;let bi=0,bdw=Infinity;for(let i=0;i<nSeg(e.g);i++){const j=(i+1)%n,d=distSeg(W,[p[2*i],p[2*i+1]],[p[2*j],p[2*j+1]]);if(d<bdw){bdw=d;bi=i}}return {e:e.id,s:bi}}return null}
@@ -5295,8 +5295,8 @@ function parteDaGrip(e,k){if(chiaviPunti(e).includes(k))return {e:e.id,k};if(e.k
 function scegliParte(r){const i=PARTI.findIndex(x=>stessaParte(x,r));if(i>=0){PARTI=PARTI.filter(x=>x.e!==r.e);sel.delete(r.e)}else PARTI.push(r)}
 function pulisciParti(){PARTI=PARTI.filter(parteValida)}
 const _selSu34=selSu;selSu=function(a){const g=a.giu;
-  if(a.att==='grip'&&!a.dest&&a.grip&&vincolabile(a.grip.e)){const r=parteDaGrip(a.grip.e,a.grip.k)||parteVicina(a.grip.e,g.sx,g.sy);if(r){scegliParte(r);snapAtt=null;aggCtx();richiedi('sopra');return}}
-  if(!a.att&&g&&g.hit&&sel.has(g.hit.id)&&vincolabile(g.hit)){const r=parteVicina(g.hit,g.sx,g.sy);if(r){scegliParte(r);aggCtx();richiedi('sopra');return}}
+  if(a.att==='grip'&&!a.dest&&a.grip&&(vincolabile(a.grip.e)||pointsFree(a.grip.e))){const r=parteDaGrip(a.grip.e,a.grip.k)||parteVicina(a.grip.e,g.sx,g.sy);if(r&&(vincolabile(a.grip.e)||r.k)){scegliParte(r);snapAtt=null;aggCtx();richiedi('sopra');return}}
+  if(!a.att&&g&&g.hit&&sel.has(g.hit.id)&&(vincolabile(g.hit)||pointsFree(g.hit))){const r=parteVicina(g.hit,g.sx,g.sy);if(r&&(vincolabile(g.hit)||r.k)){scegliParte(r);aggCtx();richiedi('sopra');return}}
   _selSu34(a);pulisciParti()};
 const NOMI_PARTI=new Set(['Fisso','Orizzontale','Verticale','Lunghezza','Coincidenti','In orizzontale','In verticale','Distanza','Parallele','Perpendicolari','Uguali','Angolo','Sul lato','Punto medio','Distanza dal lato','Sulla curva','Tangenti','Togli vincoli']);
 /* con parti scelte, la barra mostra in primo piano i vincoli possibili; gli altri comandi restano in «Altri comandi» */
@@ -6776,7 +6776,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.69';
+const VERSIONE_GESTO='0.70';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -7274,6 +7274,209 @@ window.__gestoDT={quickPinch:()=>({t0:quickPinch.t0,d0:quickPinch.d0,dLast:quick
    NM1 The module of Gesto in the .dmz file is `gesto`; `linen` disappears without synonym. */
 function vsWarn(list){if(!Array.isArray(list))return;const bad=list.filter(v=>!vsValid(v)).length;
   if(bad)avviso(bad===1?'Una vista salvata nel file non è leggibile: resta nel file e non si usa':bad+' viste salvate nel file non sono leggibili: restano nel file e non si usano')}
+
+/* ---------- 71 points and continuity (PT1-PT6, SG1-SG4; owner 23.11.2026) ----------
+   PT1 Points are added to and removed from spline, Bézier curve, polyline (rectangles included) and leader; a line that receives a point becomes a polyline.
+   PT2 «Aggiungi punto» is in the properties of the chosen element and is a command: then a tap on the element puts the point where it is tapped.
+   PT3 Adding a point does not change the shape of polylines, Bézier curves and leaders; the spline passes through the new point and changes slightly near it.
+   PT4 To remove, choose one or more points and use «Togli punto» or Canc: with only points chosen, Canc removes the points, not the object.
+   PT5 An element never goes below 2 points when open and 3 when closed: Gesto stops with a warning and does not delete the object.
+   PT6 Removing a point of a Bézier curve joins the two neighbouring stretches into one, as close as possible to the former shape.
+   SG1 The spline has the property «Continuità», from G1 to G4; G1 is today's spline and stays the default; G2-G4 are curves through the points of degree 3, 4, 5,
+       computed as Lab Disegno does (scheda 27, cap. 5 j-m: centripetal parameters, knots by averaging).
+   SG2 Single chosen points can be G0, a corner: the curve splits there into independent smooth stretches.
+   SG3 Continuity (g.G) and corners (g.G0, point indices) are written in the file, in the module `gesto`.
+   SG4 (owner) Changing the continuity never touches the points: the spline is recomputed from the same points, up and down as often as wanted, nothing is lost.
+   Up to G2 the curve on screen, in PDF and in all operations is exact; from G3 the true curve is in the file and drawing and operations use cubic pieces within 0.005 mm. */
+
+/* ---- B-spline interpolation through points (degree p), Lab Disegno scheda 27 cap. 5 j-m ---- */
+function bsParams(Q,closed){const t=[0];for(let k=1;k<Q.length;k++)t.push(t[k-1]+Math.sqrt(Math.max(1e-12,Math.hypot(Q[k][0]-Q[k-1][0],Q[k][1]-Q[k-1][1]))));
+  const T=closed?t[t.length-1]+Math.sqrt(Math.max(1e-12,Math.hypot(Q[0][0]-Q[Q.length-1][0],Q[0][1]-Q[Q.length-1][1]))):t[t.length-1];return {t,T}}
+function bsFindSpan(U,p,nCtrl,u){if(u>=U[nCtrl])return nCtrl-1;if(u<=U[p])return p;let lo=p,hi=nCtrl,mid=(lo+hi)>>1;while(u<U[mid]||u>=U[mid+1]){if(u<U[mid])hi=mid;else lo=mid;mid=(lo+hi)>>1}return mid}
+/* basis functions and first derivatives on span i (NURBS Book A2.2-A2.3) */
+function bsBasis(i,u,p,U){const nd=[];for(let r=0;r<=p;r++)nd.push(new Array(p+1).fill(0));nd[0][0]=1;const L=[0],R=[0];
+  for(let j=1;j<=p;j++){L[j]=u-U[i+1-j];R[j]=U[i+j]-u;let saved=0;for(let r=0;r<j;r++){nd[j][r]=R[r+1]+L[j-r];const tmp=nd[j][r]?nd[r][j-1]/nd[j][r]:0;nd[r][j]=saved+R[r+1]*tmp;saved=L[j-r]*tmp}nd[j][j]=saved}
+  const N=[],D=[];for(let r=0;r<=p;r++)N.push(nd[r][p]);
+  for(let r=0;r<=p;r++){let d=0;if(p>0){if(r>=1){const den=U[i+r]-U[i-p+r];if(den)d+=nd[r-1][p-1]/den}if(r<=p-1){const den=U[i+r+1]-U[i-p+r+1];if(den)d-=nd[r][p-1]/den}d*=p}D.push(d)}
+  return [N,D]}
+function bsSolve(A,B){const n=A.length,M=A.map((r,i)=>r.concat([B[i][0],B[i][1]]));
+  for(let c=0;c<n;c++){let piv=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[piv][c]))piv=r;if(Math.abs(M[piv][c])<1e-14)return null;[M[c],M[piv]]=[M[piv],M[c]];
+    for(let r=0;r<n;r++){if(r===c)continue;const f=M[r][c]/M[c][c];if(!f)continue;for(let k=c;k<n+2;k++)M[r][k]-=f*M[c][k]}}
+  return M.map((r,i)=>[r[n]/r[i],r[n+1]/r[i]])}
+function bsInterp(Q,closed,deg){const m=Q.length,p=Math.max(1,Math.min(deg,m-1)),{t,T}=bsParams(Q,closed);
+  if(!closed){const U=[];for(let j=0;j<=p;j++)U.push(t[0]);for(let j=1;j<=m-1-p;j++){let s=0;for(let i=j;i<j+p;i++)s+=t[i];U.push(s/p)}for(let j=0;j<=p;j++)U.push(t[m-1]);
+    const A=[];for(let k=0;k<m;k++){const row=new Array(m).fill(0),sp=bsFindSpan(U,p,m,t[k]),[N]=bsBasis(sp,t[k],p,U);for(let r=0;r<=p;r++)row[sp-p+r]+=N[r];A.push(row)}
+    const P=bsSolve(A,Q);return P?{p,P,U,n:m,a:t[0],b:t[m-1],wrap:0}:null}
+  const tx=i=>{const q=Math.floor(i/m);return t[i-q*m]+q*T},U=[];for(let j=0;j<=m+2*p;j++){let s=0;for(let i=j-p;i<j;i++)s+=tx(i);U.push(s/p)}
+  const nC=m+p,a=U[p],A=[];for(let k=0;k<m;k++){let u=t[k];while(u<a)u+=T;while(u>=a+T)u-=T;const row=new Array(m).fill(0),sp=bsFindSpan(U,p,nC,u),[N]=bsBasis(sp,u,p,U);
+    for(let r=0;r<=p;r++)row[(sp-p+r)%m]+=N[r];A.push(row)}
+  const P0=bsSolve(A,Q);if(!P0)return null;const P=[];for(let j=0;j<nC;j++)P.push(P0[j%m]);return {p,P,U,n:nC,a,b:a+T,wrap:1}}
+function bsEval(c,u,sp){const [N,D]=bsBasis(sp,u,c.p,c.U);let x=0,y=0,dx=0,dy=0;for(let r=0;r<=c.p;r++){const q=c.P[sp-c.p+r];x+=N[r]*q[0];y+=N[r]*q[1];dx+=D[r]*q[0];dy+=D[r]*q[1]}return [x,y,dx,dy]}
+/* cubic pieces: exact Hermite form per knot span up to degree 3, subdivided within tolerance above */
+function bsToBez(c,tol){const out=[],U=c.U,p=c.p;
+  for(let sp=p;sp<c.n;sp++){const u0=Math.max(U[sp],c.a),u1=Math.min(U[sp+1],c.b);if(u1-u0<=1e-12)continue;
+    const piece=(a,b,d)=>{const A=bsEval(c,a,sp),B=bsEval(c,b,sp),h=(b-a)/3,q=[A[0],A[1],A[0]+A[2]*h,A[1]+A[3]*h,B[0]-B[2]*h,B[1]-B[3]*h,B[0],B[1]];
+      if(p>3&&d<8){let err=0;for(let k=1;k<8;k++){const s=k/8,C=bsEval(c,a+(b-a)*s,sp),mt=1-s,bx=mt*mt*mt*q[0]+3*mt*mt*s*q[2]+3*mt*s*s*q[4]+s*s*s*q[6],by=mt*mt*mt*q[1]+3*mt*mt*s*q[3]+3*mt*s*s*q[5]+s*s*s*q[7];err=Math.max(err,Math.hypot(C[0]-bx,C[1]-by))}
+        if(err>tol){const mid=(a+b)/2;piece(a,mid,d+1);piece(mid,b,d+1);return}}
+      out.push(q)};
+    piece(u0,u1,0)}
+  return out}
+
+/* ---- spline with continuity and corners ---- */
+const splCache=new WeakMap();
+function splineG(g){return Math.max(1,Math.min(4,(g&&g.G)|0||1))}
+function splineCorners(g,n){return [...new Set((g.G0||[]).filter(i=>Number.isInteger(i)&&i>=0&&i<n))].sort((a,b)=>a-b)}
+function splineSections(g){const n=g.f.length>>1,Q=[];for(let i=0;i<n;i++)Q.push([g.f[2*i],g.f[2*i+1]]);const C=splineCorners(g,n),ch=!!g.ch&&n>=3;
+  if(!C.length)return [{Q,closed:ch}];
+  if(!ch){const cut=[0,...C.filter(i=>i>0&&i<n-1),n-1],o=[];for(let k=0;k+1<cut.length;k++)o.push({Q:Q.slice(cut[k],cut[k+1]+1),closed:false});return o}
+  const o=[];for(let k=0;k<C.length;k++){const a=C[k],b=C[(k+1)%C.length],q=[];let i=a;do{q.push(Q[i]);i=(i+1)%n}while(i!==b);q.push(Q[b]);if(C.length===1&&q.length===1)continue;o.push({Q:q,closed:false})}return o}
+function dedupe(Q){return Q.filter((q,i)=>!i||Math.hypot(q[0]-Q[i-1][0],q[1]-Q[i-1][1])>1e-9)}
+function splineSegs(g){const sig=g.f.join(',')+'|'+(g.ch?1:0)+'|'+splineG(g)+'|'+(g.G0||[]).join(',');const c=splCache.get(g);if(c&&c.sig===sig)return c.segs;
+  const G=splineG(g),segs=[];
+  splineSections(g).forEach(({Q,closed})=>{let q=dedupe(Q);if(closed&&q.length>1&&Math.hypot(q[0][0]-q[q.length-1][0],q[0][1]-q[q.length-1][1])<1e-9)q=q.slice(0,-1);
+    if(q.length<2)return;
+    if(q.length===2&&!closed){const [A,B]=q;segs.push([A[0],A[1],A[0]+(B[0]-A[0])/3,A[1]+(B[1]-A[1])/3,A[0]+2*(B[0]-A[0])/3,A[1]+2*(B[1]-A[1])/3,B[0],B[1]]);return}
+    if(G<=1){segs.push(...splineBez(q.flat(),closed));return}
+    const c=bsInterp(q,closed,G+1);if(c)segs.push(...bsToBez(c,0.005));else segs.push(...splineBez(q.flat(),closed))});
+  splCache.set(g,{sig,segs});return segs}
+function splineGEff(g){const n=g.f.length>>1,G=splineG(g);if(G<=1)return 1;let mn=Infinity;splineSections(g).forEach(s=>{const m=dedupe(s.Q).length-(s.closed?0:0);mn=Math.min(mn,m)});
+  return Math.max(1,Math.min(G,(isFinite(mn)?mn:n)-2))}
+{const _sb=segmentiBez;segmentiBez=function(e){if(e&&e.k==='spline'&&e.g&&(splineG(e.g)>1||(e.g.G0&&e.g.G0.length)))return splineSegs(e.g);return _sb(e)}}
+
+/* ---- which elements carry free points ---- */
+const PT_KINDS=new Set(['linea','poli','spline','curva','dir']);
+function pointsFree(e){return !!e&&!e.bk&&(e.k==='spline'||e.k==='curva'||e.k==='dir'||e.k==='poli')}
+function anchorsCurve(g){return Math.round((g.p.length/2-1)/3)+1-(g.ch?1:0)}
+function countPoints(e){return e.k==='linea'?2:e.k==='spline'?e.g.f.length>>1:e.k==='curva'?anchorsCurve(e.g):(e.g.p.length>>1)}
+function closedE(e){return !!(e.g&&e.g.ch)}
+
+/* ---- references that follow the points: constraints and associated dimensions ---- */
+function followRefs(eid,mapKey,mapSeg){const add=[],del=[];
+  vincoliE().forEach(v=>{if(!(v.r||[]).some(r=>r.e===eid))return;let lost=false;const r=v.r.map(x=>{if(x.e!==eid)return x;const y=Object.assign({},x);
+      if(x.k){const k=mapKey(x.k);if(k==null)lost=true;else y.k=k}else if(x.s!=null&&mapSeg){const s=mapSeg(x.s);if(s==null)lost=true;else y.s=s}return y});
+    if(lost)del.push(v);else if(JSON.stringify(r)!==JSON.stringify(v.r)){add.push(Object.assign({},v,{r}));del.push(v)}});
+  MOS.cad.forEach(q=>{if(q.k!=='quota')return;const g=q.g;let ch=false;const n=Object.assign({},g);
+    [['ra','a'],['rb','b']].forEach(([rk,pk])=>{const ref=g[rk];if(!ref||ref.id!==eid)return;const k=mapKey(ref.k);ch=true;if(k==null){const P=puntoRif(ref,g[pk]);n[pk]=[P[0],P[1]];delete n[rk]}else n[rk]=Object.assign({},ref,{k})});
+    if(ch){add.push(fattaEnt(Object.assign({},q,{g:n})));del.push(q)}});
+  return {add,del}}
+const keyIdx=(k,pre)=>k&&k[0]===pre&&/^\d+$/.test(k.slice(1))?+k.slice(1):null;
+
+/* ---- adding a point (PT2, PT3) ---- */
+function bezPoint(q,t){const m=1-t;return [m*m*m*q[0]+3*m*m*t*q[2]+3*m*t*t*q[4]+t*t*t*q[6],m*m*m*q[1]+3*m*m*t*q[3]+3*m*t*t*q[5]+t*t*t*q[7]]}
+function bezNearest(q,W){let bt=0,bd=Infinity;for(let i=0;i<=64;i++){const t=i/64,P=bezPoint(q,t),d=Math.hypot(P[0]-W[0],P[1]-W[1]);if(d<bd){bd=d;bt=t}}
+  let a=Math.max(0,bt-1/64),b=Math.min(1,bt+1/64);for(let k=0;k<40;k++){const m1=a+(b-a)/3,m2=b-(b-a)/3,d1=Math.hypot(...bezPoint(q,m1).map((v,i)=>v-W[i])),d2=Math.hypot(...bezPoint(q,m2).map((v,i)=>v-W[i]));if(d1<d2)b=m2;else a=m1}
+  const t=(a+b)/2,P=bezPoint(q,t);return {t,P,d:Math.hypot(P[0]-W[0],P[1]-W[1])}}
+function bezSplit(q,t){const L=(a,b)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t],P0=[q[0],q[1]],P1=[q[2],q[3]],P2=[q[4],q[5]],P3=[q[6],q[7]],
+  A=L(P0,P1),B=L(P1,P2),C=L(P2,P3),D=L(A,B),E=L(B,C),F=L(D,E);return [[...P0,...A,...D,...F],[...F,...E,...C,...P3]]}
+function projSeg(A,B,W){const dx=B[0]-A[0],dy=B[1]-A[1],L2=dx*dx+dy*dy;let t=L2?((W[0]-A[0])*dx+(W[1]-A[1])*dy)/L2:0;t=Math.max(0,Math.min(1,t));const P=[A[0]+dx*t,A[1]+dy*t];return {t,P,d:Math.hypot(P[0]-W[0],P[1]-W[1])}}
+function pointAdded(e,W){const g=e.g,EPS=1e-6;
+  if(e.k==='linea'){const r=projSeg(g.a,g.b,W);if(r.t<EPS||r.t>1-EPS)return null;
+    return {n:{k:'poli',g:{p:[...g.a,...r.P,...g.b],ch:false}},mapKey:k=>k==='a'?'v0':k==='b'?'v2':null,mapSeg:null}}
+  if(e.k==='poli'||e.k==='dir'){const p=g.p,n=p.length>>1,ns=e.k==='poli'?nSeg(g):n-1;let best=null;
+    for(let i=0;i<ns;i++){const j=(i+1)%n,A=[p[2*i],p[2*i+1]],B=[p[2*j],p[2*j+1]],b=e.k==='poli'&&g.bu&&g.bu[i];let r;
+      if(b){const z=segPoli(g,i);if(z&&z.k==='a'){let d=Math.atan2(W[1]-z.c[1],W[0]-z.c[0])-z.a0;if(z.sw>0){d=((d%DUEPI)+DUEPI)%DUEPI}else{d=-(((-d)%DUEPI+DUEPI)%DUEPI)}let f=d/z.sw;f=Math.max(0,Math.min(1,f));
+          const an=z.a0+z.sw*f,P=[z.c[0]+z.r*Math.cos(an),z.c[1]+z.r*Math.sin(an)];r={t:f,P,d:Math.hypot(P[0]-W[0],P[1]-W[1]),arc:b}}}
+      if(!r)r=projSeg(A,B,W);if(!best||r.d<best.d)best=Object.assign(r,{i})}
+    if(!best||best.t<EPS||best.t>1-EPS)return null;const i=best.i,np=p.slice();np.splice(2*(i+1),0,best.P[0],best.P[1]);const ng=Object.assign({},g,{p:np});
+    if(e.k==='poli'&&g.bu){const bu=g.bu.slice();while(bu.length<ns)bu.push(0);if(best.arc){const a=Math.atan(best.arc);bu.splice(i,1,Math.tan(a*best.t),Math.tan(a*(1-best.t)))}else bu.splice(i+1,0,0);ng.bu=bu}
+    return {n:{k:e.k,g:ng},mapKey:k=>{const v=keyIdx(k,'v');if(v!=null)return 'v'+(v>i?v+1:v);const m=keyIdx(k,'m')!=null?'m':keyIdx(k,'c')!=null?'c':null;if(!m)return k;const x=+k.slice(1);return m+(x>i?x+1:x)},mapSeg:s=>s>i?s+1:s}}
+  if(e.k==='curva'){const p=g.p,ns=(p.length/2-1)/3;let best=null;for(let j=0;j<ns;j++){const q=p.slice(6*j,6*j+8),r=bezNearest(q,W);if(!best||r.d<best.d)best=Object.assign(r,{j,q})}
+    if(!best||best.t<EPS||best.t>1-EPS)return null;const [s1,s2]=bezSplit(best.q,best.t),j=best.j,np=p.slice(0,6*j).concat(s1,s2.slice(2),p.slice(6*j+8));
+    return {n:{k:'curva',g:Object.assign({},g,{p:np})},mapKey:k=>{const v=keyIdx(k,'v');if(v!=null)return 'v'+(v>j?v+1:v);const h=keyIdx(k,'h');return h==null?k:'h'+(h>3*j+1?h+3:h)},mapSeg:null}}
+  if(e.k==='spline'){const n=g.f.length>>1,segs=segmentiBez(e),poly=[],cum=[0];segs.forEach((q,si)=>{for(let k=si?1:0;k<=24;k++){const P=bezPoint(q,k/24);if(poly.length)cum.push(cum[cum.length-1]+Math.hypot(P[0]-poly[poly.length-1][0],P[1]-poly[poly.length-1][1]));poly.push(P)}});
+    if(poly.length<2)return null;const proj=X=>{let bs=0,bd=Infinity,BP=null;for(let k=0;k+1<poly.length;k++){const r=projSeg(poly[k],poly[k+1],X);if(r.d<bd){bd=r.d;bs=cum[k]+r.t*(cum[k+1]-cum[k]);BP=r.P}}return {s:bs,P:BP,d:bd}};
+    const w=proj(W),L=cum[cum.length-1],sF=[];for(let i=0;i<n;i++)sF.push(proj([g.f[2*i],g.f[2*i+1]]).s);
+    let ins;if(g.ch){const rel=x=>((x-sF[0])%L+L)%L,rw=rel(w.s);ins=n;for(let i=1;i<n;i++)if(rel(sF[i])>rw){ins=i;break}}else{ins=n;for(let i=0;i<n;i++)if(sF[i]>w.s){ins=i;break}if(ins===0||ins===n)return null}
+    if(Math.min(...sF.map(x=>Math.abs(x-w.s)))<1e-6)return null;const f=g.f.slice();f.splice(2*ins,0,w.P[0],w.P[1]);const ng=Object.assign({},g,{f});
+    if(g.G0&&g.G0.length)ng.G0=g.G0.map(i=>i>=ins?i+1:i);
+    return {n:{k:'spline',g:ng},mapKey:k=>{const v=keyIdx(k,'f');return v==null?k:'f'+(v>=ins?v+1:v)},mapSeg:null}}
+  return null}
+function addPointAt(e,W){const r=pointAdded(e,W);if(!r){avviso('Tocca l’elemento fra due punti, lontano dagli estremi');return false}
+  const n=fattaEnt(Object.assign({},e,{k:r.n.k,g:arrotondaG(r.n.g)})),f=followRefs(e.id,r.mapKey,r.mapSeg);
+  esegui({add:[n,...f.add],del:[e,...f.del]});sel.add(n.id);return true}
+
+/* ---- removing points (PT4-PT6) ---- */
+function fitMerge(s1,s2){const A=[s1[0],s1[1]],B=[s2[6],s2[7]],nv=(x,y)=>{const l=Math.hypot(x,y);return l>1e-12?[x/l,y/l]:null};
+  const t1=nv(s1[2]-A[0],s1[3]-A[1])||nv(s1[4]-A[0],s1[5]-A[1])||nv(B[0]-A[0],B[1]-A[1])||[1,0],t2=nv(s2[4]-B[0],s2[5]-B[1])||nv(s2[2]-B[0],s2[3]-B[1])||nv(A[0]-B[0],A[1]-B[1])||[-1,0];
+  const S=[];[s1,s2].forEach((q,qi)=>{for(let k=qi?1:0;k<=16;k++)S.push(bezPoint(q,k/16))});const cu=[0];for(let i=1;i<S.length;i++)cu.push(cu[i-1]+Math.hypot(S[i][0]-S[i-1][0],S[i][1]-S[i-1][1]));const Lt=cu[cu.length-1]||1;
+  let c00=0,c01=0,c11=0,x0=0,x1=0;S.forEach((P,i)=>{const u=cu[i]/Lt,m=1-u,b0=m*m*m,b1=3*m*m*u,b2=3*m*u*u,b3=u*u*u,a1=[t1[0]*b1,t1[1]*b1],a2=[t2[0]*b2,t2[1]*b2];
+    c00+=a1[0]*a1[0]+a1[1]*a1[1];c01+=a1[0]*a2[0]+a1[1]*a2[1];c11+=a2[0]*a2[0]+a2[1]*a2[1];const tx=P[0]-(A[0]*(b0+b1)+B[0]*(b2+b3)),ty=P[1]-(A[1]*(b0+b1)+B[1]*(b2+b3));x0+=a1[0]*tx+a1[1]*ty;x1+=a2[0]*tx+a2[1]*ty});
+  const det=c00*c11-c01*c01,dAB=Math.hypot(B[0]-A[0],B[1]-A[1]);let al1=det?(x0*c11-x1*c01)/det:0,al2=det?(c00*x1-c01*x0)/det:0;if(!(al1>1e-6*dAB)||!(al2>1e-6*dAB))al1=al2=dAB/3;
+  return [A[0],A[1],A[0]+t1[0]*al1,A[1]+t1[1]*al1,B[0]+t2[0]*al2,B[1]+t2[1]*al2,B[0],B[1]]}
+/* sides joined by removing vertices: one arc when all the joined sides lie on the same circle, otherwise a straight side */
+function mergedBulge(g,a,b,n){const gap=((b-a+n)%n)||n;if(gap===1)return g.bu[a]||0;let sum=0,c0=null;
+  for(let k=0;k<gap;k++){const i=(a+k)%n,bb=g.bu[i]||0;if(!bb)return 0;const z=segPoli(g,i);if(!z||z.k!=='a')return 0;if(!c0)c0=z;else if(Math.hypot(z.c[0]-c0.c[0],z.c[1]-c0.c[1])>1e-6*Math.max(1,c0.r)||Math.abs(z.r-c0.r)>1e-6*Math.max(1,c0.r))return 0;sum+=Math.atan(bb)}
+  return Math.abs(sum)<Math.PI/2?Math.tan(sum):0}
+function pointsRemoved(e,idx){const g=e.g,n=countPoints(e),ch=closedE(e),keep=n-idx.size;if(keep<(ch?3:2))return {err:true};
+  const newIndex=i=>{if(idx.has(i))return null;let s=0;idx.forEach(j=>{if(j<i)s++});return i-s};
+  if(e.k==='poli'||e.k==='dir'){const p=g.p,np=[],kept=[];for(let i=0;i<n;i++)if(!idx.has(i)){np.push(p[2*i],p[2*i+1]);kept.push(i)}const ng=Object.assign({},g,{p:np});
+    if(e.k==='poli'&&g.bu){const bu=[];const ns=ch?kept.length:kept.length-1;for(let k=0;k<ns;k++){const a=kept[k],b=kept[(k+1)%kept.length];bu.push(mergedBulge(g,a,b,n))}ng.bu=bu.some(x=>x)?bu:undefined;if(!ng.bu)delete ng.bu}
+    return {n:{k:e.k,g:ng},mapKey:k=>{const v=keyIdx(k,'v');if(v!=null){const j=newIndex(v);return j==null?null:'v'+j}const m=keyIdx(k,'m');return m==null?k:null},mapSeg:s=>{const a=s,b=(s+1)%n;if(idx.has(a)||idx.has(b))return null;return newIndex(a)}}}
+  if(e.k==='spline'){const f=[];for(let i=0;i<n;i++)if(!idx.has(i))f.push(g.f[2*i],g.f[2*i+1]);const ng=Object.assign({},g,{f});if(g.G0){ng.G0=g.G0.map(newIndex).filter(i=>i!=null);if(!ng.G0.length)delete ng.G0}
+    return {n:{k:'spline',g:ng},mapKey:k=>{const v=keyIdx(k,'f');if(v==null)return k;const j=newIndex(v);return j==null?null:'f'+j},mapSeg:null}}
+  if(e.k==='curva'){const S=[];for(let j=0;j+7<g.p.length;j+=6)S.push(g.p.slice(j,j+8));const ns=S.length,nA=ch?ns:ns+1;
+    /* linked chain of anchors: seg[a] runs from anchor a to next[a] */
+    const seg=new Map(),next=new Map();for(let a=0;a<ns;a++){seg.set(a,S[a]);next.set(a,ch?(a+1)%ns:a+1)}
+    const prevOf=a=>{for(const [k,v] of next)if(v===a&&seg.has(k))return k;return null};
+    [...idx].sort((x,y)=>x-y).forEach(a=>{const pr=prevOf(a),hasOut=seg.has(a);
+      if(pr!=null&&hasOut){seg.set(pr,fitMerge(seg.get(pr),seg.get(a)));next.set(pr,next.get(a));seg.delete(a);next.delete(a)}
+      else if(hasOut){seg.delete(a);next.delete(a)}else if(pr!=null){seg.delete(pr);next.delete(pr)}});
+    const kept=[];for(let a=0;a<nA;a++)if(!idx.has(a))kept.push(a);let start=ch?kept[0]:kept[0];const np=[];let a=start,guard=0;
+    while(seg.has(a)&&guard++<nA){const q=seg.get(a);if(!np.length)np.push(q[0],q[1]);np.push(...q.slice(2));a=next.get(a);if(ch&&a===start)break}
+    return {n:{k:'curva',g:Object.assign({},g,{p:np})},mapKey:k=>{const v=keyIdx(k,'v');if(v!=null){const j=newIndex(v);return j==null?null:'v'+j}return keyIdx(k,'h')!=null?null:k},mapSeg:null}}
+  return {err:true}}
+function partIndex(e,k){return e.k==='spline'?keyIdx(k,'f'):(e.k==='poli'||e.k==='dir'||e.k==='curva')?keyIdx(k,'v'):null}
+function removeChosenPoints(){const by=new Map();PARTI.filter(r=>r.k).forEach(r=>{const e=MOS.cad.get(r.e);if(!e||!pointsFree(e))return;const i=partIndex(e,r.k);if(i==null)return;if(!by.has(e.id))by.set(e.id,new Set());by.get(e.id).add(i)});
+  if(!by.size){avviso('Scegli i punti da togliere');return false}const add=[],del=[];let refused=0;
+  by.forEach((idx,id)=>{const e=MOS.cad.get(id),r=pointsRemoved(e,idx);if(r.err){refused++;return}const n=fattaEnt(Object.assign({},e,{k:r.n.k,g:arrotondaG(r.n.g)})),f=followRefs(e.id,r.mapKey,r.mapSeg);add.push(n,...f.add);del.push(e,...f.del)});
+  if(refused)avviso(refused===1?'Non si toglie: l’elemento resterebbe sotto 2 punti aperto, 3 chiuso':refused+' elementi resterebbero sotto il minimo: lì i punti restano');
+  if(!add.length)return true;PARTI=[];esegui({add,del});aggCtx();richiedi('sopra');return true}
+{const _el=eliminaSel;eliminaSel=function(){if(PARTI.length&&PARTI.every(r=>r.k&&pointsFree(MOS.cad.get(r.e)))){removeChosenPoints();return}return _el()}}
+
+/* ---- «Aggiungi punto» mode: the next taps put points on the element; Esc or a tap on empty canvas ends it ---- */
+var ADDPT=false;
+function addPointMode(on){ADDPT=on;document.body.classList.toggle('addPt',on);if(on)avviso('Aggiungi punto · tocca l’elemento dove serve · Esc per finire');try{rendiPP()}catch(e){}}
+addEventListener('pointerdown',e=>{if(!ADDPT||e.pointerType==='touch'||e.button>0)return;if(!(e.target===area||(e.target.closest&&e.target.closest('#wrap canvas'))))return;
+  const W=s2w(e.clientX-V.rx,e.clientY-V.ry),tol=14/V.s,cand=[...sel].map(id=>MOS.cad.get(id)).filter(x=>x&&PT_KINDS.has(x.k)&&!x.bk);
+  let e0=null,bd=tol;cand.forEach(x=>{const d=distEnt(x,W[0],W[1]);if(d<=bd){bd=d;e0=x}});if(!e0){const x=entVicina(W,true);if(x&&PT_KINDS.has(x.k)&&!x.bk&&distEnt(x,W[0],W[1])<=tol)e0=x}
+  e.preventDefault();e.stopImmediatePropagation();if(!e0){addPointMode(false);return}if(bloccatoE(e0)){avviso('L’elemento è su un layer bloccato');return}addPointAt(e0,W);aggCtx();richiedi('sopra')},true);
+addEventListener('keydown',e=>{if(ADDPT&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();addPointMode(false)}},true);
+
+/* ---- continuity (SG1, SG2, SG4) ---- */
+function setSplineG(e,G){const g=Object.assign({},e.g);if(G>1)g.G=G;else delete g.G;esegui({add:[fattaEnt(Object.assign({},e,{g}))],del:[e]});aggCtx();richiedi('sopra')}
+function setCorners(e,idx,on){const n=e.g.f.length>>1,s=new Set(splineCorners(e.g,n));idx.forEach(i=>on?s.add(i):s.delete(i));const g=Object.assign({},e.g);if(s.size)g.G0=[...s].sort((a,b)=>a-b);else delete g.G0;
+  esegui({add:[fattaEnt(Object.assign({},e,{g}))],del:[e]});aggCtx();richiedi('sopra')}
+
+/* ---- chosen points on free-point elements (parts) ---- */
+function bottoniPartiFree(c){const P=PARTI.filter(r=>r.k),t=document.createElement('span');t.className='t';t.textContent=P.length+(P.length===1?' punto':' punti');c.appendChild(t)}
+{const _bp=bottoniParti;bottoniParti=function(c){const free=PARTI.some(r=>{const e=MOS.cad.get(r.e);return e&&!vincolabile(e)});if(free)bottoniPartiFree(c);else _bp(c);
+  if(PARTI.length&&PARTI.every(r=>r.k&&pointsFree(MOS.cad.get(r.e))))c.appendChild(bottone(PARTI.length===1?'Togli punto':'Togli i punti',()=>removeChosenPoints()))}}
+['Togli punto','Togli i punti'].forEach(n=>NOMI_PARTI.add(n));
+
+/* ---- properties panel ---- */
+{const _rp=rendiPP;rendiPP=function(){_rp();try{if(pp.hidden)return;const es=selEnts();if(es.length!==1)return;const e=es[0];if(!e.g||!PT_KINDS.has(e.k)||e.bk)return;
+  const box=document.createDocumentFragment(),el=(t,c,x)=>{const o=document.createElement(t);if(c)o.className=c;if(x!=null)o.textContent=x;return o},row=(k,...xs)=>{const r=el('div','pr');if(k!=null)r.appendChild(el('span','k',k));xs.forEach(x=>r.appendChild(x));box.appendChild(r);return r};
+  const place=()=>{const ref=[...pp.querySelectorAll(':scope>.sez')].find(x=>x.textContent==='Oggetto');pp.insertBefore(box,ref||null)};
+  box.appendChild(el('div','sez','Punti'));
+  const add=bottone('Aggiungi punto',()=>addPointMode(!ADDPT));add.setAttribute('aria-pressed',String(ADDPT));add.title='Poi tocca l’elemento dove serve il punto';if(ADDPT)add.classList.add('att');
+  const mine=PARTI.filter(r=>r.e===e.id&&r.k);const parts=[add];if(mine.length&&pointsFree(e))parts.push(bottone(mine.length===1?'Togli punto':'Togli i punti',()=>removeChosenPoints()));
+  row(null,el('span','num',countPoints(e)+(countPoints(e)===1?' punto':' punti')),...parts);
+  if(e.k!=='spline'){place();return}
+  box.appendChild(el('div','sez','Continuità'));const G=splineG(e.g),eff=splineGEff(e.g);
+  const seg=cpSeg([[1,'G1','G1 · tangente continua; un punto spostato cambia solo i tratti vicini'],[2,'G2','G2 · curvatura continua'],[3,'G3','G3 · anche la variazione della curvatura è continua'],[4,'G4','G4 · continuità di quarto ordine']],G,v=>setSplineG(e,v),'Continuità della spline');
+  row('Curva',seg);if(eff<G)row(null,el('span','num','Con '+countPoints(e)+' punti vale G'+eff+'; i punti restano, G'+G+' torna con più punti'));
+  const n=e.g.f.length>>1,C=new Set(splineCorners(e.g,n)),idx=mine.map(r=>keyIdx(r.k,'f')).filter(i=>i!=null);
+  if(idx.length){const all=idx.every(i=>C.has(i)),none=idx.every(i=>!C.has(i));
+    row(idx.length===1?'Punto scelto':'Punti scelti',cpSeg([['g0','G0','G0 · spigolo: qui la curva cambia direzione'],['c','Come la curva','Il punto segue la continuità della curva']],all?'g0':none?'c':null,v=>setCorners(e,idx,v==='g0'),'Continuità dei punti scelti'))}
+  else if(C.size)row(null,el('span','num',C.size+(C.size===1?' spigolo G0':' spigoli G0')+' · scegli un punto per cambiarlo'));place()}catch(err){console.error(err)}}}
+
+{const st=document.createElement('style');st.textContent='body.addPt #wrap canvas{cursor:copy}';document.head.appendChild(st)}
+try{COMANDI.push({k:'addpoint',n:'Aggiungi punto',en:'Add point',ab:'AP',f:()=>addPointMode(true),al:['aggiungi punto','inserisci punto']});
+  COMANDI.push({k:'removepoint',n:'Togli punto',en:'Remove point',ab:'RP',f:()=>removeChosenPoints(),al:['togli punto','rimuovi punto']})}catch(e){}
+window.__gestoPT={preview:(e,x,y)=>{const r=pointAdded(e,[x,y]);return r?r.n:null},removedPreview:(e,idx)=>{const r=pointsRemoved(e,new Set(idx));return r.err?null:r.n},clear:()=>{PARTI=[];aggCtx()},add:(id,x,y)=>{const e=MOS.cad.get(id);return e?addPointAt(e,[x,y]):false},remove:()=>removeChosenPoints(),mode:on=>addPointMode(on),parts:()=>PARTI.slice(),
+  choose:(id,k)=>{sel.add(id);PARTI.push({e:id,k});aggCtx();try{rendiPP()}catch(e){}},setG:(id,G)=>setSplineG(MOS.cad.get(id),G),corners:(id,idx,on)=>setCorners(MOS.cad.get(id),idx,on),
+  segs:id=>{const e=MOS.cad.get(id);return e?segmentiBez(e):null},interp:(Q,closed,deg)=>bsInterp(Q,closed,deg),bez:(Q,closed,deg)=>{const c=bsInterp(Q,closed,deg);return c?bsToBez(c,0.005):null},
+  eval:(Q,closed,deg,u)=>{const c=bsInterp(Q,closed,deg);if(!c)return null;let x=u;const sp=bsFindSpan(c.U,c.p,c.n,x);return bsEval(c,x,sp)},geff:id=>splineGEff(MOS.cad.get(id).g)};
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
