@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.77';
+const VERSIONE_GESTO='0.78';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -6819,7 +6819,7 @@ logo.innerHTML=GESTO_SVG;
     return {blob:new Blob([JSON.stringify(env)],{type:'application/octet-stream'}),n,persi,id:f.id}}
 
   /* ---- scrittura sul file legato ---- */
-  async function scrivi(v,b){const w=await v.h.createWritable();await w.write(b.blob);await w.close();const fl=await v.h.getFile();v.mod=fl.lastModified;v.sporco=false;v.conflitto=false;regSet(b.id,{h:v.h,nome:v.nome,mod:v.mod})}
+  async function scrivi(v,b){if(b.blob.size>100*1048576)avviso('«'+v.nome+'» pesa '+Math.round(b.blob.size/1048576)+' MB: salvataggi e sincronizzazione rallentano. Il formato .dmz a pacchetto è in preparazione.');const w=await v.h.createWritable();await w.write(b.blob);await w.close();const fl=await v.h.getFile();v.mod=fl.lastModified;v.sporco=false;v.conflitto=false;regSet(b.id,{h:v.h,nome:v.nome,mod:v.mod})}
   async function salvaLegato(chiedi){
     const id=foglioId,v=voce(id);if(!v)return false;
     if(!await permesso(v.h,chiedi)){v.attesa=true;aggFile();return false}v.attesa=false;
@@ -6857,7 +6857,7 @@ logo.innerHTML=GESTO_SVG;
       await attendi(()=>caricato);
       const nuovo=!v||!v.mod||fl.lastModified>v.mod+1000;
       if(nuovo&&!(v&&v.sporco)){const persi=await ricarica(o);avviso('Aperto «'+h.name+'»'+(persi?' · '+persi+' sfondi non recuperati':''))}
-      else if(nuovo)avviso('«'+h.name+'» è cambiato altrove, ma qui ci sono modifiche non salvate: le tengo. Usa Salva con nome per non perdere nessuna delle due.');
+      else if(nuovo){const cl=await copiaLocale(id);const persi=await ricarica(o);avviso('Aperto «'+h.name+'». Le modifiche che il file non aveva restano nel foglio «'+cl+'»'+(persi?' · '+persi+' sfondi non recuperati':''))}
       else avviso('«'+h.name+'» è già aperto');
       const w={h,nome:h.name,mod:fl.lastModified,sporco:v?v.sporco:false};FD.set(id,w);regSet(id,{h,nome:h.name,mod:w.mod});aggFile();return}
     /* nuovo: si apre in un foglio nuovo, legato al file */
@@ -6865,6 +6865,12 @@ logo.innerHTML=GESTO_SVG;
     const f=foglio();if(o._doc&&!f.uuid)fogliSet({uuid:o._doc});
     FD.set(f.id,{h,nome:h.name,mod:fl.lastModified,sporco:false});regSet(f.id,{h,nome:h.name,mod:fl.lastModified});aggFile();
     avviso('Aperto «'+h.name+'». Le modifiche si salvano su questo file.')}
+  /* GC2: the sheet in front, with its changes, becomes a separate local copy; the linked sheet stays linked */
+  async function copiaLocale(id){const b=await contenuto(),f0=foglio(),d=new Date(),z=n=>String(n).padStart(2,'0');
+    const nome=(f0.nome||'Foglio')+' (copia locale '+z(d.getDate())+'/'+z(d.getMonth()+1)+' '+z(d.getHours())+'.'+z(d.getMinutes())+')';
+    const v=voce(id);if(v)v.sporco=false;clearTimeout(pausa);
+    await importaFoglio(new File([b.blob],'copia.dmz'));await attendi(()=>caricato&&foglioId!==id);fogliSet({nome});
+    $('foglio').value=id;apriFoglio(id);await attendi(()=>caricato&&foglioId===id);menuFogli();return nome}
   async function apriFD(){let hs;try{hs=await showOpenFilePicker({types:TIPO,multiple:false,id:'gesto-fogli'})}catch(e){return}if(hs&&hs[0])apriHandle(hs[0]).catch(e=>{console.warn(e);avviso('Il file non si apre')})}
 
   /* ---- modifiche e pause ---- */
@@ -8552,6 +8558,32 @@ setTimeout(()=>{pnTesta();if(IMPAG&&!ER.full)document.body.classList.toggle('col
    DC9 A tap on the head of a document opens or closes its pages, also while one writes on one of them;
        opening a closed document leads to its first page only if the page in front is elsewhere. */
 window.__gestoDC.toggleDoc=d=>{const it=document.querySelector('#dcL .dcDh[data-d="'+d+'"]');if(it)dcAlterna(d);return !DC.docChiusi.has(d)};
+
+/* ---------- 79. The building site inside the project file (owner, 23.11.2026) ----------
+   GC0 The project is the .dmz file: Gesto opens it and saves on the spot (phase 60, FD1-FD7, already in place).
+   GC2 Opening again a .dmz whose project here has changes the file lacks deletes nothing: those changes stay beside,
+       in a sheet named «(copia locale dd/mm hh.mm)», and the project shows the version of the file.
+   GC3 A new building site is born with the standard folders: 00 - VIGENTI, 0 - POSTA, Verbali, Ordini di servizio, SAL,
+       Sicurezza, Imprese, Foto, Disegni, Superati; they are renamed, moved and deleted like any folder.
+   GC5 A new folder inside «0 - POSTA» is born as «AAMMGG - Mittente - Oggetto», dated today, ready to be completed.
+   GC7 Gesto warns when the project file passes 100 MB (until the packed .dmz exists). */
+const GC_CARTELLE=['00 - VIGENTI','0 - POSTA','Verbali','Ordini di servizio','SAL','Sicurezza','Imprese','Foto','Disegni','Superati'];
+const GC_POSTA=/^0\s*-\s*posta$/i;
+function gcNuovoCantiere(){if(!IMPAG)entraImpag();const L=dcCartelle().slice(),id=idCasuale('cr'),base='Nuovo cantiere';
+  let nome=base,k=2;while(L.some(c=>!c.p&&c.nome===nome))nome=base+' '+(k++);
+  L.push({id,nome});GC_CARTELLE.forEach(n=>{const c={id:idCasuale('cr'),nome:n,p:id};L.push(c);DC.chiuse.add(c.id)});/* the standard folders start closed: names only, the site fits the column */DC.chiuse.delete(id);DC.cart=id;DC.rinomina='f:'+id;dcSalvaCartelle(L);return id}
+/* GC5: the mail folder names itself */
+{const _n=dcNuovaCartella;dcNuovaCartella=function(p,...a){const r=_n(p,...a);const par=p&&dcCartelle().find(c=>c.id===p);
+  if(par&&GC_POSTA.test(par.nome.trim())){const L=dcCartelle(),c=L[L.length-1],d=new Date(),z=n=>String(n).padStart(2,'0');
+    const nome=String(d.getFullYear()).slice(2)+z(d.getMonth()+1)+z(d.getDate())+' - Mittente - Oggetto';
+    dcSalvaCartelle(L.map(x=>x.id===c.id?Object.assign({},x,{nome}):x));DC.rinomina='f:'+c.id;dcChiave='';rendiCol();
+    setTimeout(()=>{const i=document.querySelector('#dcL .dcN input');if(i&&i.value===nome)i.setSelectionRange(9,nome.length)},40)}
+  return r}}
+/* GC3: the key at the foot of the column */
+(()=>{const pm=$('icPiu')&&$('icPiu').parentNode;if(!pm)return;const b=document.createElement('button');b.className='pb pmB';b.title='Nuovo cantiere';b.setAttribute('aria-label','Nuovo cantiere');
+  b.innerHTML=SV('<path d="M4 20h16"/><path d="M6 20v-6a6 6 0 0 1 12 0v6"/><path d="M12 8V5"/><path d="M9 14h6"/>');b.onclick=()=>gcNuovoCantiere();pm.insertBefore(b,pm.children[1]||null)})();
+try{COMANDI.push({k:'newsite',n:'Nuovo cantiere',en:'New building site',ab:'CNT',f:()=>gcNuovoCantiere(),al:['cantiere','nuovo cantiere','cartelle tipo']})}catch(e){}
+window.__gestoGC={site:()=>gcNuovoCantiere(),standard:()=>GC_CARTELLE.slice()};
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
