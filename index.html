@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.84';
+const VERSIONE_GESTO='0.85';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8899,6 +8899,40 @@ const tbDrag=document.createElement('div');tbDrag.id='tbDrag';tbDrag.setAttribut
 /* a moving window is told to the layout: the free part of the screen and the handles of the panels follow */
 if(navigator.windowControlsOverlay&&navigator.windowControlsOverlay.addEventListener)navigator.windowControlsOverlay.addEventListener('geometrychange',()=>{try{posPennaLato();rzPosiziona();if(IMPAG)erRifit()}catch(e){}});
 setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
+
+/* ---------- 86. Visual language (owner, 23.11.2026; reference: Lab Disegno, without copying it) ----------
+   VS1 Surfaces: panels veiled on the canvas, the grid faintly through, a thin rule, barely a shadow; the same in the light theme.
+   VS2 Titles: section titles in small spaced capitals, small and muted; content in plain roman; title left, main action right.
+   VS3 Values: numeric fields are pills with a light rule, numbers right-aligned in figures of equal width, unit outside.
+   VS4 Icons: thin even stroke; the active tool is a light filled square with the dark icon.
+   VS5 Sizes for the pen: every target at least 40 px, every pill at least 34 px high.
+   VS6 Contrast: muted texts never below 4.5:1 on their ground, measured with ink under the veil (alpha .92: 4.7 dark, 5.0 light).
+   VS7 One accent: colour marks only what is active or chosen; the rest lives on tones of the same petrol.
+   No blur behind the panels: a blur would recompose at every stroke of the pen under them, and Gesto stays fast. */
+(()=>{const st=document.createElement('style');st.textContent=
+  ':root{--veil:rgba(255,255,255,.92);--hair:rgba(30,63,76,.14);--hair2:rgba(30,63,76,.30);--muted:#4E6873;--ombra:0 2px 10px rgba(15,35,44,.08)}'+
+  ':root[data-theme="dark"]{--veil:rgba(30,63,76,.92);--hair:rgba(197,213,218,.18);--hair2:rgba(252,248,244,.34);--muted:#B4BEC0;--ombra:0 2px 12px rgba(5,15,20,.22)}'+
+  '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--veil:rgba(30,63,76,.92);--hair:rgba(197,213,218,.18);--hair2:rgba(252,248,244,.34);--muted:#B4BEC0;--ombra:0 2px 12px rgba(5,15,20,.22)}}'+
+  /* VS1 */
+  '.pan,#pp,#impCol,.rail,#logoPan,.fstrip,.mnu,#dcNav,.ctx.dock,#panApri.lingua,#icApri.lingua{background:var(--veil)!important;border-color:var(--hair)!important;box-shadow:var(--ombra)!important}'+
+  '.rail{border-top-color:transparent!important}#logoPan{border-bottom-color:transparent!important}body.senzaStr #logoPan{border-bottom-color:var(--hair)!important}#logoPan{height:55px}'+
+  '.pan>.ph,#pp>.ph,#impCol .icT{background:transparent!important;border-bottom:1px solid var(--hair);height:44px;font:600 11.5px var(--sans)!important;letter-spacing:.12em;text-transform:uppercase}'+
+  '#pEsporta>.ph,#pp>.ph{background:var(--veil)!important}'+
+  /* VS2 */
+  '.sez,#dcPag .sez{text-transform:uppercase;letter-spacing:.12em;font:600 10.5px var(--sans)!important;color:var(--muted)!important;padding-top:16px}'+
+  '.pan .k,#pp .k,#tavB .k,.k{color:var(--muted)}'+
+  /* VS3 */
+  '.cmp,#pp .cmp,#tavB .prK .cmp{height:34px!important;border-radius:999px!important;border:1px solid var(--hair2)!important;background:transparent!important;padding:0 12px!important;text-align:right;font-variant-numeric:tabular-nums}'+
+  '#tavB input[type=text],#tavB textarea,#tavB select,#tavSel,.pan select,#pp select,.crBox input{border-color:var(--hair2)!important;border-radius:8px!important;background:transparent!important}'+
+  '.pb{border-radius:8px;border-color:var(--hair2)}.pb:hover{border-color:var(--fg)}'+
+  /* VS4 */
+  '.rb svg,.fstrip svg,#dcNav svg,.pmB svg{stroke-width:1.6}.rb:hover{background:var(--on)}'+
+  '.rb[aria-pressed="true"],.fstrip .b[aria-pressed="true"]{background:var(--acc)!important;color:var(--accfg)!important;box-shadow:none}'+
+  /* VS5 */
+  '.pb{min-height:34px}.rb{min-width:40px;min-height:40px}'+
+  /* the tree and the column follow the same quiet ground */
+  '.dcF{background:transparent!important;border:1px solid var(--hair)}.dcDh{border-color:var(--hair)!important}.crBox input{height:34px;border-radius:999px!important;padding:0 14px}';
+  document.head.appendChild(st)})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
