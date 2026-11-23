@@ -3799,7 +3799,7 @@ async function stampaTavola(){
   TAV_FILTRO=t;try{pdfModello(doc,f,G.ax0-G.mx0*f,G.ay0-G.my0*f,true)}finally{TAV_FILTRO=null}
   doc.restoreGraphicsState();
   contornoTav(doc,G,t,logo);
-  doc.setLineDashPattern([],0);doc.setDrawColor(DMZ.scuro);doc.setLineWidth(0.7);doc.rect(G.ax0,G.ay0,G.aw,G.ah,'S');doc.rect(G.cx,G.cy,G.cw,G.ch,'S');
+  cornicePdf(doc,G,t);
   let blob;try{blob=pdfFinale(doc)}catch(e){notaEx('Tavola non generata');return}
   const nome=((c.cod||'').trim()||('Gesto - '+(foglio().nome||'Foglio')+' - '+(t.nome||'Tavola'))).replace(/[\\\/:*?"<>|]+/g,' ').trim()+'.pdf';
   await salvaFile(nome,blob);
@@ -4690,7 +4690,7 @@ async function docTavola(t,doc){const G=tavGeo(t),c=t.cart||{};if(!doc)doc=await
   TAV_FILTRO=t;try{
     finestre(t,G).forEach(fw=>{const g=finGeo(fw),ff=1/fw.sc;TAV_FILTRO=filtroFin(t,fw);doc.saveGraphicsState();doc.rect(fw.x,fw.y,fw.w,fw.h,null);doc.clip();doc.discardPath();pdfModello(doc,ff,fw.x-g.mx0*ff,fw.y-g.my0*ff,true);doc.restoreGraphicsState()});
     contornoTav(doc,G,t,logo);
-    doc.setLineDashPattern([],0);doc.setDrawColor(DMZ.scuro);doc.setLineWidth(0.7);doc.rect(G.ax0,G.ay0,G.aw,G.ah,'S');doc.rect(G.cx,G.cy,G.cw,G.ch,'S');
+    cornicePdf(doc,G,t);
   }finally{TAV_FILTRO=null}
   return {doc,G}}
 /* il codice dell'elaborato termina con il tipo di file: si allinea al formato esportato */
@@ -4758,7 +4758,7 @@ function registratore(doc){const R=[],st={dc:'#000000',fc:'#000000',tc:'#000000'
 dxfTavola=async function(tt){const t=tt||tavPer(tavAtt()||{},'DXF');if(!t||!t.id)return;const G=tavGeo(t);let base;try{base=await nuovoPdf(G.W,G.H)}catch(e){notaEx('Libreria PDF non raggiungibile');return}
   const {doc,R}=registratore(base);
   TAV_FILTRO=t;try{contornoTav(doc,G,t,LOGO_VETT?{img:null,w:LOGO_VETT.r,h:1}:null);
-    doc.setLineDashPattern([],0);doc.setDrawColor(DMZ.scuro);doc.setLineWidth(0.7);doc.rect(G.ax0,G.ay0,G.aw,G.ah,'S');doc.rect(G.cx,G.cy,G.cw,G.ch,'S');
+    cornicePdf(doc,G,t);
     DXF_TAV={t,G,R,fin:finestre(t,G)};DXF_NOME=nomeTav(t);await esportaDxf()}catch(e){console.warn(e);notaEx('DXF della tavola non generato')}finally{TAV_FILTRO=null;DXF_TAV=null;DXF_NOME=null;richiedi()}};
 /* taglio sul bordo dell'area grafica: rettangolo in coordinate del modello */
 function tagliaSeg(a,b,F){let t0=0,t1=1;const dx=b[0]-a[0],dy=b[1]-a[1],P=[-dx,dx,-dy,dy],Q=[a[0]-F.x0,F.x1-a[0],a[1]-F.y0,F.y1-a[1]];
@@ -4855,7 +4855,7 @@ let fmtAperto=false;
    FI8 il disegno si modifica nel modello; doppio tocco su una finestra apre il modello in quel punto. FI9 una tavola esistente vale come tavola con una finestra.
    FI10 PDF, immagini e DXF riproducono le finestre. Titolo facoltativo «1 · Nome · 1:50»; bordo della finestra non stampato; «In grigio» per lo stato di fatto. */
 const r1m=v=>Math.round(v*10)/10;
-function finestre(t,G){if(!t||t.pdf)return [];if(t.fin&&t.fin.length)return t.fin.map((f,i)=>Object.assign({n:i+1},f));G=G||tavGeo(t);
+function finestre(t,G){if(!t||t.pdf||(t.noFin&&!(t.fin&&t.fin.length)))return [];if(t.fin&&t.fin.length)return t.fin.map((f,i)=>Object.assign({n:i+1},f));G=G||tavGeo(t);
   return [{id:'f1',n:1,x:G.ax0,y:G.ay0,w:G.aw,h:G.ah,c:t.c||[0,0],sc:G.sc,vis:t.vis,sost:t.sost,tit:t.tit,virt:true}]}
 const finGeo=f=>({mx0:f.c[0]-f.w*f.sc/2,my0:f.c[1]-f.h*f.sc/2,mw:f.w*f.sc,mh:f.h*f.sc});
 const finAtt=t=>{const L=finestre(t);return L.find(f=>f.id===S.finAtt)||L[0]||null};
@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.95';
+const VERSIONE_GESTO='0.96';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9345,6 +9345,98 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
   document.head.appendChild(st);
   let era=document.body.classList.contains('impagina');
   new MutationObserver(()=>{const ora=document.body.classList.contains('impagina');if(era&&!ora&&!$('pEsporta').hidden)pannello(null);era=ora}).observe(document.body,{attributes:true,attributeFilter:['class']});
+})();
+
+/* ---------- 96. The plate: formats, a clean start, margins, frame, visible windows, snaps (owner, 23.11.2026) ----------
+   IM1  One entry per size (A5 to A0, the long series, the formats of the sheet) and an orientation switch.
+   IM2  A new plate is the sheet only: no margins, no frame, no cartiglio, no windows.
+   IM3  Margins in Proprietà: one value for the four sides, with a chain; unchained, left, right, top, bottom.
+   IM4  The frame along the margins has its own weight and colour, or is off and the margins stay a guide.
+   IM9  Windows are drawn on the sheet as a dashed line in Petrolio Chiaro, on screen only.
+   IM10 Windows snap also to the edges and the centre of the page and to the edges of the cartiglio.
+   Older plates keep their look: without own margins they keep the 8 mm and the frame of before. */
+(()=>{
+  /* IM1: a vertical twin for every format */
+  Object.keys(FORMATI).forEach(k=>{if(/V$/.test(k))return;if(!FORMATI[k+'V'])FORMATI[k+'V']=[FORMATI[k][1],FORMATI[k][0]]});
+  const base=k=>String(k||'A3').replace(/V$/,''),vert=k=>/V$/.test(String(k||''));
+  /* IM2: the model «no cartiglio» */
+  if(!MODELLI_BASE.some(m=>m.id==='nessuno'))MODELLI_BASE.push({id:'nessuno',nome:'Nessun cartiglio',pos:'nessuno',w:0,alto:[],basso:[],base:true});
+  const _entra=entraMod;entraMod=function(m,W,H,t){if(m&&m.pos==='nessuno')return true;return _entra(m,W,H,t)};
+  const mgpDi=t=>{const m=t&&t.mgp;return m?{l:+m.l||0,r:+m.r||0,t:+m.t||0,b:+m.b||0}:{l:8,r:8,t:8,b:8}};
+  const _geo=tavGeo;tavGeo=function(t){if(!t||!t.mgp)return _geo(t);
+    const F=formatoDi(t),W=Math.round(F[0]*(t.lun||1)),H=F[1],G2=5,mod=modelloDi(t),sc=t.sc||den(),c=t.c||[0,0],m=mgpDi(t);let aw,ah,cx,cy,cw,ch,SBW;
+    if(mod.pos==='nessuno'){cw=0;ch=0;cx=W-m.r;cy=m.t;aw=W-m.l-m.r;ah=H-m.t-m.b;SBW=0}
+    else if(mod.pos==='angolo'){cw=Math.min(mod.w||180,W-m.l-m.r);ch=altezzaMod(mod,t,cw);cx=W-m.r-cw;cy=H-m.b-ch;aw=W-m.l-m.r;ah=Math.max(20,H-m.t-m.b-ch-G2);SBW=cw}
+    else{SBW=mod.w||sbwDi(H);cw=SBW;ch=H-m.t-m.b;cx=W-m.r-SBW;cy=m.t;aw=W-m.l-m.r-SBW-G2;ah=H-m.t-m.b}
+    aw=Math.max(10,aw);ah=Math.max(10,ah);
+    return {W,H,M:m.t,G2,SBW,mod,ax0:m.l,ay0:m.t,aw,ah,sc,sx:cx,cx,cy,cw,ch,mx0:c[0]-aw*sc/2,my0:c[1]-ah*sc/2,mw:aw*sc,mh:ah*sc,mg:m}};
+  /* without cartiglio nothing dresses the plate: no scale bar, no north, no titles */
+  const _cont=contornoTav;contornoTav=function(doc,G,t,logo){if(G&&G.mod&&G.mod.pos==='nessuno')return;return _cont(doc,G,t,logo)};
+  /* IM4: the frame along the margins and the edge of the cartiglio */
+  const COLF={nero:'#1A1A1A',scuro:'#1E3F4C',petrolio:'#264E5D',grigio:'#7A8C93',terracotta:'#AC7853'};
+  window.cornicePdf=function(doc,G,t){doc.setLineDashPattern([],0);
+    if(!t||!t.mgp){doc.setDrawColor(DMZ.scuro);doc.setLineWidth(0.7);doc.rect(G.ax0,G.ay0,G.aw,G.ah,'S');doc.rect(G.cx,G.cy,G.cw,G.ch,'S');return}
+    const c=t.cor||{};if(c.on){doc.setDrawColor(COLF[c.c]||COLF.scuro);doc.setLineWidth(+c.lw||0.5);const m=G.mg;doc.rect(m.l,m.t,G.W-m.l-m.r,G.H-m.t-m.b,'S')}
+    if(G.cw>0&&G.ch>0){doc.setDrawColor(COLF[c.c]||DMZ.scuro);doc.setLineWidth(c.on?(+c.lw||0.5):0.5);doc.rect(G.cx,G.cy,G.cw,G.ch,'S')}};
+  /* IM2: a new plate starts clean */
+  /* gesto.tavPulita '0' keeps the plate of before (the older tests rely on it) */
+  let vecchia=false;try{vecchia=localStorage.getItem('gesto.tavPulita')==='0'}catch(e){}
+  const _nuova=nuovaTavola;nuovaTavola=function(...a){const prima=new Set(MOS.tavole.keys()),r=_nuova(...a),nu=[...MOS.tavole.keys()].find(k=>!prima.has(k));
+    if(nu&&!vecchia){const t=Object.assign({},MOS.tavole.get(nu),{mod:'nessuno',mgp:{l:0,r:0,t:0,b:0},cor:{on:false,lw:0.5,c:'scuro'},noFin:true,fin:[]});delete t.c;salva('tavole',nu,'set',t);ricomponi();if(typeof BG!=='undefined'){BG.key=''}richiedi()}return r};
+  /* Proprietà of the plate: format and orientation, margins, frame */
+  const tvMod=p=>{const t=tavAtt();if(!t)return;tavSet(p);if(typeof BG!=='undefined')BG.key='';rendiTavole()};
+  const _rt=rendiTavole;rendiTavole=function(...a){const v=_rt(...a);try{plateProps()}catch(e){console.warn(e)}return v};
+  function plateProps(){const B=$('tavB'),t=tavAtt();if(!t||!B)return;const s=B.querySelector('select[aria-label="Formato della tavola"]');if(!s)return;
+    const riga=s.closest('.pr');if(B.querySelector('.imOri'))return;
+    /* IM1: one entry per size */
+    const k0=t.fmt||'A3',P=String(k0).startsWith('P:'),cur=P?k0:base(k0);s.textContent='';
+    const gr=(nome,voci)=>{if(!voci.length)return;const g=document.createElement('optgroup');g.label=nome;voci.forEach(([v,n])=>{const o=document.createElement('option');o.value=v;o.textContent=n;g.appendChild(o)});s.appendChild(g)};
+    const mis=k=>{const F=FORMATI[k];return Math.max(F[0],F[1])+' × '+Math.min(F[0],F[1])};
+    if((t.lun||1)>1)gr('Questa tavola',[['__l',nomeFmt(t)]]);
+    gr('Serie A',['A5','A4','A3','A2','A1','A0'].map(k=>[k,k+' · '+mis(k)]));
+    gr('Allungati UNI EN ISO 5457',Object.keys(FORMATI).filter(k=>/x/.test(k)&&!/V$/.test(k)).map(k=>[k,k.replace('x','×')+' · '+mis(k)]));
+    gr('Formati del foglio',(foglio().formati||[]).map(f=>['P:'+f.id,(f.nome?f.nome+' · ':'')+f.w+' × '+f.h]));
+    gr('Nuovo',[['__n','Formato personalizzato…']]);
+    s.value=(t.lun||1)>1?'__l':cur;
+    s.onchange=()=>{const v=s.value;if(v==='__l')return;if(v==='__n'){fmtAperto=true;rendiTavole();return}tvMod({fmt:v.startsWith('P:')?v:(vert(t.fmt)?v+'V':v),lun:1})};
+    const mk=(et,...els)=>{const r=document.createElement('div');r.className='pr';const k=document.createElement('span');k.className='k';k.textContent=et;r.appendChild(k);els.forEach(e=>r.appendChild(e));return r};
+    const seg=(voci,val,fn,dis)=>{const w=document.createElement('div');w.className='seg imSeg';voci.forEach(([v,n])=>{const b=document.createElement('button');b.type='button';b.textContent=n;b.setAttribute('aria-pressed',String(v===val));b.disabled=!!dis;b.onclick=()=>fn(v);w.appendChild(b)});return w};
+    const ori=mk('Orientamento',seg([['v','Verticale'],['o','Orizzontale']],vert(k0)?'v':'o',v=>{if(P)return;tvMod({fmt:v==='v'?base(k0)+'V':base(k0)})},P));ori.classList.add('imOri');
+    if(P)ori.title='Il formato del foglio ha già le sue misure';riga.after(ori);
+    /* IM3: margins */
+    const m=mgpDi(t),uguali=m.l===m.r&&m.l===m.t&&m.l===m.b,catena=t.mgpC!=null?!!t.mgpC:uguali;
+    const num=(v,et,fn)=>{const i=document.createElement('input');i.type='text';i.inputMode='decimal';i.className='cmp';i.value=String(v).replace('.',',');i.setAttribute('aria-label',et);
+      i.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')i.blur()};i.onchange=()=>{const x=+String(i.value).replace(',','.');if(!(x>=0&&x<200)){avviso('Margine fra 0 e 200 mm');i.value=String(v).replace('.',',');return}fn(Math.round(x*10)/10)};return i};
+    const cat=document.createElement('button');cat.type='button';cat.className='pb icn';cat.innerHTML=SV('<path d="M9 15l6-6"/><path d="M10 6l1-1a4 4 0 0 1 6 6l-1 1M14 18l-1 1a4 4 0 0 1-6-6l1-1"/>');
+    cat.title=catena?'Margini uguali: tocca per separarli':'Margini separati: tocca per renderli uguali';cat.setAttribute('aria-label',cat.title);cat.setAttribute('aria-pressed',String(catena));
+    cat.onclick=()=>{if(catena)tvMod({mgpC:false,mgp:m});else tvMod({mgpC:true,mgp:{l:m.l,r:m.l,t:m.l,b:m.l}})};
+    const sz=document.createElement('div');sz.className='sez';sz.textContent='Margini';
+    let after=ori;const put=el=>{after.after(el);after=el};put(sz);
+    if(catena){const u=document.createElement('span');u.className='u';u.textContent='mm';put(mk('Tutti',num(m.l,'Margine su tutti i lati',x=>tvMod({mgpC:true,mgp:{l:x,r:x,t:x,b:x}})),u,cat))}
+    else{[['l','Sinistro'],['r','Destro'],['t','Alto'],['b','Basso']].forEach(([k,n],i)=>{const u=document.createElement('span');u.className='u';u.textContent='mm';
+        const r=mk(n,num(m[k],'Margine '+n.toLowerCase(),x=>tvMod({mgpC:false,mgp:Object.assign({},m,{[k]:x})})),u);if(!i)r.appendChild(cat);else{const sp=document.createElement('span');sp.style.width='34px';sp.style.flex='none';r.appendChild(sp)}put(r)})}
+    /* IM4: frame */
+    const c=t.mgp?(t.cor||{on:false,lw:0.5,c:'scuro'}):{on:true,lw:0.7,c:'scuro'};
+    const scl=(opz,val,fn,et)=>{const x=scelta(opz,val,fn);x.className='cs';x.setAttribute('aria-label',et);x.disabled=!c.on;return x};
+    const setC=p=>tvMod({mgp:t.mgp||m,cor:Object.assign({},c,p)});
+    put(mk('Cornice',seg([['1','Sì'],['0','No']],c.on?'1':'0',v=>setC({on:v==='1'}))));
+    put(mk('Spessore',scl(PESI.concat([1]).map(p=>[String(p),fmt(p,2)+' mm']),String(c.lw),v=>setC({lw:+v}),'Spessore della cornice')));
+    put(mk('Colore',scl([['scuro','Petrolio scuro'],['petrolio','Petrolio'],['nero','Nero'],['grigio','Grigio'],['terracotta','Terracotta']],c.c||'scuro',v=>setC({c:v}),'Colore della cornice')));
+    if(typeof pnPieghe==='function')pnPieghe(B)}
+  const st=document.createElement('style');st.textContent=
+    '#tavB .imSeg{display:flex;gap:4px;flex:1}#tavB .imSeg button{flex:1;height:30px;border:1px solid var(--hair);border-radius:15px;background:transparent;color:var(--fg);font:400 12.5px var(--sans);cursor:pointer}'+
+    '#tavB .imSeg button[aria-pressed="true"]{box-shadow:inset 0 0 0 1.5px var(--fg);border-color:transparent}#tavB .imSeg button:disabled{opacity:.45;cursor:default}'+
+    '#tavB .imMg{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1}#tavB .imMgC{display:flex;align-items:center;gap:6px;font:400 12px var(--sans);color:var(--muted)}#tavB .imMgC span{width:48px}';
+  document.head.appendChild(st);
+  /* IM9: every window visible on the sheet, dashed Petrolio Chiaro, on screen only */
+  const _dt=disegnaTavola;disegnaTavola=function(x){_dt(x);if(!IMPAG)return;const t=tavAtt();if(!t)return;vista(x);x.save();x.setLineDash([6/V.s,4/V.s]);x.strokeStyle='#3D6B7D';x.lineWidth=1.3/V.s;
+    finCarta(t).forEach(f=>{if(f.id===FSEL)return;if(ptr&&ptr.fin&&ptr.fin.f&&ptr.fin.f.id===f.id)return;x.strokeRect(f.x,f.y,f.w,f.h)});x.restore()};
+  /* IM10: snaps to the page and to the cartiglio as well */
+  const _rif=riferimenti;riferimenti=function(t,G,ids,asse){const R=_rif(t,G,ids,asse);
+    if(asse==='x'){R.push({v:0},{v:G.W},{v:G.W/2,c:1});if(G.cw>0)R.push({v:G.cx},{v:G.cx+G.cw},{v:G.cx-gapT(t),g:1})}
+    else{R.push({v:0},{v:G.H},{v:G.H/2,c:1});if(G.ch>0)R.push({v:G.cy},{v:G.cy+G.ch},{v:G.cy-gapT(t),g:1})}
+    if(G.mg){const m=G.mg;if(asse==='x')R.push({v:m.l},{v:G.W-m.r});else R.push({v:m.t},{v:G.H-m.b})}return R};
+  window.__gestoIM={geo:()=>{const t=tavAtt();return t?tavGeo(t):null},tav:()=>tavAtt(),fin:()=>{const t=tavAtt();return t?finCarta(t):[]},rif:(asse)=>{const t=tavAtt();return t?riferimenti(t,tavGeo(t),new Set(),asse).map(r=>r.v):[]}};
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
