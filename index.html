@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.97';
+const VERSIONE_GESTO='0.98';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9325,7 +9325,7 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
     if(segs.length>=Math.floor((an.length-1)/3))return null;const g={p:bezPunti(segs)};if(ch)g.ch=true;return {k:'curva',g}}
   window.__gestoOF={bez:e=>{const P=densa(e),I=[0,P.length-1];I.angoli=new Set();return bezSuAncore(P,I,false).length+1},tol:v=>{TOL=v},offsetPulito,semplificaE,adatta,offset:(...a)=>offsetE(...a),poly:e=>polyCurva(e)};
   const nPunti=e=>e.k==='spline'?e.g.f.length>>1:Math.floor((e.g.p.length/2-1)/3)+1;
-  const _rp=rendiPP;rendiPP=function(...a){const v=_rp(...a);try{if(pp.hidden)return v;const es=selEnts().filter(e=>e.k==='spline'||e.k==='curva');if(!es.length)return v;
+  const _rp=rendiPP;rendiPP=function(...a){const v=_rp(...a);try{return v;const es=[];
     const sz=document.createElement('div');sz.className='sez';sz.textContent='Curva';pp.appendChild(sz);
     const r=document.createElement('div');r.className='pr';const k=document.createElement('span');k.className='k';k.textContent='Punti';const n=document.createElement('span');n.className='num';n.textContent=String(es.reduce((s,e)=>s+nPunti(e),0));
     const b=document.createElement('button');b.type='button';b.className='pb';b.textContent='Semplifica';b.title='Il minimo dei punti che conserva la forma entro 0,1 mm';
@@ -9509,6 +9509,45 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
   const st=document.createElement('style');st.textContent='.imCampo{position:fixed;z-index:70;box-sizing:border-box;padding:6px 8px;border:1.5px solid #3D6B7D;border-radius:6px;background:#FFFFFF;color:#1A1A1A;font:400 14px var(--sans);resize:none;box-shadow:0 6px 18px rgba(15,35,44,.18)}';
   document.head.appendChild(st);
   window.__gestoCT={fissa:(id,s)=>tvMod({mod:id,cside:s||'r'}),posa:id=>iniziaPosa(id),attiva:()=>POSA,zone:()=>{const t=tavAtt();return t?zone(t,tavGeo(t)):[]},campo:c=>{const t=tavAtt();const z=zone(t,tavGeo(t)).find(q=>q.c===c);if(z)apriCampo(z);return !!z}};
+})();
+
+/* ---------- 98. Scale-sensitive elements in the model: readable, to scale, or at a chosen scale (owner, 23.11.2026) ----------
+   SV1 Scale-sensitive: hatches, dimensions, texts, leaders and line types (dashed, axis, hidden).
+   SV2 Three views in the model: «Leggibile» (default), signs of a fixed size on screen at any zoom; «In scala», their
+       real size at the scale of the sheet; «Scala scelta», drawn at a scale set by the owner.
+   SV3 Only the view changes: the data stay, and layout and exports are always at the scale of the plate.
+   SV4 One choice for the whole sheet, in Proprietà, section «Vista», with the tools and the elements concerned.
+   SV5 Readable: 4.4 px on screen for each mm of paper, so a hatch of 2 mm keeps at least 8 px, a text of 2.5 mm 11 px,
+       a dash of 3 mm 13 px. */
+(()=>{
+  PREF.push('sv','svDen');try{const m=JSON.parse(localStorage.getItem('gesto.prefs')||'{}');if(m.sv)S.sv=m.sv;if(m.svDen)S.svDen=m.svDen}catch(e){}
+  /* default readable; gesto.svDef sets another default (the older tests use «scala») */
+  if(!S.sv){let d='leggibile';try{d=localStorage.getItem('gesto.svDef')||d}catch(e){}S.sv=d}
+  const PX_MM=4.4,SENS=new Set(['retino','quota','testo','dir']);
+  const efficace=()=>S.sv==='scelta'?(+S.svDen||den()):PX_MM/V.s;
+  /* the view scale stands in for the sheet scale only while the model is drawn on screen */
+  const con=(fn,test)=>function(...a){if(IMPAG||S.sv==='scala'||(test&&!test(...a)))return fn.apply(this,a);const d0=den,v=efficace();den=()=>v;try{return fn.apply(this,a)}finally{den=d0}};
+  const _de=disegnaEnt;disegnaEnt=function(x,e,chiaro,pxs,stampa){if(stampa)return _de(x,e,chiaro,pxs,stampa);return con(_de)(x,e,chiaro,pxs,stampa)};
+  /* what is seen is what is touched: the distance to texts, dimensions and leaders follows the view */
+  const _di=distEnt;distEnt=con(_di,e=>e&&SENS.has(e.k));
+  if(typeof disegnaVivo==='function'){const _dv=disegnaVivo;disegnaVivo=con(_dv)}
+  const rid=()=>{try{if(typeof ridisegnaTutto==='function')ridisegnaTutto();else{richiedi();cambioVista()}}catch(e){richiedi()}};
+  /* SV4: the choice in Proprietà */
+  const _rp=rendiPP;rendiPP=function(...a){const v=_rp(...a);try{sezVista()}catch(e){console.warn(e)}return v};
+  function sezVista(){if(pp.hidden||IMPAG||pp.querySelector('.svSez'))return;
+    const sel=selEnts(),tool=S.tool,ok=sel.some(e=>SENS.has(e.k)||(e.st&&e.st.lt&&e.st.lt!=='continua'))||(!sel.length&&['retino','quota','testo','dir'].includes(tool));if(!ok)return;
+    const sz=document.createElement('div');sz.className='sez svSez';sz.textContent='Vista';pp.appendChild(sz);
+    const r=document.createElement('div');r.className='pr';const k=document.createElement('span');k.className='k';k.textContent='Mostra';r.appendChild(k);
+    const w=document.createElement('div');w.className='strSeg svSeg';[['leggibile','Leggibile'],['scala','In scala'],['scelta','Scelta']].forEach(([v,n])=>{const b=document.createElement('button');b.type='button';b.textContent=n;b.setAttribute('aria-pressed',String(S.sv===v));
+      b.title={leggibile:'Tratteggi, quote e testi di misura fissa sullo schermo, a qualunque zoom',scala:'Come usciranno alla scala del foglio, 1:'+den(),scelta:'Alla scala che scegli tu'}[v];b.onclick=()=>{S.sv=v;if(v==='scelta'&&!S.svDen)S.svDen=den();salvaPref();rendiPP();rid()};w.appendChild(b)});
+    r.appendChild(w);pp.appendChild(r);
+    if(S.sv==='scelta'){const r2=document.createElement('div');r2.className='pr';const k2=document.createElement('span');k2.className='k';k2.textContent='Scala';r2.appendChild(k2);
+      const s=scelta(SCALE.map(d=>[String(d),'1:'+d]),String(S.svDen||den()),v=>{S.svDen=+v;salvaPref();rid()});s.className='cs';s.setAttribute('aria-label','Scala della vista');r2.appendChild(s);pp.appendChild(r2)}
+    const n=document.createElement('div');n.className='nota';n.textContent='Cambia solo la vista nel modello: impaginazione ed esportazioni sono sempre alla scala della tavola.';pp.appendChild(n)}
+  /* the panel of the tool redraws itself on its own: the section follows it */
+  let tmV=0;new MutationObserver(()=>{if(pp.hidden||pp.querySelector('.svSez'))return;clearTimeout(tmV);tmV=setTimeout(()=>{try{sezVista()}catch(e){}},20)}).observe(pp,{childList:true});
+  const st=document.createElement('style');st.textContent='#pp .svSeg{flex:1}#pp .svSeg button{flex:1}';document.head.appendChild(st);
+  window.__gestoSV={efficace:()=>efficace(),modo:()=>S.sv,imposta:(m,d)=>{S.sv=m;if(d)S.svDen=d;salvaPref();rid()}};
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
