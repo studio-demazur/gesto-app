@@ -6780,7 +6780,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.98';
+const VERSIONE_GESTO='0.99';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -8152,7 +8152,7 @@ function dcMenuDoc(d,el){const ts=dcDocTs(d);const v=[['Rinomina',()=>{DC.rinomi
 (()=>{let dr=null,seg=null;
   const pulisci=()=>{dcL.querySelectorAll('.sopra,.dcPrima,.dcDopo').forEach(x=>x.classList.remove('sopra','dcPrima','dcDopo'));const r=document.querySelector('#impCol .dcRoot');if(r)r.classList.remove('sopra')};
   dcL.addEventListener('pointerdown',e=>{if(e.target.closest('.dcM,input'))return;const it=e.target.closest('.dcI,.dcDh,.dcF');if(!it)return;dr={it,x0:e.clientX,y0:e.clientY,mosso:false,pid:e.pointerId}});
-  dcL.addEventListener('pointermove',e=>{if(!dr||e.pointerId!==dr.pid||dr.it.classList.contains('dcF'))return;if(!dr.mosso&&Math.hypot(e.clientX-dr.x0,e.clientY-dr.y0)<8)return;
+  dcL.addEventListener('pointermove',e=>{if(!dr||e.pointerId!==dr.pid||dr.it.classList.contains('dcF'))return;if(!dr.mosso&&Math.hypot(e.clientX-dr.x0,e.clientY-dr.y0)<5)return;
     if(!dr.mosso){dr.mosso=true;try{dcL.setPointerCapture(e.pointerId)}catch(_){}dr.it.classList.add('trasc');dr.it.style.pointerEvents='none'}
     pulisci();const el=document.elementFromPoint(e.clientX,e.clientY),q=el&&el.closest('.dcF,.dcI,.dcDh,.dcVuoto,.dcRoot');seg=null;if(!q||q===dr.it)return;
     if(q.classList.contains('dcF')){q.classList.add('sopra');seg={dir:q.dataset.f,prima:null}}
@@ -8702,14 +8702,14 @@ function stMuovi(id,p,prima,dopo){const L=dcCartelle().slice(),i=L.findIndex(c=>
   L.splice(j,0,c);if(p)DC.chiuse.delete(p);dcSalvaCartelle(L)}
 (()=>{const L=$('dcL');if(!L)return;const pul=()=>{L.querySelectorAll('.sopra,.dcPrima,.dcDopo').forEach(x=>x.classList.remove('sopra','dcPrima','dcDopo'));const r=document.querySelector('#impCol .dcRoot');if(r)r.classList.remove('sopra')};
   L.addEventListener('pointerdown',e=>{if(e.target.closest('.dcM,.dcTw,input'))return;const it=e.target.closest('.dcF');ST.drag=it?{it,x0:e.clientX,y0:e.clientY,pid:e.pointerId,mosso:false,meta:null}:null},true);
-  L.addEventListener('pointermove',e=>{const d=ST.drag;if(!d||e.pointerId!==d.pid)return;if(!d.mosso&&Math.hypot(e.clientX-d.x0,e.clientY-d.y0)<8)return;
+  L.addEventListener('pointermove',e=>{const d=ST.drag;if(!d||e.pointerId!==d.pid)return;if(!d.mosso&&Math.hypot(e.clientX-d.x0,e.clientY-d.y0)<5)return;
     if(!d.mosso){d.mosso=true;try{L.setPointerCapture(e.pointerId)}catch(_){}d.it.classList.add('trasc');d.it.style.pointerEvents='none'}
     pul();d.meta=null;const el=document.elementFromPoint(e.clientX,e.clientY),q=el&&el.closest('.dcF,.dcRoot,.dcVuoto'),id=d.it.dataset.f;if(!q||q===d.it)return;
     if(q.classList.contains('dcRoot')){q.classList.add('sopra');d.meta={p:''};return}
     const f=q.classList.contains('dcVuoto')?q.dataset.vuota:q.dataset.f;if(!f||dcSotto(id).includes(f))return;
     if(q.classList.contains('dcVuoto')){const h=L.querySelector('.dcF[data-f="'+f+'"]');if(h)h.classList.add('sopra');d.meta={p:f};return}
     const r=q.getBoundingClientRect(),y=(e.clientY-r.top)/r.height,c=dcCartelle().find(x=>x.id===f),par=c&&dcEsiste(c.p)?c.p:'';
-    if(y<.28){q.classList.add('dcPrima');d.meta={p:par,prima:f}}else if(y>.72){q.classList.add('dcDopo');d.meta={p:par,dopo:f}}else{q.classList.add('sopra');d.meta={p:f}}
+    if(y<1/3){q.classList.add('dcPrima');d.meta={p:par,prima:f}}else if(y>2/3){q.classList.add('dcDopo');d.meta={p:par,dopo:f}}else{q.classList.add('sopra');d.meta={p:f}}
     e.stopImmediatePropagation()},true);
   const fine=e=>{const d=ST.drag;if(!d||e.pointerId!==d.pid)return;ST.drag=null;d.it.classList.remove('trasc');d.it.style.pointerEvents='';pul();if(!d.mosso)return;
     e.stopImmediatePropagation();e.preventDefault();if(d.meta)stMuovi(d.it.dataset.f,d.meta.p,d.meta.prima,d.meta.dopo)};
@@ -9548,6 +9548,56 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
   let tmV=0;new MutationObserver(()=>{if(pp.hidden||pp.querySelector('.svSez'))return;clearTimeout(tmV);tmV=setTimeout(()=>{try{sezVista()}catch(e){}},20)}).observe(pp,{childList:true});
   const st=document.createElement('style');st.textContent='#pp .svSeg{flex:1}#pp .svSeg button{flex:1}';document.head.appendChild(st);
   window.__gestoSV={efficace:()=>efficace(),modo:()=>S.sv,imposta:(m,d)=>{S.sv=m;if(d)S.svDen=d;salvaPref();rid()}};
+})();
+
+/* ---------- 99. The tree, dragged freely (owner, 24.11.2026) ----------
+   DR1 Folders, documents and pages are dragged with pen, finger or mouse from anywhere on their row, after 5 px of
+       movement; a simple tap still opens. Rows no longer hand the pen to the scrolling of the list, which used to
+       cancel the drag.
+   DR2 Three zones on every folder: the upper third puts it before, the lower third after, the middle inside; the mark
+       shows where it will fall before it is let go.
+   DR3 The order is free and kept; the empty space at the bottom takes it to the end of the main level.
+   DR4 Near the edges the list scrolls by itself; a closed folder held under the pen for 0.6 s opens.
+   DR5 Ctrl or Shift choose more rows; dragging one of them moves them all. Esc lets the choice go. */
+(()=>{const L=$('dcL');if(!L)return;
+  const st=document.createElement('style');st.textContent=
+    '#dcL .dcF,#dcL .dcDh,#dcL .dcI{touch-action:none}'+
+    '#dcL .dcF.trasc,#dcL .dcDh.trasc,#dcL .dcI.trasc{opacity:.45}'+
+    '#dcL .dcPrima{box-shadow:0 -2px 0 0 var(--fg)!important}#dcL .dcDopo{box-shadow:0 2px 0 0 var(--fg)!important}'+
+    '#dcL .drSel{box-shadow:inset 0 0 0 1.5px var(--fg)!important}';
+  document.head.appendChild(st);
+  /* DR4: the list scrolls near its edges and a closed folder opens under the pen */
+  let py=null,px=null,raf=0,sopra=null,tSopra=0;
+  const trascina=()=>!!L.querySelector('.trasc');
+  const giro=()=>{raf=0;if(!trascina()||py==null)return;const r=L.getBoundingClientRect(),m=40;let v=0;
+    if(py<r.top+m)v=-Math.ceil((r.top+m-py)/4);else if(py>r.bottom-m)v=Math.ceil((py-(r.bottom-m))/4);
+    if(v){L.scrollTop+=v;/* the mark follows the row that is now under the pen */L.dispatchEvent(new PointerEvent('pointermove',{clientX:px,clientY:py,bubbles:false,pointerId:ultimoId}))}
+    const el=document.elementFromPoint(px,py),f=el&&el.closest('.dcF');const id=f&&f.dataset.f;
+    if(id&&DC.chiuse.has(id)&&!f.classList.contains('trasc')){if(sopra!==id){sopra=id;tSopra=performance.now()}else if(performance.now()-tSopra>600){DC.chiuse.delete(id);sopra=null;dcChiave='';rendiCol()}}else sopra=null;
+    raf=requestAnimationFrame(giro)};
+  let ultimoId=1;
+  L.addEventListener('pointermove',e=>{if(!e.isTrusted)return;ultimoId=e.pointerId;py=e.clientY;px=e.clientX;if(trascina()&&!raf)raf=requestAnimationFrame(giro)},true);
+  const ferma=()=>{py=null;sopra=null;if(raf){cancelAnimationFrame(raf);raf=0}};L.addEventListener('pointerup',ferma,true);L.addEventListener('pointercancel',ferma,true);
+  /* DR5: more rows chosen together */
+  const SEL=new Set();const chiave=r=>r.classList.contains('dcF')?'f:'+r.dataset.f:r.classList.contains('dcDh')?'d:'+r.dataset.d:r.classList.contains('dcI')?'t:'+r.dataset.id:null;
+  const righe=()=>[...L.querySelectorAll('.dcF,.dcDh,.dcI')].filter(r=>r.offsetParent);
+  const segna=()=>{righe().forEach(r=>r.classList.toggle('drSel',SEL.has(chiave(r))))};
+  let ultima=null;
+  L.addEventListener('pointerdown',e=>{if(!(e.ctrlKey||e.metaKey||e.shiftKey))return;const r=e.target.closest('.dcF,.dcDh,.dcI');if(!r||e.target.closest('.dcM,input'))return;
+    e.preventDefault();e.stopImmediatePropagation();const k=chiave(r);
+    if(e.shiftKey&&ultima){const R=righe(),a=R.findIndex(x=>chiave(x)===ultima),b=R.indexOf(r);if(a>=0&&b>=0){const[i,j]=a<b?[a,b]:[b,a];for(let n=i;n<=j;n++)SEL.add(chiave(R[n]))}}
+    else{if(SEL.has(k))SEL.delete(k);else SEL.add(k)}ultima=k;segna()},true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&SEL.size){SEL.clear();segna()}});
+  new MutationObserver(()=>{if(SEL.size)segna()}).observe(L,{childList:true,subtree:true});
+  /* moving one of the chosen moves them all */
+  let insieme=false;
+  const _sm=stMuovi;stMuovi=function(id,p,prima,dopo){_sm(id,p,prima,dopo);if(insieme||!SEL.has('f:'+id))return;insieme=true;try{
+      [...SEL].filter(k=>k!=='f:'+id).forEach(k=>{const[t,v]=[k.slice(0,1),k.slice(2)];if(t==='f'&&!dcSotto(v).includes(p||''))_sm(v,p,null,id);else if(t==='d')dcSposta(dcDocTs(v).map(x=>x.id),p||'',null);else if(t==='t')dcSposta([v],p||'',null)})}finally{insieme=false;SEL.clear();segna()}};
+  const _ds=dcSposta;dcSposta=function(ids,dir,prima){const v=_ds(ids,dir,prima);if(insieme||!SEL.size)return v;
+    const tocca=ids.some(i=>SEL.has('t:'+i)||[...SEL].some(k=>k.startsWith('d:')&&dcDocTs(k.slice(2)).some(t=>t.id===i)));if(!tocca)return v;insieme=true;try{
+      const tav=[];[...SEL].forEach(k=>{const t=k.slice(0,1),x=k.slice(2);if(t==='d')dcDocTs(x).forEach(q=>{if(!ids.includes(q.id))tav.push(q.id)});else if(t==='t'&&!ids.includes(x))tav.push(x);else if(t==='f')stMuovi(x,dir||'',null,null)});
+      if(tav.length)_ds(tav,dir,prima)}finally{insieme=false;SEL.clear();segna()}return v};
+  window.__gestoDR={sel:()=>[...SEL],scegli:k=>{SEL.add(k);segna()},pulisci:()=>{SEL.clear();segna()}};
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
