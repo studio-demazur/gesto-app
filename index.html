@@ -6783,7 +6783,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.101';
+const VERSIONE_GESTO='0.102';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9846,6 +9846,39 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
         vola(g,r&&r.offsetParent?r.getBoundingClientRect():null,()=>{const q=trova(k);if(q){q.classList.remove('dvArr');void q.offsetWidth;q.classList.add('dvArr');setTimeout(()=>q.classList.remove('dvArr'),700)}})})},0)};
   addEventListener('pointerup',chiudi,true);addEventListener('pointercancel',chiudi,true);
   window.__gestoDV={stato:()=>({drag:!!DV.g,k:DV.k,dest:DV.dest,no:!!(DV.g&&DV.g.classList.contains('dvNo')),n:DV.g&&DV.g.querySelector('.dvN')?+DV.g.querySelector('.dvN').textContent:0})};
+})();
+
+
+/* ---------- 102. Calm destination marks and studio tones (owner, 24.11.2026) ----------
+   DV6 Over its own place the dragged row has no destination: the copy fades and goes back on release.
+   DV7 The main level as destination is a line at the end of the list, never a frame around «Documenti».
+   DV8 A drag never selects text in the panels.
+   TN1 No grey: the search field takes the light petrol of the separators, its placeholder the studio light blue. */
+(()=>{const L=$('dcL');if(!L)return;
+  const st=document.createElement('style');st.textContent=
+    '#impCol .dcRoot.sopra{box-shadow:none!important;background:transparent!important;outline:none!important}'+
+    '.dvFineL{position:fixed;height:2.5px;border-radius:2px;background:var(--acc);pointer-events:none;z-index:8999;display:none}'+
+    '.dvFineL::before{content:"";position:absolute;left:-6px;top:-2.25px;width:7px;height:7px;border-radius:50%;box-sizing:border-box;border:2px solid var(--acc);background:var(--paper)}'+
+    'body.dvTrasc,body.dvTrasc *{-webkit-user-select:none!important;user-select:none!important}body.dvTrasc{cursor:grabbing}'+
+    '#impCol .icT,#impCol .dcRoot,#dcL,#dcL *:not(input){-webkit-user-select:none;user-select:none}'+
+    '.crBox input{border-color:var(--line)!important}.crBox input:focus{border-color:var(--acc)!important}'+
+    'input::placeholder,textarea::placeholder{color:#9FBAC3;opacity:1}';
+  document.head.appendChild(st);
+  const linea=document.createElement('div');linea.className='dvFineL';document.body.appendChild(linea);
+  const inDrag=()=>{try{return window.__gestoDV.stato().drag}catch(e){return false}};
+  /* DV6: the own place of the dragged row names nothing */
+  const f1=document.elementFromPoint;document.elementFromPoint=function(x,y){if(inDrag()){const t=L.querySelector('.trasc');if(t){const b=t.getBoundingClientRect();
+      if(x>=b.left-2&&x<=b.right+2&&y>=b.top&&y<b.bottom)return document.createElement('div')}}return f1.call(document,x,y)};
+  /* DV7: the line at the end of the main level */
+  let raf=0;const giro=()=>{raf=0;const root=document.querySelector('#impCol .dcRoot');const on=inDrag()&&root&&root.classList.contains('sopra');
+    if(!on){linea.style.display='none';if(inDrag())raf=requestAnimationFrame(giro);return}
+    const lb=L.getBoundingClientRect(),kids=[...L.children].filter(e=>e.offsetParent&&!e.classList.contains('dcVuoto'));const last=kids[kids.length-1];
+    let y=last?last.getBoundingClientRect().bottom+4:lb.top+6;y=Math.min(Math.max(y,lb.top+4),lb.bottom-2);
+    linea.style.display='block';linea.style.left=(lb.left+14)+'px';linea.style.width=Math.max(20,lb.width-24)+'px';linea.style.top=(y-1.25)+'px';raf=requestAnimationFrame(giro)};
+  /* DV8: the drag owns the pointer, no text is selected */
+  new MutationObserver(()=>{const on=inDrag();document.body.classList.toggle('dvTrasc',on);if(on){try{const s=getSelection();if(s&&s.rangeCount&&!s.isCollapsed)s.removeAllRanges()}catch(e){}if(!raf)raf=requestAnimationFrame(giro)}
+      else{linea.style.display='none'}}).observe(document.body,{childList:true});
+  window.__gestoDV2={linea:()=>linea.style.display==='block'?linea.getBoundingClientRect().toJSON():null};
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
