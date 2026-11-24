@@ -6783,7 +6783,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.100';
+const VERSIONE_GESTO='0.101';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9763,6 +9763,90 @@ function pgIcone(box,b){if(!box||!b||!b.pdf)return;const gr={},prs=new Set();let
   '.pgTh img{max-width:100%;max-height:100%;object-fit:contain}.pgTh:hover{border-color:var(--acc)!important}';document.head.appendChild(st)})();
 window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuovo(b,u,v);return !!b},set:p=>pgCambia(p),scelto:()=>{const q=pgScelto();return q&&q.m},
   posa:k=>pfPosa(k),assets:()=>pgTuttiAsset(),progetto:()=>pgImmaginiProgetto(),pronte:L=>pgPronte(L),img:k=>{const o=pfImg(k);return {ok:!!o.ok,none:!!o.none,w:o.w,h:o.h,fmt:o.fmt}}};
+
+
+/* ---------- 101. The drag in the tree, visible and certain (owner, 24.11.2026) ----------
+   DV1 Once the drag starts, a copy of the row lifts with a light shadow and follows the pen, riding beside it; an imprint stays in place;
+       with more rows chosen the copy carries their number.
+   DV2 The destination is always declared: the receiving folder takes a light petrol ground, the insertion line is
+       thicker with a dot at its start; over an invalid point the copy fades and no mark appears.
+   DV3 A valid release slides the copy into its new place, opens the receiving folder and lights the row once; an invalid
+       release slides the copy back. With reduced motion in the system the movements are immediate.
+   DV4 No release falls into the void: the gaps between rows and the indents count as the nearest row; below the last row
+       counts as the main level; under a dragged folder, a document inside a folder counts as that folder.
+   DV5 A redraw of the list during the drag (a folder opening by itself) keeps the copy and the mark. */
+(()=>{const L=$('dcL');if(!L)return;
+  const st=document.createElement('style');st.textContent=
+    '#dcL .dcF.trasc,#dcL .dcDh.trasc,#dcL .dcI.trasc{opacity:.28!important;outline:1px dashed var(--muted);outline-offset:-1px}'+
+    '#dcL .dcF,#dcL .dcDh,#dcL .dcI{position:relative}'+
+    '#dcL .dcF.sopra,#dcL .dcDh.sopra,#impCol .dcRoot.sopra{box-shadow:0 0 0 1.5px var(--acc)!important;background:color-mix(in srgb,var(--acc) 14%,transparent)!important}'+
+    '#dcL .dcPrima,#dcL .dcDopo{box-shadow:none!important}'+
+    '#dcL .dcPrima::after,#dcL .dcDopo::after{content:"";position:absolute;left:8px;right:2px;height:2.5px;border-radius:2px;background:var(--acc);pointer-events:none;z-index:2}'+
+    '#dcL .dcPrima::after{top:-5.25px}#dcL .dcDopo::after{bottom:-5.25px}'+
+    '#dcL .dcPrima::before,#dcL .dcDopo::before{content:"";position:absolute;left:2px;width:7px;height:7px;border-radius:50%;box-sizing:border-box;border:2px solid var(--acc);background:var(--paper);pointer-events:none;z-index:3}'+
+    '#dcL .dcPrima::before{top:-7.5px}#dcL .dcDopo::before{bottom:-7.5px}'+
+    '.dvFant{position:fixed;left:0;top:0;z-index:9000;pointer-events:none;box-sizing:border-box;margin:0!important;background:var(--paper)!important;border-radius:6px;'+
+      'box-shadow:0 6px 18px rgba(0,0,0,.18),0 1px 3px rgba(0,0,0,.12);opacity:.96;transition:opacity .12s;will-change:transform}'+
+    '.dvFant.dvNo{opacity:.45}.dvFant .dcM{visibility:hidden}'+
+    '.dvN{position:absolute;right:4px;top:50%;margin-top:-9px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:var(--acc);color:var(--paper);font:600 11px/18px var(--sans);text-align:center}'+
+    '@keyframes dvLuce{0%{background:color-mix(in srgb,var(--acc) 26%,transparent)}100%{background:transparent}}'+
+    '#dcL .dvArr{animation:dvLuce .6s ease-out}';
+  document.head.appendChild(st);
+  const lento=()=>!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const chiave=r=>r.classList.contains('dcF')?'f:'+r.dataset.f:r.classList.contains('dcDh')?'d:'+r.dataset.d:r.classList.contains('dcI')?'t:'+r.dataset.id:null;
+  const trova=k=>{if(!k)return null;const[t,v]=[k[0],k.slice(2)];const c=window.CSS&&CSS.escape?CSS.escape(v):v;
+    return L.querySelector(t==='f'?'.dcF[data-f="'+c+'"]':t==='d'?'.dcDh[data-d="'+c+'"]':'.dcI[data-id="'+c+'"]')};
+  const righe=()=>[...L.querySelectorAll('.dcF,.dcDh,.dcI,.dcVuoto')].filter(r=>r.offsetParent&&!r.classList.contains('trasc'));
+  const DV={k:null,el:null,g:null,ox:0,oy:0,x:0,y:0,pid:1,meta:null,dest:null};
+  const attivo=()=>!!DV.g;
+  /* DV4: the point under the pen always names a row */
+  const cartellaDi=q=>{let t=null;if(q.classList.contains('dcI'))t=MOS.tavole.get(q.dataset.id);else if(q.classList.contains('dcDh')){const ts=dcDocTs(q.dataset.d);t=ts&&ts[0]}
+    if(!t)return null;const p=dcDir(t);return p&&dcEsiste(p)?p:''};
+  const efp=document.elementFromPoint.bind(document);
+  document.elementFromPoint=function(x,y){const el=efp(x,y);if(!attivo())return el;
+    const r=L.getBoundingClientRect();if(x<r.left||x>r.right||y<r.top-2||y>r.bottom)return el;
+    if(el&&el.closest&&el.closest('#impCol .dcRoot'))return el;
+    let q=el&&el.closest?el.closest('.dcF,.dcI,.dcDh,.dcVuoto'):null;if(q&&(q.classList.contains('trasc')||!L.contains(q)))q=null;
+    if(!q){const R=righe();if(!R.length)return el;let best=null,bd=1e9;
+      for(const w of R){const b=w.getBoundingClientRect();if(y>=b.top&&y<b.bottom){best=w;bd=0;break}const d=y<b.top?b.top-y:y-b.bottom;if(d<bd){bd=d;best=w}}
+      const last=R[R.length-1].getBoundingClientRect();if(y>=last.bottom){const root=document.querySelector('#impCol .dcRoot');return root||el}
+      q=best;if(!q)return el}
+    if(ST.drag&&ST.drag.mosso&&(q.classList.contains('dcI')||q.classList.contains('dcDh'))){const p=cartellaDi(q);if(p===''){const root=document.querySelector('#impCol .dcRoot');return root||el}
+      if(p){const v=document.createElement('div');v.className='dcVuoto';v.dataset.vuota=p;return v}}
+    return q};
+  /* DV1: the copy */
+  const crea=row=>{const b=row.getBoundingClientRect(),g=row.cloneNode(true);g.classList.remove('trasc','att','sopra','dcPrima','dcDopo','drSel');g.classList.add('dvFant');
+    g.style.width=Math.min(b.width*.74,210)+'px';g.style.height=b.height+'px';g.style.overflow='hidden';g.style.pointerEvents='none';g.removeAttribute('data-f');g.removeAttribute('data-d');g.removeAttribute('data-id');
+    let n=0;try{const S=(window.__gestoDR&&__gestoDR.sel())||[];if(S.includes(DV.k))n=S.length}catch(e){}
+    if(n>1){const c=document.createElement('span');c.className='dvN';c.textContent=n;g.appendChild(c)}
+    /* the copy rides beside the pen, so the row under it and its mark stay in sight */DV.ox=-16;DV.oy=-10;document.body.appendChild(g);DV.g=g;muovi()};
+  const muovi=()=>{if(DV.g)DV.g.style.transform='translate('+(DV.x-DV.ox)+'px,'+(DV.y-DV.oy)+'px) rotate(-.6deg) scale(1.02)'};
+  const marca=()=>{const m=L.querySelector('.sopra,.dcPrima,.dcDopo')||document.querySelector('#impCol .dcRoot.sopra');return m};
+  const stato=()=>{if(!DV.g)return;const m=marca();DV.g.classList.toggle('dvNo',!m);DV.dest=m?{k:m.classList.contains('dcRoot')?'root':chiave(m),
+    dentro:m.classList.contains('sopra'),f:m.classList.contains('sopra')&&m.classList.contains('dcF')?m.dataset.f:null}:null};
+  /* the drag is recognised when the handlers mark the row */
+  new MutationObserver(ms=>{for(const m of ms){if(m.type!=='attributes')continue;const r=m.target;
+      if(r.classList&&r.classList.contains('trasc')&&!DV.g&&DV.k&&chiave(r)===DV.k){DV.el=r;crea(r)}}}).observe(L,{attributes:true,attributeFilter:['class'],subtree:true});
+  /* DV5: after a redraw the row is found again and keeps its state */
+  new MutationObserver(()=>{if(!DV.g||!DV.k)return;const r=trova(DV.k);if(!r||r.classList.contains('trasc'))return;r.classList.add('trasc');r.style.pointerEvents='none';DV.el=r;
+      if(ST.drag&&ST.drag.mosso&&DV.k==='f:'+ST.drag.it.dataset.f)ST.drag.it=r;
+      requestAnimationFrame(()=>{if(DV.g)L.dispatchEvent(new PointerEvent('pointermove',{clientX:DV.x,clientY:DV.y,bubbles:false,pointerId:DV.pid}));stato()})}).observe(L,{childList:true,subtree:true});
+  addEventListener('pointerdown',e=>{DV.k=null;if(!L.contains(e.target)||e.ctrlKey||e.metaKey||e.shiftKey||e.target.closest('.dcM,input,.dcTw'))return;const r=e.target.closest('.dcF,.dcDh,.dcI');
+    if(!r)return;DV.k=chiave(r);DV.x=e.clientX;DV.y=e.clientY;DV.pid=e.pointerId},true);
+  addEventListener('pointermove',e=>{if(!DV.k||e.pointerId!==DV.pid)return;DV.x=e.clientX;DV.y=e.clientY;if(DV.g){muovi();requestAnimationFrame(stato)}},true);
+  /* L.dispatchEvent from the autoscroll moves the marks: the state follows */
+  L.addEventListener('pointermove',()=>{if(DV.g)requestAnimationFrame(stato)});
+  const vola=(g,b,dopo)=>{if(!lento()||!b){g.remove();dopo&&dopo();return}g.style.transition='transform .22s cubic-bezier(.2,.7,.2,1),opacity .22s';
+    g.style.transform='translate('+b.left+'px,'+b.top+'px) rotate(0) scale(1)';g.style.opacity='.85';let ok=false;const fine=()=>{if(ok)return;ok=true;g.remove();dopo&&dopo()};g.addEventListener('transitionend',fine,{once:true});setTimeout(fine,320)};
+  const chiudi=e=>{if(!DV.g){DV.k=null;return}if(e.pointerId!==DV.pid)return;stato();const g=DV.g,k=DV.k,dest=DV.dest,orig=DV.el&&DV.el.getBoundingClientRect();DV.g=null;DV.k=null;DV.el=null;
+    if(!dest){/* DV3: nothing changes, the copy goes back */const r=trova(k);vola(g,r?r.getBoundingClientRect():orig);return}
+    /* the handlers move the row on this same event; the new place is read after the redraw */
+    setTimeout(()=>{if(dest.f&&DC.chiuse.has(dest.f)){DC.chiuse.delete(dest.f);dcChiave='';rendiCol()}
+      requestAnimationFrame(()=>{const r=trova(k);if(r&&r.scrollIntoView){const lb=L.getBoundingClientRect(),rb=r.getBoundingClientRect();if(rb.top<lb.top||rb.bottom>lb.bottom)r.scrollIntoView({block:'nearest'})}
+        vola(g,r&&r.offsetParent?r.getBoundingClientRect():null,()=>{const q=trova(k);if(q){q.classList.remove('dvArr');void q.offsetWidth;q.classList.add('dvArr');setTimeout(()=>q.classList.remove('dvArr'),700)}})})},0)};
+  addEventListener('pointerup',chiudi,true);addEventListener('pointercancel',chiudi,true);
+  window.__gestoDV={stato:()=>({drag:!!DV.g,k:DV.k,dest:DV.dest,no:!!(DV.g&&DV.g.classList.contains('dvNo')),n:DV.g&&DV.g.querySelector('.dvN')?+DV.g.querySelector('.dvN').textContent:0})};
+})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
