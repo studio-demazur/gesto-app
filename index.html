@@ -6783,7 +6783,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.103';
+const VERSIONE_GESTO='0.104';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9933,6 +9933,154 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
     const k=JSON.stringify([dop,giri]);if((dop.length||giri.length)&&k!==detto){detto=k;avviso((dop.length?'Cartelle con lo stesso codice interno: '+dop.join(', ')+'. ':'')+(giri.length?'Cartelle in cerchio: '+giri.join(', ')+'. ':'')+'Segnalalo: i dati restano come sono.');console.warn('gesto: cartelle',dop,giri)}};
   {const _r=rendiCol;rendiCol=function(){const v=_r.apply(this,arguments);try{verifica()}catch(e){}return v}}
   window.__gestoDV3={geo:(x,y)=>{const q=geo(x,y);return q?(q.className+'|'+(q.dataset.f||q.dataset.vuota||q.dataset.d||q.dataset.id||'')):null},perche:()=>perche};
+})();
+
+
+/* ---------- 104. Guard of the approved, reachable tops, breathing logo, tones, cursors, bars in layout, spline handles, gizmo of points (owner, 24.11.2026) ----------
+   RG1 Every approved visual truth has an automatic check (colours, cursors, reachable areas, positions), run at every delivery.
+   RG2 Before every delivery the main states are compared as images with the last approved version; an unrequested difference stops it.
+   TB1 The strip of the title gives way to every key and panel: logo and keys answer on their whole surface.
+   LG1 At a tap the logo breathes: it grows a little inside its ring, turns anticlockwise and comes back to its size.
+   TN2 Every scroll bar is thin and light petrol, in every panel and list, in both themes.
+   LY1 The Layer key carries no dot; the colour of the layer stays in the panel.
+   PT3 The dot is only for drawing by hand (Penna, Mano libera); every technical tool has the cross, with any pointer.
+   CT1 In layout the bar of the selection and the bar of the tool stand upright under the column of the tools, in line
+       with it: never under a panel, never over a key.
+   SP1 A chosen spline shows its handles; «Punti di passaggio · Punti di controllo» is in the bar and in Properties.
+       Dragging a control handle turns the spline into a Bézier curve with that handle moved (always transformation).
+   GZ1 One chosen vertex: the gizmo moves and turns it; the turn is about the nearby vertex (the other end of the side);
+       a tap on the pivot passes to the next vertex and to the centre of the object.
+   GZ2 Two or more chosen vertices: the gizmo stands between them and moves and turns them together; its pivot passes
+       from the middle to the first point and to the second. */
+(()=>{
+  /* TB1: the strip that moves the window comes first, so every key drawn after it keeps its whole surface */
+  const tb=$('tbDrag');if(tb&&tb.parentNode===document.body&&document.body.firstChild!==tb)document.body.insertBefore(tb,document.body.firstChild);
+  const st=document.createElement('style');st.textContent=
+    '#logo,#logo *,#impCol .icT,#impCol .icT *,#icApri,.ctx,.ctx *{-webkit-app-region:no-drag;app-region:no-drag}'+
+    /* TN2 */
+    '*{scrollbar-width:thin;scrollbar-color:var(--line) transparent}'+
+    '::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;border:2px solid transparent;background-clip:padding-box}::-webkit-scrollbar-button{display:none;width:0;height:0}'+
+    /* LY1 */
+    '#rail #lyAtt .lyDot{display:none!important}'+
+    /* PT3: the cross for every technical tool, the dot for the hand */
+    '#cSopra:not(.gomma):not(.mano):not(.sfondo):not(.puntatore):not([data-strum="penna"]):not([data-strum="libera"]){cursor:crosshair}'+
+    '#cSopra[data-strum="penna"]:not(.gomma):not(.mano):not(.sfondo):not(.puntatore),#cSopra[data-strum="libera"]:not(.gomma):not(.mano):not(.sfondo):not(.puntatore){cursor:var(--dmzPunto)}'+
+    /* CT1 */
+    '.ctx.ctVert{flex-direction:column!important;flex-wrap:nowrap!important;align-items:center!important;min-height:0!important;height:auto!important;overflow-y:auto;overflow-x:hidden;padding:6px!important;gap:6px!important;box-sizing:border-box}'+
+    '.ctx.ctVert>button,.ctx.ctVert>.pb{width:38px!important;min-width:38px!important;height:34px!important;min-height:34px!important;padding:0!important}'+'.ctx.ctVert{gap:4px!important;padding:5px!important}.ctx.ctVert>*{flex:none}.ctx.ctVert .sep,.ctx.ctVert .div,.ctx.ctVert hr{width:24px!important;height:1px!important;min-height:1px}'+
+    '.ctx.ctVert>span.t{display:none}';
+  document.head.appendChild(st);
+
+  /* PT3: the tool is written on the surface, which keeps it across the changes of its classes */
+  {const _s=strumento;strumento=function(t){const r=_s.apply(this,arguments);try{area.dataset.strum=S.tool||t||''}catch(e){}return r}}
+  try{area.dataset.strum=S.tool||''}catch(e){}
+
+  /* LG1: the turn of the logo breathes */
+  const svg=document.querySelector('#logo svg');
+  if(svg&&svg.animate){const a0=svg.animate.bind(svg);svg.animate=function(k,o){try{if(Array.isArray(k)&&k.length===2&&/rotate\(-360deg\)/.test((k[1]&&k[1].transform)||''))
+      return a0([{transform:'scale(1) rotate(0deg)',easing:'cubic-bezier(.3,0,.2,1)'},{transform:'scale(1.07) rotate(0deg)',offset:.2,easing:'cubic-bezier(.45,.05,.25,1)'},
+        {transform:'scale(1.07) rotate(-360deg)',offset:.8,easing:'cubic-bezier(.3,0,.2,1)'},{transform:'scale(1) rotate(-360deg)'}],{duration:1150})}catch(e){}return a0(k,o)}}
+
+  /* CT1: upright bars under the column of the tools, in layout */
+  const pulisci=c=>{['left','top','right','bottom','max-height','max-width','width'].forEach(p=>c.style.removeProperty(p))};
+  let inCT=false;
+  function posCT(){if(inCT)return;inCT=true;try{const c=$('ctx');if(!c)return;
+    const imp=IMPAG&&!TEL()&&!document.body.classList.contains('mancino');const vis=!c.hidden&&getComputedStyle(c).display!=='none';
+    const on=imp&&vis&&(c.classList.contains('dock')||!!c.dataset.su);
+    if(!on){if(c.classList.contains('ctVert')){c.classList.remove('ctVert');pulisci(c);try{posCtx()}catch(e){}}return}
+    const w=$('wrap').getBoundingClientRect();
+    /* a bar with words or fields does not fit upright: it stands right of every panel and key on the left, on the top line */
+    const parole=[...c.children].some(x=>x.offsetParent&&(x.matches('select,input,.seg')||((x.tagName==='BUTTON'||x.tagName==='SPAN')&&!x.matches('span.t')&&(x.textContent||'').trim().length>2)));
+    if(parole){c.classList.remove('ctVert');let R=0;['logoPan','impCol','icApri'].map(i=>$(i)).concat([document.querySelector('.rail')]).forEach(e=>{if(!e||e.hidden)return;const st_=getComputedStyle(e);if(st_.display==='none'||st_.visibility==='hidden'||+st_.opacity===0)return;
+        const r=e.getBoundingClientRect();if(r.width&&r.top-w.top<90)R=Math.max(R,r.right-w.left)});
+      const Lx=Math.round(R+8);c.style.setProperty('left',Lx+'px','important');c.style.setProperty('right','auto','important');c.style.setProperty('bottom','auto','important');
+      c.style.setProperty('top',(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--TL'))||17)+'px','important');c.style.setProperty('max-width',Math.max(220,w.width-Lx-340)+'px','important');c.style.removeProperty('width');c.style.removeProperty('max-height');return}
+    c.classList.add('ctVert');let ref=null;
+    for(const i of ['rail','logoPan']){const e=i==='rail'?document.querySelector('.rail'):$(i);if(!e)continue;const s=getComputedStyle(e);if(s.display==='none'||s.visibility==='hidden'||e.hidden)continue;const r=e.getBoundingClientRect();if(r.height){ref=r;break}}
+    if(!ref)ref={left:w.left+17,bottom:w.top+17,width:52};
+    const top=ref.bottom-w.top+8,mh=Math.max(80,w.height-top-17);
+    c.style.setProperty('left',(ref.left-w.left)+'px','important');c.style.setProperty('right','auto','important');c.style.setProperty('bottom','auto','important');
+    c.style.setProperty('top',top+'px','important');c.style.setProperty('width',ref.width+'px','important');c.style.setProperty('max-width',ref.width+'px','important');c.style.setProperty('max-height',mh+'px','important')}finally{inCT=false}}
+  {const _a=aggCtx;aggCtx=function(){const r=_a.apply(this,arguments);try{spDock()}catch(e){}posCT();return r}}
+  {const _p=posCtx;posCtx=function(){const r=_p.apply(this,arguments);posCT();return r}}
+  addEventListener('resize',()=>requestAnimationFrame(posCT));
+  {const c=$('ctx');if(c)new MutationObserver(()=>requestAnimationFrame(posCT)).observe(c,{attributes:true,attributeFilter:['class','data-su','hidden']})}
+  new MutationObserver(()=>requestAnimationFrame(posCT)).observe(document.body,{attributes:true,attributeFilter:['class']});
+
+  /* SP1: control handles of the spline */
+  S.splVis=(()=>{try{return JSON.parse(localStorage.getItem('gesto.prefs')||'{}').splVis==='ctrl'?'ctrl':'pass'}catch(e){return 'pass'}})();
+  try{PREF.push('splVis')}catch(e){}
+  const bezP=e=>{const segs=segmentiBez(e);if(!segs||!segs.length)return null;const p=segs[0].slice();for(let i=1;i<segs.length;i++)p.push(...segs[i].slice(2));return p};
+  const spCtrl=e=>e&&e.k==='spline'&&S.splVis==='ctrl';
+  {const _g=gripsDi;gripsDi=function(e){const o=_g(e);if(!spCtrl(e))return o;const p=bezP(e);if(!p)return o;const N=p.length>>1;for(let j=0;j<N;j++)if(j%3)o.push(['sh'+j,[p[2*j],p[2*j+1]],'maniglia']);return o}}
+  {const _pk=puntoChiave;puntoChiave=function(e,k){if(e&&e.k==='spline'&&typeof k==='string'&&k.startsWith('sh')){const p=bezP(e),j=+k.slice(2);return p&&2*j+1<p.length?[p[2*j],p[2*j+1]]:null}return _pk.apply(this,arguments)}}
+  {const _a=applicaGrip;applicaGrip=function(e,k,P,P0){if(e&&e.k==='spline'&&typeof k==='string'&&k.startsWith('sh')){const p=bezP(e);if(!p)return null;const j=+k.slice(2);
+      if(!(j>=0&&2*j+1<p.length))return null;p[2*j]=P[0];p[2*j+1]=P[1];const g={p:p.map(v=>Math.round(v*1000)/1000)};if(e.g.ch)g.ch=true;
+      const n=Object.assign({},e,{k:'curva',g});return fattaEnt(n)}return _a.apply(this,arguments)}}
+  {const _ds=disegnaSopra;disegnaSopra=function(){_ds();try{if(S.splVis!=='ctrl')return;const es=selEnts().filter(e=>e.k==='spline');if(!es.length)return;const x=L.sopra.x;schermo(x);x.save();x.strokeStyle=T.acc;x.lineWidth=1;x.globalAlpha=.5;
+      es.forEach(e=>{const p=bezP(e);if(!p)return;const N=p.length>>1;x.beginPath();for(let a=0;a<N;a+=3){const A=w2s(p[2*a],p[2*a+1]);[a-1,a+1].forEach(j=>{if(j>=0&&j<N){const H=w2s(p[2*j],p[2*j+1]);x.moveTo(A[0],A[1]);x.lineTo(H[0],H[1])}})}x.stroke()});x.restore()}catch(e){}}}
+  const setVis=v=>{S.splVis=v==='ctrl'?'ctrl':'pass';try{salvaPref()}catch(e){}try{rendiPP()}catch(e){}try{aggCtx()}catch(e){}richiedi('sopra')};
+  const ICS={pass:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 16c3-8 6-8 9-4s6 4 9-4"/><circle cx="3" cy="16" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="21" cy="8" r="1.8" fill="currentColor"/></svg>',
+    ctrl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 17c3-9 6-9 9-5s6 4 9-5"/><path d="M12 12L7 6M12 12l5 6" stroke-dasharray="2 2"/><rect x="5.5" y="4.5" width="3" height="3" fill="currentColor"/><rect x="15.5" y="16.5" width="3" height="3" fill="currentColor"/></svg>'};
+  function spDock(){const c=$('ctx');if(!c||!c.classList.contains('dock'))return;const es=selEnts();if(es.length!==1||es[0].k!=='spline')return;if(c.querySelector('.spVis'))return;
+    const b=document.createElement('button');b.className='pb ic spVis';const ctrl=S.splVis==='ctrl',t=ctrl?'Mostra i punti di passaggio':'Mostra i punti di controllo';
+    b.title=t;b.setAttribute('aria-label',t);b.setAttribute('aria-pressed',String(ctrl));b.innerHTML=ctrl?ICS.ctrl:ICS.pass;b.onclick=ev=>{ev.stopPropagation();setVis(ctrl?'pass':'ctrl')};
+    const altro=[...c.children].find(x=>/…|altro/i.test((x.title||'')+(x.textContent||'')));c.insertBefore(b,altro||null)}
+  {const _rp=rendiPP;rendiPP=function(){_rp.apply(this,arguments);try{if(pp.hidden)return;const es=selEnts();if(es.length!==1||es[0].k!=='spline')return;
+      const sez=[...pp.querySelectorAll('.sez')].find(x=>x.textContent.trim()==='Continuità');if(!sez||pp.querySelector('.spVisRow'))return;
+      const seg=cpSeg([['pass','Passaggio','Punti di passaggio: la curva passa per i punti'],['ctrl','Controllo','Punti di controllo: maniglie che danno forma alla curva']],S.splVis,v=>setVis(v),'Punti mostrati');
+      let ref=sez.nextElementSibling;const row=document.createElement('div');row.className=(ref&&ref.className)||'pr';row.classList.add('spVisRow');
+      const lab=document.createElement('span');const ls=ref&&ref.firstElementChild;lab.className=(ls&&ls.tagName==='SPAN'&&ls.className)||'k';lab.textContent='Punti';row.append(lab,seg);
+      sez.parentNode.insertBefore(row,sez)}catch(e){console.warn(e)}}}
+
+  /* GZ1, GZ2: the gizmo of points */
+  S.gzPv1='vic';S.gzPvN='m';
+  const vicini=(e,k)=>{const K=chiaviPunti(e),i=K.indexOf(k);if(i<0)return [];const ch=closedE(e),n=K.length,o=[];
+    if(i>0)o.push(K[i-1]);else if(ch&&n>2)o.push(K[n-1]);if(i<n-1)o.push(K[i+1]);else if(ch&&n>2)o.push(K[0]);return o};
+  const centroE=e=>{try{const b=bbUnione([e]);return [(b.x0+b.x1)/2,(b.y0+b.y1)/2]}catch(err){return null}};
+  function perno1(e,k){const V=vicini(e,k),P=puntoChiave(e,k);const modi=[];if(V[0])modi.push(['vic',puntoChiave(e,V[0]),'Perno sul vertice vicino']);if(V[1])modi.push(['suc',puntoChiave(e,V[1]),'Perno sul vertice successivo']);
+    const c=centroE(e);if(c&&(!P||Math.hypot(c[0]-P[0],c[1]-P[1])>1e-6))modi.push(['cen',c,'Perno al centro dell’oggetto']);if(!modi.length)return null;
+    return modi.find(m=>m[0]===S.gzPv1)||modi[0]}
+  const puntiScelti=()=>{let es;try{es=selEnts()}catch(e){return null}const parti=PARTI.filter(r=>es.some(e=>e.id===r.e));if(parti.length<2||!parti.every(r=>r.k&&r.k!=='pv'))return null;
+    const L=parti.map(r=>{const e=MOS.cad.get(r.e);const P=e&&puntoChiave(e,r.k);return P?{e,k:r.k,P}:null});return L.every(Boolean)?L:null};
+  function pernoN(L){const m=[L.reduce((a,q)=>a+q.P[0],0)/L.length,L.reduce((a,q)=>a+q.P[1],0)/L.length];
+    if(S.gzPvN==='1')return ['1',L[0].P,'Perno sul primo punto'];if(S.gzPvN==='2')return ['2',L[L.length-1].P,L.length>2?'Perno sull’ultimo punto':'Perno sul secondo punto'];return ['m',m,'Perno a metà']}
+  {const _b=gzBersaglio;gzBersaglio=function(){const B=_b();
+    if(B&&B.tipo==='punto'){const pv=perno1(B.e,B.r.k);if(pv){B.tipo='pt1';B.piv=pv[1];B.pivM=pv[0];B.pivT=pv[2]}return B}
+    if(B)return B;if(!S.gz||S.tool!=='sel'||rac)return null;const L=puntiScelti();if(!L||L.some(q=>bloccatoE(q.e)))return null;const pv=pernoN(L);
+    return {tipo:'punti',ps:L,O:pv[1],pivM:pv[0],pivT:pv[2],a:S.rif==='lib'?(S.gzA||0):0,es:[...new Set(L.map(q=>q.e))]}}}
+  {const _k=gzCalcola;gzCalcola=function(D,W,shift){const B=D.B;if(B&&B.tipo==='pt1'&&D.modo==='rot'&&B.piv){D.B=Object.assign({},B,{O:B.piv});try{_k(D,W,shift)}finally{D.B=B}return}
+    if(B&&B.tipo==='punti'&&D.modo&&D.modo[0]==='s'){D.ris=null;return}return _k(D,W,shift)}}
+  {const _r=gzRisultato;gzRisultato=function(D){const B=D.B,R=D.ris;if(!R||R.ga!=null)return _r(D);
+    if(B.tipo==='pt1'){const P=B.O;let N=null;if(R.d)N=[P[0]+R.d[0],P[1]+R.d[1]];else if(R.r!=null){const c=Math.cos(R.r),s=Math.sin(R.r),O=B.piv,dx=P[0]-O[0],dy=P[1]-O[1];N=[O[0]+dx*c-dy*s,O[1]+dx*s+dy*c]}if(!N)return null;
+      const n=applicaGrip(B.e,B.r.k,N,P);return n?{add:[n],del:[B.e]}:null}
+    if(B.tipo==='punti'){const O=B.O,tr=R.d?(P=>[P[0]+R.d[0],P[1]+R.d[1]]):R.r!=null?(P=>{const c=Math.cos(R.r),s=Math.sin(R.r),dx=P[0]-O[0],dy=P[1]-O[1];return [O[0]+dx*c-dy*s,O[1]+dx*s+dy*c]}):null;if(!tr)return null;
+      const per=new Map();B.ps.forEach(q=>{if(!per.has(q.e.id))per.set(q.e.id,{e:q.e,ks:[]});per.get(q.e.id).ks.push(q)});const add=[],del=[];
+      for(const {e,ks} of per.values()){let n=e;for(const q of ks){const P0=puntoChiave(n,q.k)||q.P,N=tr(q.P);const z=applicaGrip(n,q.k,N,P0);if(!z)return null;n=z}add.push(n);del.push(e)}return {add,del}}
+    return _r(D)}}
+  {const _d=gzDisegna;gzDisegna=function(x){_d(x);try{const D=GZ.drag,B=D?D.B:gzBersaglio();if(!B||(B.tipo!=='pt1'&&B.tipo!=='punti'))return;
+      schermo(x);x.save();const att=D?D.modo:GZ.hover,{O}=gzGeo(B);
+      if(B.tipo==='pt1'&&B.piv){
+        const p=w2s(B.piv[0],B.piv[1]);x.strokeStyle=T.acc;x.lineWidth=1;x.setLineDash([4,3]);x.beginPath();x.moveTo(O[0],O[1]);x.lineTo(p[0],p[1]);x.stroke();x.setLineDash([]);
+        x.fillStyle=T.paper;x.lineWidth=1.6;x.beginPath();x.arc(p[0],p[1],5.5,0,DUEPI);x.fill();x.stroke();x.fillStyle=T.acc;x.beginPath();x.arc(p[0],p[1],1.8,0,DUEPI);x.fill()}
+      if(B.tipo==='punti'){x.strokeStyle=T.acc;x.lineWidth=1;x.globalAlpha=.6;x.setLineDash([4,3]);B.ps.forEach(q=>{const s=w2s(q.P[0],q.P[1]);x.beginPath();x.moveTo(O[0],O[1]);x.lineTo(s[0],s[1]);x.stroke()});x.setLineDash([]);x.globalAlpha=1;
+}
+      x.restore()}catch(e){}}}
+  /* a tap on the pivot changes it */
+  const pernoA=(B,sx,sy)=>{if(!B)return false;if(B.tipo==='pt1'&&B.piv){const p=w2s(B.piv[0],B.piv[1]);return Math.hypot(sx-p[0],sy-p[1])<10}return false};
+  addEventListener('pointerdown',e=>{if(e.target!==area||!S.gz||S.tool!=='sel')return;let B=null;try{B=gzBersaglio()}catch(err){}if(!B)return;const [sx,sy]=[e.clientX-V.rx,e.clientY-V.ry];if(!pernoA(B,sx,sy))return;
+    e.preventDefault();e.stopImmediatePropagation();
+    if(B.tipo==='pt1'){const ord=['vic','suc','cen'];let i=ord.indexOf(B.pivM);for(let n=0;n<3;n++){i=(i+1)%3;S.gzPv1=ord[i];const nb=gzBersaglio();if(nb&&nb.pivM===ord[i])break}}
+    else{const ord=['m','1','2'];S.gzPvN=ord[(ord.indexOf(B.pivM)+1)%3]}
+    const nb=gzBersaglio();if(nb&&nb.pivT)avviso(nb.pivT);richiedi('sopra')},true);
+  const giraPerno=v=>{if(v==null)return;const B=gzBersaglio();if(!B)return;if(B.tipo==='pt1')S.gzPv1=v;else S.gzPvN=v;try{rendiPP()}catch(e){}richiedi('sopra')};
+  {const _rp=rendiPP;rendiPP=function(){_rp.apply(this,arguments);try{if(pp.hidden||pp.querySelector('.gzPvRow'))return;const B=gzBersaglio();if(!B||(B.tipo!=='pt1'&&B.tipo!=='punti'))return;
+      const L=B.tipo==='pt1'?[['vic','Vicino','Perno sul vertice vicino'],['suc','Successivo','Perno sul vertice successivo'],['cen','Centro','Perno al centro dell’oggetto']]:[['m','Metà','Perno a metà fra i punti'],['1','Primo','Perno sul primo punto'],['2',B.ps.length>2?'Ultimo':'Secondo',B.ps.length>2?'Perno sull’ultimo punto':'Perno sul secondo punto']];
+      const seg=cpSeg(L,B.pivM,v=>giraPerno(v),'Perno della rotazione');const sez=document.createElement('div');sez.className='sez';sez.textContent='Perno';
+      const ref=pp.querySelector('.pr');const row=document.createElement('div');row.className=((ref&&ref.className)||'pr')+' gzPvRow';const lab=document.createElement('span');const ls=ref&&ref.firstElementChild;lab.className=(ls&&ls.tagName==='SPAN'&&ls.className)||'k';lab.textContent='Rotazione';row.append(lab,seg);
+      pp.append(sez,row)}catch(e){console.warn(e)}}}
+  window.__gestoRG={rv:()=>[V.rx,V.ry],grips:()=>selEnts().flatMap(e=>gripsDi(e).map(([k,P,f])=>{const q=w2s(P[0],P[1]);return [e.id,k,q[0]+V.rx,q[1]+V.ry,f]})),scr:(x,y)=>{const q=w2s(x,y);return [q[0]+V.rx,q[1]+V.ry]},gzOn:()=>{S.gz=true;richiedi('sopra')},posCT,gz:()=>{const B=gzBersaglio();return B?{tipo:B.tipo,O:B.O,piv:B.piv||null,pivM:B.pivM||null,n:B.ps?B.ps.length:1}:null},splVis:v=>{if(v)setVis(v);return S.splVis}};
+  requestAnimationFrame(posCT);
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
