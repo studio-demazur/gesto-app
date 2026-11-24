@@ -6783,7 +6783,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.102';
+const VERSIONE_GESTO='0.103';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9879,6 +9879,60 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
   new MutationObserver(()=>{const on=inDrag();document.body.classList.toggle('dvTrasc',on);if(on){try{const s=getSelection();if(s&&s.rangeCount&&!s.isCollapsed)s.removeAllRanges()}catch(e){}if(!raf)raf=requestAnimationFrame(giro)}
       else{linea.style.display='none'}}).observe(document.body,{childList:true});
   window.__gestoDV2={linea:()=>linea.style.display==='block'?linea.getBoundingClientRect().toJSON():null};
+})();
+
+
+/* ---------- 103. The tree reads the pen by geometry; the dot for every pointer (owner, 24.11.2026) ----------
+   DV9  During a drag the destination is found by the geometry of the rows, not by what lies on top of them: a layer
+        over the list (a panel, a bar, a touch area) cannot hide a folder from the pen.
+   DV10 The main level is only below the last row of the list, counting the dragged row too; the gap between two rows
+        belongs to the nearer of them.
+   DV11 A refused destination says why on the copy («non entra in sé stessa»); the folders are checked when the list is
+        drawn, and twin codes or circles in their data are reported, never silently changed.
+   PT2  On the drawing surface the pointer is a dot for pen, mouse and finger alike: no cross. Some pens reach the
+        browser as a mouse (drivers outside Windows Ink), so the dot cannot depend on the kind of pointer. */
+(()=>{const L=$('dcL');if(!L)return;
+  const nat=(x,y)=>Document.prototype.elementFromPoint.call(document,x,y);
+  const inDrag=()=>{try{return window.__gestoDV.stato().drag}catch(e){return false}};
+  const vuoto=()=>document.createElement('div');
+  const root=()=>document.querySelector('#impCol .dcRoot');
+  const tutte=()=>[...L.querySelectorAll('.dcF,.dcDh,.dcI,.dcVuoto')].filter(r=>r.offsetParent);
+  const cartellaDi=q=>{let t=null;if(q.classList.contains('dcI'))t=MOS.tavole.get(q.dataset.id);else if(q.classList.contains('dcDh')){const ts=dcDocTs(q.dataset.d);t=ts&&ts[0]}
+    if(!t)return null;const p=dcDir(t);return p&&dcEsiste(p)?p:''};
+  /* DV9, DV10 */
+  const geo=(x,y)=>{const lb=L.getBoundingClientRect();if(x<lb.left||x>lb.right||y<lb.top||y>lb.bottom)return null;
+    const R=tutte();if(!R.length)return root();
+    const lastB=Math.max(...R.map(r=>r.getBoundingClientRect().bottom));if(y>=lastB)return root()||vuoto();
+    let q=null,bd=1e9;for(const r of R){const b=r.getBoundingClientRect();if(y>=b.top&&y<b.bottom){q=r;bd=0;break}const d=y<b.top?b.top-y:y-b.bottom;if(d<bd){bd=d;q=r}}
+    if(!q||q.classList.contains('trasc'))return vuoto();
+    if(ST.drag&&ST.drag.mosso&&(q.classList.contains('dcI')||q.classList.contains('dcDh'))){const p=cartellaDi(q);if(p==='')return root()||vuoto();
+      if(p){const v=document.createElement('div');v.className='dcVuoto';v.dataset.vuota=p;return v}}
+    return q};
+  const prima=document.elementFromPoint;
+  document.elementFromPoint=function(x,y){if(inDrag()){const g=geo(x,y);if(g)return g;const n=nat(x,y);if(n&&n.closest&&n.closest('#impCol .dcRoot'))return n;return n}return prima.call(document,x,y)};
+  /* DV11: the reason of a refusal, on the copy */
+  const st=document.createElement('style');st.textContent=
+    '.dvPerche{position:fixed;z-index:9001;pointer-events:none;white-space:nowrap;font:500 11px var(--sans);color:var(--fg);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:2px 7px;display:none}'+
+    /* PT2: more specific than the old cross and the pen class; an inline cursor of a handle still wins */
+    '#cSopra:not(.gomma):not(.mano):not(.sfondo):not(.puntatore){cursor:var(--dmzPunto)}';
+  document.head.appendChild(st);
+  const dot=(f,h)=>'url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="2.3" fill="'+f+'" stroke="'+h+'" stroke-width="1.3"/></svg>')+'") 6 6, default';
+  const st2=document.createElement('style');st2.textContent=':root{--dmzPunto:'+dot('#1E3F4C','#FFFFFF')+'}:root[data-theme="dark"]{--dmzPunto:'+dot('#FCF8F4','#1E3F4C')+'}'+
+    '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--dmzPunto:'+dot('#FCF8F4','#1E3F4C')+'}}';document.head.appendChild(st2);
+  let perche='';const eti=document.createElement('div');eti.className='dvPerche';document.body.appendChild(eti);
+  const mostra=()=>{const g=document.querySelector('.dvFant');if(!g||!perche){eti.style.display='none';return}const b=g.getBoundingClientRect();
+    if(eti.textContent!==perche)eti.textContent=perche;eti.style.display='block';eti.style.left=b.left+'px';eti.style.top=(b.bottom+4)+'px'};
+  addEventListener('pointerup',()=>{perche='';eti.style.display='none'},true);addEventListener('pointercancel',()=>{perche='';eti.style.display='none'},true);
+  addEventListener('pointermove',e=>{if(!inDrag()){perche='';return}requestAnimationFrame(()=>{perche='';const d=ST.drag;
+    if(d&&d.mosso&&!L.querySelector('.sopra,.dcPrima,.dcDopo')&&!(root()&&root().classList.contains('sopra'))){const q=geo(e.clientX,e.clientY);
+      const f=q&&(q.classList.contains('dcVuoto')?q.dataset.vuota:q.dataset&&q.dataset.f);if(f&&f!==d.it.dataset.f&&dcSotto(d.it.dataset.f).includes(f))perche='Non entra in sé stessa'}
+    mostra()})},true);
+  /* DV11: folder data checked, reported once per sheet */
+  let detto='';const verifica=()=>{let L2=[];try{L2=dcCartelle()}catch(e){return}const ids=new Map(),dop=[];L2.forEach(c=>{if(ids.has(c.id))dop.push(c.nome);else ids.set(c.id,c)});
+    const giri=[];L2.forEach(c=>{const vis=new Set([c.id]);let p=c.p;while(p&&ids.has(p)){if(vis.has(p)){giri.push(c.nome);break}vis.add(p);p=ids.get(p).p}});
+    const k=JSON.stringify([dop,giri]);if((dop.length||giri.length)&&k!==detto){detto=k;avviso((dop.length?'Cartelle con lo stesso codice interno: '+dop.join(', ')+'. ':'')+(giri.length?'Cartelle in cerchio: '+giri.join(', ')+'. ':'')+'Segnalalo: i dati restano come sono.');console.warn('gesto: cartelle',dop,giri)}};
+  {const _r=rendiCol;rendiCol=function(){const v=_r.apply(this,arguments);try{verifica()}catch(e){}return v}}
+  window.__gestoDV3={geo:(x,y)=>{const q=geo(x,y);return q?(q.className+'|'+(q.dataset.f||q.dataset.vuota||q.dataset.d||q.dataset.id||'')):null},perche:()=>perche};
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
