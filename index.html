@@ -6783,7 +6783,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.104';
+const VERSIONE_GESTO='0.105';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -10081,6 +10081,47 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
       pp.append(sez,row)}catch(e){console.warn(e)}}}
   window.__gestoRG={rv:()=>[V.rx,V.ry],grips:()=>selEnts().flatMap(e=>gripsDi(e).map(([k,P,f])=>{const q=w2s(P[0],P[1]);return [e.id,k,q[0]+V.rx,q[1]+V.ry,f]})),scr:(x,y)=>{const q=w2s(x,y);return [q[0]+V.rx,q[1]+V.ry]},gzOn:()=>{S.gz=true;richiedi('sopra')},posCT,gz:()=>{const B=gzBersaglio();return B?{tipo:B.tipo,O:B.O,piv:B.piv||null,pivM:B.pivM||null,n:B.ps?B.ps.length:1}:null},splVis:v=>{if(v)setVis(v);return S.splVis}};
   requestAnimationFrame(posCT);
+})();
+
+
+/* ---------- 105. Folders and documents told apart in the tree (owner, 24.11.2026) ----------
+   AL1 Folder and document are recognised at a glance: the folder has the folder icon, open or closed, and its name in
+       bold; the document has the sheet with the folded corner and its name in regular weight.
+   AL2 The document states its kind: a small light petrol tag, «PDF» for documents opened from a file, «TAV» for the
+       sheets of Gesto.
+   AL3 The numbers say different things and write it: beside a folder the number of what it holds, beside a document
+       the number of its pages with «p.».
+   AL4 Free documents stay possible: a document can lie on the main level, outside every folder, and is recognised alike.
+   AL5 A folder let go on a document goes beside it, in the same folder; the copy says «Accanto al documento», or
+       «Un documento non contiene cartelle» when nothing would change. */
+(()=>{const L=$('dcL');if(!L)return;
+  const I={chiusa:'<path d="M3 7.5a2 2 0 0 1 2-2h4.2l2 2H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    aperta:'<path d="M3 9V7.5a2 2 0 0 1 2-2h4.2l2 2H17a2 2 0 0 1 2 2V11"/><path d="M3.2 11h16.6a1.2 1.2 0 0 1 1.16 1.5l-1.4 5A2 2 0 0 1 17.6 19H5a2 2 0 0 1-2-2v-4.8a1.2 1.2 0 0 1 1.2-1.2z"/>',
+    foglio:'<path d="M6.5 3h7.5l4 4v13.2a.8.8 0 0 1-.8.8H6.5a.8.8 0 0 1-.8-.8V3.8a.8.8 0 0 1 .8-.8z"/><path d="M14 3v4h4"/>'};
+  const st=document.createElement('style');st.textContent=
+    '#dcL .alIc{flex:none;width:16px;height:16px;display:flex;align-items:center;justify-content:center;color:var(--fg);margin-right:2px}#dcL .alIc svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:round}'+
+    '#dcL .dcF .dcN{font-weight:600}#dcL .dcDh .dcN{font-weight:400}#dcL .dcF .dcN,#dcL .dcDh .dcN{word-break:normal!important;overflow-wrap:break-word}'+
+    '#dcL .alTag,#dcL .dcI .alTag{flex:none;font:600 9px/14px var(--sans);letter-spacing:.04em;color:var(--fg);background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-right:4px}'+
+    '#dcL .dcI .icN .alTag{display:inline-block;vertical-align:1px;margin:0 4px 0 2px}';
+  document.head.appendChild(st);
+  const ico=k=>{const s=document.createElement('span');s.className='alIc';s.setAttribute('aria-hidden','true');s.innerHTML='<svg viewBox="0 0 24 24">'+I[k]+'</svg>';return s};
+  const tag=t=>{const s=document.createElement('span');s.className='alTag';s.textContent=t;return s};
+  {const _r=dcRiga;dcRiga=function(cls,nome,conta,aperta,menu,dati){const r=_r.apply(this,arguments);try{const tw=r.querySelector('.dcTw');
+      if(cls==='dcF'){r.insertBefore(ico(aperta?'aperta':'chiusa'),tw?tw.nextSibling:r.firstChild);r.setAttribute('aria-label','Cartella '+nome)}
+      else if(cls==='dcDh'){const n=r.querySelector('.dcN');r.insertBefore(ico('foglio'),n);r.insertBefore(tag('PDF'),n);const c=r.querySelector('.dcC');if(c&&conta)c.textContent=conta+' p.';r.setAttribute('aria-label','Documento '+nome)}}catch(e){}return r}}
+  {const _c=dcCard;dcCard=function(t,pag){const it=_c.apply(this,arguments);try{if(!t.pdf){const b=it.querySelector('.icN b');if(b)b.after(tag('TAV'))}}catch(e){}return it}}
+  /* AL5: the word on the copy when a folder is over a document */
+  const eti=document.createElement('div');eti.className='dvPerche alAcc';document.body.appendChild(eti);
+  const nat=(x,y)=>Document.prototype.elementFromPoint.call(document,x,y);
+  const docSotto=(x,y)=>{const lb=L.getBoundingClientRect();if(x<lb.left||x>lb.right||y<lb.top||y>lb.bottom)return null;
+    for(const r of L.querySelectorAll('.dcDh,.dcI')){if(!r.offsetParent||r.classList.contains('trasc'))continue;const b=r.getBoundingClientRect();if(y>=b.top&&y<b.bottom)return r}return null};
+  const dirDi=q=>{let t=null;if(q.classList.contains('dcI'))t=MOS.tavole.get(q.dataset.id);else{const ts=dcDocTs(q.dataset.d);t=ts&&ts[0]}if(!t)return null;const p=dcDir(t);return p&&dcEsiste(p)?p:''};
+  addEventListener('pointermove',e=>{const d=ST.drag;if(!d||!d.mosso){eti.style.display='none';return}requestAnimationFrame(()=>{const g=document.querySelector('.dvFant'),q=docSotto(e.clientX,e.clientY);
+    if(!g||!q){eti.style.display='none';return}const p=dirDi(q);if(p==null){eti.style.display='none';return}
+    const c=dcCartelle().find(x=>x.id===d.it.dataset.f),ora=c&&dcEsiste(c.p)?c.p:'';eti.textContent=p===ora?'Un documento non contiene cartelle':'Accanto al documento';
+    const b=g.getBoundingClientRect();eti.style.display='block';eti.style.left=b.left+'px';eti.style.top=(b.bottom+4)+'px'})},true);
+  const via=()=>{eti.style.display='none'};addEventListener('pointerup',via,true);addEventListener('pointercancel',via,true);
+  window.__gestoAL={eti:()=>eti.style.display==='block'?eti.textContent:''};
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
