@@ -3906,6 +3906,7 @@ async function esportaFoglio(){
   for(const b of elencoSfondi()){const a=b.pdf&&b.pdf.a;if(!a||o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
   for(const tv of MOS.tavole.values()){const a=tv.pdf&&tv.pdf.a;if(!a||o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
   for(const tv of MOS.tavole.values()){const a=tv.cart&&tv.cart.kp;if(!a||o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
+  for(const a of pgTuttiAsset()){if(o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
   const blob=new Blob([JSON.stringify(involucroDmz(o))],{type:'application/json'}),nome=nomeFile('dmz');
   if(downloads){try{await downloads.save({filename:nome,data:blob});notaEx('Salvato: '+nome)}
     catch(e){const c=e&&e.code;if(c==='declined'){notaEx('Salvataggio annullato');return}if(c==='rate_limited'){notaEx('Una richiesta di salvataggio è già aperta');return}
@@ -3932,6 +3933,8 @@ async function importaFoglio(file){
   for(const tv of (o.rami.tavole||[])){const a=tv.pdf&&tv.pdf.a;if(!a)continue;if(!mappa.has(a)&&o.immagini&&o.immagini[a]&&assets)try{const q=daData(o.immagini[a]),r=await assets.upload(q,{type:q.type});mappa.set(a,r.id)}catch(e){}if(mappa.has(a))tv.pdf=Object.assign({},tv.pdf,{a:mappa.get(a)});else delete tv.pdf}
   for(const tv of (o.rami.tavole||[])){const a=tv.cart&&tv.cart.kp;if(!a)continue;if(!mappa.has(a)){const dati=o.immagini&&o.immagini[a];if(dati&&assets)try{const q=daData(dati),r=await assets.upload(q,{type:q.type});mappa.set(a,r.id);immagine(r.id,r.url)}catch(e){persi++}}
     if(mappa.has(a))tv.cart.kp=mappa.get(a);else{delete tv.cart.kp;delete tv.cart.kpOn}}
+  for(const r of [...(o.rami.sfondi||[]),...(o.rami.tavole||[])]){for(const a of pgAssetsPdf(r.pdf)){if(mappa.has(a))continue;const dati=o.immagini&&o.immagini[a];if(!dati||!assets){persi++;continue}
+    try{const q=daData(dati),u=await assets.upload(q,{type:q.type});mappa.set(a,u.id);immagine(u.id,u.url)}catch(e){persi++}}pgRimappa(r,mappa)}
   const base=(o.foglio&&o.foglio.nome)||'Foglio';let nome=base,k=1;while(fogli.some(f=>f.nome===nome)){nome=base+(k===1?' (copia)':' (copia '+k+')');k++}
   const id=idCasuale('f'),nf={id,nome,t:Date.now()};if(o.foglio){if(o.foglio.sc)nf.sc=o.foglio.sc;if(o.foglio.o)nf.o=o.foglio.o;if(o.foglio.qu)nf.qu=o.foglio.qu;if(o.foglio.ts)nf.ts=o.foglio.ts;if(Array.isArray(o.foglio.formati))nf.formati=o.foglio.formati;if(Array.isArray(o.foglio.cartigli))nf.cartigli=o.foglio.cartigli;if(o.foglio.cartDef)nf.cartDef=o.foglio.cartDef;if(o.foglio.dp)nf.dp=o.foglio.dp;if(Array.isArray(o.foglio.viste)){nf.viste=o.foglio.viste;setTimeout(()=>vsWarn(nf.viste),0)}if(Array.isArray(o.foglio.cartelle))nf.cartelle=o.foglio.cartelle;if(Array.isArray(o.foglio.strutture))nf.strutture=o.foglio.strutture;}if(o._doc&&!fogli.some(q=>q.uuid===o._doc))nf.uuid=o._doc;
   fogli.push(nf);foglioId=id;menuFogli();apriFoglio(id);fogliSet({});
@@ -6780,7 +6783,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.99';
+const VERSIONE_GESTO='0.100';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -6811,7 +6814,7 @@ logo.innerHTML=GESTO_SVG;
     const f=foglio(),o={formato:'lavagna-demazur',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
     ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
     let n=0,persi=0;RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
-    const imm=[...elencoSfondi()];elencoSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a});if(tv.pdf&&tv.pdf.a)imm.push({a:tv.pdf.a})});
+    const imm=[...elencoSfondi()];elencoSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a});if(tv.pdf&&tv.pdf.a)imm.push({a:tv.pdf.a})});pgTuttiAsset().forEach(a=>imm.push({a}));
     if(!f.uuid)fogliSet({uuid:uuid7()});const u=f.uuid,nome=f.nome||'Foglio';
     for(const b of imm){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
     const c=senzaNull(o);delete c.formato;delete c.versione;
@@ -6837,7 +6840,7 @@ logo.innerHTML=GESTO_SVG;
   const attendi=c=>new Promise(ok=>{const t0=Date.now();(function g(){if(c()||Date.now()-t0>8000)ok();else setTimeout(g,60)})()});
   async function mappaImmagini(o){const mappa=new Map();let persi=0;const una=async a=>{if(mappa.has(a))return;const dati=o.immagini&&o.immagini[a];if(!dati||!assets){persi++;return}
       try{const q=daData(dati),r=await assets.upload(q,{type:q.type});mappa.set(a,r.id);immagine(r.id,r.url)}catch(e){persi++}};
-    for(const b of (o.rami.sfondi||[])){await una(b.a);if(b.pdf&&b.pdf.a)await una(b.pdf.a)}for(const tv of (o.rami.tavole||[])){const a=tv.cart&&tv.cart.kp;if(a)await una(a);if(tv.pdf&&tv.pdf.a)await una(tv.pdf.a)}return {mappa,persi}}
+    for(const b of (o.rami.sfondi||[])){await una(b.a);if(b.pdf&&b.pdf.a)await una(b.pdf.a)}for(const tv of (o.rami.tavole||[])){const a=tv.cart&&tv.cart.kp;if(a)await una(a);if(tv.pdf&&tv.pdf.a)await una(tv.pdf.a)}for(const r of [...(o.rami.sfondi||[]),...(o.rami.tavole||[])]){for(const a of pgAssetsPdf(r.pdf))await una(a);pgRimappa(r,mappa)}return {mappa,persi}}
   /* sostituisce il contenuto del foglio corrente con quello del file */
   async function ricarica(o){
     const {mappa,persi}=await mappaImmagini(o);const del=[];RAMI.forEach(r=>MOS[r].forEach(x=>{if(r!=='tratti')x._r=r;del.push(x)}));
@@ -9599,6 +9602,167 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){}},50);
       if(tav.length)_ds(tav,dir,prima)}finally{insieme=false;SEL.clear();segna()}return v};
   window.__gestoDR={sel:()=>[...SEL],scegli:k=>{SEL.add(k);segna()},pulisci:()=>{SEL.clear();segna()}};
 })();
+
+
+/* ---------- 100. Page commands as icons, «Posa immagine» and «Campo immagine» (owner, 24.11.2026) ----------
+   PG1 The commands of a PDF page are icons with their name on hover, grouped: Campi, Immagini, Revisione, Esporta.
+   PG2 «Posa immagine» replaces «Posa firma» and «Posa timbro»: firma, timbro, an image of the project or one from the computer.
+   PG3 «Campo immagine» is a frame with fixed position, size and rotation on the page; a tap or a right click on it
+       chooses its image from the computer or from the project; the image fits the frame (or fills it).
+   Data: entries of pdf.im keep {k,x,y,w,h} (pt of the page); an image of the project adds a (asset id) and k 'img:'+a;
+   a frame adds t:'campo', a or s ('firma'|'timbro'), r (quarter turns), f ('c' fits, 'r' fills) and a derived key 'cp:…'.
+   Images with an asset id travel in the .dmz like the backgrounds and are remapped when it opens. */
+const PGS={down:null,place:false};
+const pgMm=v=>Math.round(v*PT_MM*10)/10, pgPt=v=>pfR2(v/PT_MM);
+function pgNorm(m){const q=Object.assign({},m);
+  if(q.t==='campo'){q.k='cp:'+(q.a?'a:'+q.a:q.s?'s:'+q.s:'')+'|'+((q.r||0)&3)+'|'+(q.f==='r'?'r':'c')+'|'+(+q.w).toFixed(2)+'|'+(+q.h).toFixed(2)}
+  else if(typeof q.k==='string'&&q.k.startsWith('img:')){if(!q.a)q.a=q.k.slice(4);q.k='img:'+q.a}
+  return q}
+
+/* ---- the pictures behind the keys ---- */
+function pgImgAsset(k){let o=PF.img.get(k);if(o)return o;o={ok:false};PF.img.set(k,o);const a=k.slice(4);
+  datiSfondo({a}).then(d=>{if(!d){o.none=true;return}const i=new Image();i.onload=()=>{Object.assign(o,{ok:true,img:i,data:d,w:i.naturalWidth,h:i.naturalHeight,fmt:/^data:image\/jpe?g/.test(d)?'JPEG':'PNG'});richiedi('fondo')};
+    i.onerror=()=>{o.none=true};i.src=d},()=>{o.none=true});return o}
+const PG_CP=[];
+function pgImgCampo(k){let o=PF.img.get(k);if(o)return o;const [src,r,f,w,h]=k.slice(3).split('|');if(!src){o={ok:false,none:true};PF.img.set(k,o);return o}
+  const S=src.startsWith('a:')?pfImg('img:'+src.slice(2)):pfImg(src.slice(2));
+  if(!S.ok){if(S.none){o={ok:false,none:true};PF.img.set(k,o);return o}return {ok:false}}
+  const W=+w*PT_MM,H=+h*PT_MM,px=Math.min(12,3000/Math.max(W,H,1)),cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(W*px));cv.height=Math.max(1,Math.round(H*px));
+  const x=cv.getContext('2d'),q=(+r||0)&3,sw=q%2?S.h:S.w,sh=q%2?S.w:S.h,s=(f==='r'?Math.max:Math.min)(cv.width/sw,cv.height/sh);
+  x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.translate(cv.width/2,cv.height/2);x.rotate(q*Math.PI/2);x.drawImage(S.img,-S.w*s/2,-S.h*s/2,S.w*s,S.h*s);
+  const jpg=f==='r'&&S.fmt==='JPEG',data=jpg?cv.toDataURL('image/jpeg',.92):cv.toDataURL('image/png');
+  o={ok:true,img:cv,data,w:cv.width,h:cv.height,fmt:jpg?'JPEG':'PNG'};PF.img.set(k,o);PG_CP.push(k);while(PG_CP.length>24)PF.img.delete(PG_CP.shift());return o}
+{const _pf=pfImg;pfImg=function(k){if(typeof k==='string'){if(k.startsWith('img:'))return pgImgAsset(k);if(k.startsWith('cp:'))return pgImgCampo(k)}return _pf(k)}}
+/* every change of the list goes through here: keys stay in step with the frame */
+{const _s=pfSalvaIm;pfSalvaIm=function(b,L){return _s(b,(L||[]).map(pgNorm))}}
+/* before a PDF or an image of the page is written, the pictures are ready */
+async function pgPronte(L){const ks=(L||[]).map(m=>m.k).filter(Boolean);for(let n=0;n<80;n++){if(ks.every(k=>{const o=pfImg(k);return o.ok||o.none}))return;await new Promise(r=>setTimeout(r,100))}}
+{const _o=pfOverlay;pfOverlay=async function(b){if(b&&b.pdf)await pgPronte(b.pdf.im);return _o(b)}}
+{const _d=docTavola;docTavola=async function(t,doc){if(t&&t.pdf)await pgPronte(t.pdf.im);return _d(t,doc)}}
+
+/* ---- .dmz: the images of the pages travel with the file ---- */
+function pgAssetsPdf(pdf){return ((pdf&&pdf.im)||[]).map(m=>m.a).filter(Boolean)}
+function pgTuttiAsset(){const s=new Set();[...sfondi.values(),...MOS.tavole.values()].forEach(r=>pgAssetsPdf(r.pdf).forEach(a=>s.add(a)));return [...s]}
+function pgRimappa(rec,mappa){const p=rec&&rec.pdf;if(!p||!Array.isArray(p.im)||!p.im.some(m=>m&&m.a))return;
+  rec.pdf=Object.assign({},p,{im:p.im.map(m=>{if(!m||!m.a)return m;const q=Object.assign({},m),n=mappa.get(m.a);if(n)q.a=n;else{if(q.t!=='campo')return null;delete q.a}return pgNorm(q)}).filter(Boolean)})}
+
+/* ---- images of the project and from the computer ---- */
+function pgImmaginiProgetto(){const out=new Map(),add=(a,n)=>{if(a&&!out.has(a))out.set(a,n)};
+  [...sfondi.values()].forEach(b=>{if(!b.pdf&&b.a)add(b.a,b.nome||'Immagine')});
+  [...MOS.tavole.values()].forEach(t=>{if(t.cart&&t.cart.kp)add(t.cart.kp,'Key-plan · '+(t.nome||'Tavola'))});
+  [...sfondi.values(),...MOS.tavole.values()].forEach(r=>((r.pdf&&r.pdf.im)||[]).forEach(m=>add(m.a,'Immagine posata')));
+  return [...out].map(([a,n])=>({a,n}))}
+async function pgDaComputer(){if(!assets){avviso('Qui le immagini non si possono salvare');return null}const f=await scegliImmagine();if(!f)return null;
+  try{const r=await assets.upload(f,{type:f.type});immagine(r.id,r.url);return r.id}catch(e){avviso(erroreAsset(e));return null}}
+function pgPopup(x,y,fill){dcMenuChiudi();const m=document.createElement('div');m.id='dcMenu';m.className='pgPop';fill(m);$('wrap').appendChild(m);
+  const w=$('wrap').getBoundingClientRect();m.style.left=Math.max(8,Math.min(x-w.left+6,w.width-m.offsetWidth-8))+'px';m.style.top=Math.max(8,Math.min(y-w.top+6,w.height-m.offsetHeight-8))+'px';DC.menu=m;return m}
+function pgVoce(m,t,fn){const b=document.createElement('button');b.textContent=t;b.onclick=e=>{e.stopPropagation();dcMenuChiudi();fn()};m.appendChild(b);return b}
+function pgGalleria(m,scegli){const L=pgImmaginiProgetto(),h=document.createElement('div');h.className='pgGT';h.textContent='Dal progetto';m.appendChild(h);
+  if(!L.length){const n=document.createElement('div');n.className='dcVuoto';n.textContent='Nessuna immagine nel foglio';m.appendChild(n);return}
+  const g=document.createElement('div');g.className='pgGal';L.forEach(({a,n})=>{const b=document.createElement('button');b.className='pgTh';b.title=n;b.setAttribute('aria-label',n);
+    const i=document.createElement('img');i.alt='';const r=immagine(a);if(r.ok)i.src=r.img.src;else r.img.addEventListener('load',()=>{i.src=r.img.src},{once:true});b.appendChild(i);
+    b.onclick=e=>{e.stopPropagation();dcMenuChiudi();scegli(a)};g.appendChild(b)});m.appendChild(g)}
+function pgPaginaRo(){const t=IMPAG&&tavAtt();if(t&&t.pdf&&t.pdf.ro){rvAvviso();return true}return false}
+
+/* ---- PG2: «Posa immagine» ---- */
+async function pgPosaImg(k){if(pgPaginaRo())return;let o=pfImg(k);for(let n=0;n<60&&!o.ok&&!o.none;n++){await new Promise(r=>setTimeout(r,100));o=pfImg(k)}
+  if(!o.ok){avviso('L’immagine non è disponibile');return}PF.place=k;avviso('Tocca la pagina dove va l’immagine')}
+{const _p=pfPosa;pfPosa=function(k){if(typeof k==='string'&&k.startsWith('img:'))return pgPosaImg(k);return _p(k)}}
+function pgMenuPosa(el){const r=el.getBoundingClientRect();pgPopup(r.right,r.top,m=>{
+  pgVoce(m,'Firma',()=>pfPosa('firma'));pgVoce(m,'Timbro',()=>pfPosa('timbro'));
+  pgVoce(m,'Dal computer…',async()=>{const a=await pgDaComputer();if(a)pfPosa('img:'+a)});
+  pgGalleria(m,a=>pfPosa('img:'+a))})}
+
+/* ---- PG3: «Campo immagine» ---- */
+function pgCampoInizia(){if(pgPaginaRo())return;PF.place=null;PGS.place=true;avviso('Tocca la pagina dove va il campo immagine')}
+function pgCampoNuovo(b,u,v){const w=60/PT_MM,h=40/PT_MM,L=(b.pdf.im||[]).map(q=>Object.assign({},q));
+  L.push({t:'campo',x:pfR2(u-w/2),y:pfR2(v-h/2),w:pfR2(w),h:pfR2(h),r:0,f:'c'});PF.pick={id:b.id,i:L.length-1};pfSalvaIm(b,L);pgAgg()}
+function pgAgg(){try{pfRefresh()}catch(e){}if(IMPAG)try{prRendiPag()}catch(e){}richiedi('fondo')}
+function pgScelto(){const p=PF.pick,b=p&&pfGet(p.id),m=b&&(b.pdf.im||[])[p.i];return m?{b,i:p.i,m}:null}
+function pgCambia(patch){const q=pgScelto();if(!q)return;const L=q.b.pdf.im.map(x=>Object.assign({},x));Object.assign(L[q.i],patch);
+  Object.keys(patch).forEach(k=>{if(patch[k]==null)delete L[q.i][k]});pfSalvaIm(q.b,L);pgAgg()}
+function pgMenuCampo(x,y){const q=pgScelto();if(!q||q.m.t!=='campo')return;pgPopup(x,y,m=>{
+  pgVoce(m,'Dal computer…',async()=>{const a=await pgDaComputer();if(a)pgCambia({a,s:null})});
+  pgVoce(m,'Firma',()=>pgCambia({s:'firma',a:null}));pgVoce(m,'Timbro',()=>pgCambia({s:'timbro',a:null}));
+  if(q.m.a||q.m.s)pgVoce(m,'Svuota il campo',()=>pgCambia({a:null,s:null}));
+  pgGalleria(m,a=>pgCambia({a,s:null}))})}
+/* place a frame; a tap without moving on a frame opens its chooser; the right click too */
+addEventListener('pointerdown',e=>{PGS.down=null;if(e.target!==area)return;const [wx,wy]=s2w(e.clientX-V.rx,e.clientY-V.ry),b=pfPageAt(wx,wy);
+  if(PGS.place){e.preventDefault();e.stopPropagation();PGS.place=false;if(!b){avviso('Tocca una pagina del PDF');return}const [u,v]=pfW2P(b,wx,wy);pgCampoNuovo(b,u,v);return}
+  if(e.button===0)PGS.down={x:e.clientX,y:e.clientY,t:Date.now(),id:e.pointerId}},true);
+addEventListener('pointerup',e=>{const d=PGS.down;PGS.down=null;if(!d||d.id!==e.pointerId||Date.now()-d.t>600||Math.hypot(e.clientX-d.x,e.clientY-d.y)>6)return;
+  const q=pgScelto();if(!q||q.m.t!=='campo')return;const [wx,wy]=s2w(e.clientX-V.rx,e.clientY-V.ry);if(pfImgAt(q.b,wx,wy)!==q.i)return;setTimeout(()=>pgMenuCampo(e.clientX,e.clientY),0)},true);
+addEventListener('contextmenu',e=>{if(e.target!==area)return;const [wx,wy]=s2w(e.clientX-V.rx,e.clientY-V.ry),b=pfPageAt(wx,wy);if(!b)return;const i=pfImgAt(b,wx,wy);
+  if(i<0||(b.pdf.im[i]||{}).t!=='campo')return;e.preventDefault();e.stopPropagation();PF.pick={id:b.id,i};pgAgg();setTimeout(()=>pgMenuCampo(e.clientX,e.clientY),0)},true);
+addEventListener('keydown',e=>{if(e.key==='Escape'&&PGS.place){PGS.place=false;avviso('Campo immagine annullato')}});
+
+/* ---- PG1: the icons ---- */
+const PG_SVG={
+  campi:SV('<rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7.5 10v4"/>'),
+  fissa:SV('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
+  posa:SV('<rect x="3" y="7" width="13" height="13" rx="2"/><path d="M5.5 17l3-3.5 2.5 2.5 1.5-1.5 2 2"/><path d="M19 3v6M16 6h6"/>'),
+  campo:SV('<rect x="3" y="4" width="18" height="16" rx="1.5" stroke-dasharray="3 2.4"/><path d="M7 16l3.5-4 2.5 3 2-2 2.5 3"/><circle cx="9" cy="9" r="1.2"/>'),
+  meno:SV('<circle cx="11" cy="11" r="6.5"/><path d="M8 11h6M16 16l4.5 4.5"/>'),
+  piu:SV('<circle cx="11" cy="11" r="6.5"/><path d="M8 11h6M11 8v6M16 16l4.5 4.5"/>'),
+  togli:SV('<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/>'),
+  scegli:SV('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6 16l4-4.5 3 3 2-2 3 3.5"/><circle cx="15.5" cy="9" r="1.3"/>'),
+  ruota:SV('<path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/>'),
+  adatta:SV('<rect x="3" y="5" width="18" height="14" rx="1.5"/><rect x="8" y="8" width="8" height="8"/>'),
+  riempi:SV('<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3 9h18M3 15h18" stroke-dasharray="2 2"/>'),
+  svuota:SV('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 9l8 6M16 9l-8 6"/>'),
+  emetti:SV('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 14h6M12 11v6"/>'),
+  vigente:SV('<circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l3 3 5-6"/>'),
+  torna:SV('<path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/>'),
+  pagina:SV('<path d="M6 3h7l4 4v6"/><path d="M6 3v18h7"/><path d="M18 14v7M15 18l3 3 3-3"/>'),
+  documento:SV('<path d="M9 3h6l4 4v6"/><path d="M9 3v14h4"/><path d="M5 7v14h8"/><path d="M18 14v7M15 18l3 3 3-3"/>')};
+const PG_MAP={'Campi attivi':['campi','campi'],'Fissa i campi':['campi','fissa'],'Posa firma':['img','posa'],'Posa timbro':[null],
+  'Emetti revisione':['rev','emetti'],'Rendi vigente':['rev','vigente'],'Torna alla copia di lavoro':['rev','torna'],
+  'Esporta la pagina':['esp','pagina'],'Esporta il documento':['esp','documento'],'Esporta la revisione':['esp','documento']};
+const PG_GR=[['campi','Campi'],['img','Immagini'],['rev','Revisione'],['esp','Esporta']];
+function pgIco(b,t,ic){b.textContent='';b.innerHTML=PG_SVG[ic];b.title=t;b.setAttribute('aria-label',t);b.classList.add('pgI');return b}
+function pgBtn(t,ic,fn,cls){const b=bottone('',fn,cls);return pgIco(b,t,ic)}
+function pgNum(lbl,val,fn){const w=document.createElement('label');w.className='pgN';const s=document.createElement('span');s.textContent=lbl;
+  const i=document.createElement('input');i.type='number';i.step='0.5';i.value=val;i.setAttribute('aria-label',lbl==='X'?'Distanza dal bordo sinistro, mm':lbl==='Y'?'Distanza dal bordo alto, mm':lbl==='L'?'Larghezza, mm':'Altezza, mm');
+  i.onchange=()=>{const v=parseFloat(i.value);if(isFinite(v))fn(v)};w.append(s,i);return w}
+function pgScelta(b){const p=PF.pick;if(!p||p.id!==b.id)return null;const m=(b.pdf.im||[])[p.i];if(!m)return null;const box=document.createElement('div');box.className='pgSc';
+  const tit=document.createElement('div');tit.className='pgST';tit.textContent=m.t==='campo'?'Campo immagine':m.k==='firma'?'Firma':m.k==='timbro'?'Timbro':'Immagine';box.appendChild(tit);
+  const r=(...el)=>{const d=document.createElement('div');d.className='pgSR';el.forEach(x=>d.appendChild(x));box.appendChild(d);return d};
+  if(m.t==='campo'){
+    r(pgNum('X',pgMm(m.x),v=>pgCambia({x:pgPt(v)})),pgNum('Y',pgMm(m.y),v=>pgCambia({y:pgPt(v)})));
+    r(pgNum('L',pgMm(m.w),v=>{if(v>0)pgCambia({w:pgPt(v)})}),pgNum('A',pgMm(m.h),v=>{if(v>0)pgCambia({h:pgPt(v)})}));
+    const sc=pgBtn('Scegli l’immagine','scegli',e=>{const R=sc.getBoundingClientRect();pgMenuCampo(R.right,R.top)});
+    const ru=pgBtn('Ruota l’immagine di 90°','ruota',()=>pgCambia({r:(((m.r||0)+1)&3)}));
+    const fi=m.f==='r'?pgBtn('Adatta l’immagine al campo','adatta',()=>pgCambia({f:'c'})):pgBtn('Riempi il campo con l’immagine','riempi',()=>pgCambia({f:'r'}));
+    const L=[sc,ru,fi];if(m.a||m.s)L.push(pgBtn('Svuota il campo','svuota',()=>pgCambia({a:null,s:null})));r(...L);const tg=pgBtn('Togli il campo','togli',()=>{pfImTogli();pgAgg()});tg.classList.add('pgTg');tit.appendChild(tg)}
+  else{const k=m.w>0?m.h/m.w:1;
+    r(pgNum('L',pgMm(m.w),v=>{if(v>0){const w=pgPt(v),h=pfR2(w*k);pgCambia({x:pfR2(m.x+m.w/2-w/2),y:pfR2(m.y+m.h/2-h/2),w,h})}}),
+      pgBtn('Più piccola','meno',()=>{pfImScala(1/1.1);pgAgg()}),pgBtn('Più grande','piu',()=>{pfImScala(1.1);pgAgg()}),pgBtn('Togli','togli',()=>{pfImTogli();pgAgg()}))}
+  return box}
+function pgIcone(box,b){if(!box||!b||!b.pdf)return;const gr={},prs=new Set();let primo=null;
+  [...box.querySelectorAll('button.pb')].forEach(x=>{const t=x.textContent.trim(),d=PG_MAP[t];if(!d)return;const row=x.closest('.pr');if(row){prs.add(row);if(!primo)primo=row}
+    if(!d[0]){x.remove();return}let y=x;if(t==='Posa firma'){y=bottone('',()=>pgMenuPosa(y));pgIco(y,'Posa immagine','posa');x.remove()}else pgIco(x,t,d[1]);(gr[d[0]]=gr[d[0]]||[]).push(y)});
+  /* the old row of the picked image goes: its controls are rebuilt below */
+  [...box.querySelectorAll('.pr')].forEach(row=>{if([...row.querySelectorAll('button')].some(x=>x.textContent==='−')){prs.add(row);if(!primo)primo=row}});
+  if(!primo)return;if(gr.img)gr.img.push(pgBtn('Campo immagine','campo',()=>pgCampoInizia()));
+  const blk=document.createElement('div');blk.className='pgG';
+  PG_GR.forEach(([k,n])=>{if(!gr[k])return;const r=document.createElement('div');r.className='pgR';const l=document.createElement('span');l.className='pgL';l.textContent=n;
+    const c=document.createElement('div');c.className='pgB';gr[k].forEach(x=>c.appendChild(x));r.append(l,c);blk.appendChild(r);
+    if(k==='img'){const s=pgScelta(b);if(s)blk.appendChild(s)}});
+  box.insertBefore(blk,primo);prs.forEach(row=>{if(!row.querySelector('button,select,input'))row.remove();else if([...row.querySelectorAll('button')].some(x=>x.textContent==='−'))row.remove()})}
+{const _p=pfPanelIn;pfPanelIn=function(box,b,inImp){_p(box,b,inImp);try{pgIcone(box,b)}catch(e){console.warn(e)}}}
+{const _p=prPdfPagina;prPdfPagina=function(b,t){_p(b,t);try{pgIcone(dcPag,b)}catch(e){console.warn(e)}}}
+(()=>{const st=document.createElement('style');st.textContent=
+  '.pgG{display:flex;flex-direction:column;gap:6px;margin:2px 0 6px;padding:0 10px 0 12px}.pgR{display:grid;grid-template-columns:66px 1fr;align-items:center;gap:6px}'+
+  '.pgL{font:500 11px var(--sans);color:var(--muted);letter-spacing:.02em}.pgB{display:flex;flex-wrap:wrap;gap:6px}'+
+  '.pb.pgI{flex:0 0 34px!important;width:34px!important;min-width:34px!important;max-width:34px;height:30px;padding:0!important;display:inline-flex;align-items:center;justify-content:center}.pb.pgI svg{width:17px;height:17px;flex:none}'+
+  '.pgSc{display:flex;flex-direction:column;gap:7px;margin:0 0 2px;padding:8px 10px 10px;border:1px solid var(--line);border-radius:8px}'+
+  '.pgST{display:flex;align-items:center;justify-content:space-between;min-height:30px;font:600 11px var(--sans);color:var(--fg)}.pgSR{display:flex;flex-wrap:wrap;align-items:center;gap:5px}'+
+  '.pgN{display:inline-flex;align-items:center;gap:5px;flex:1 1 40%;font:500 11px var(--sans);color:var(--muted)}.pgN span{width:10px}.pgN input{flex:1;min-width:0;width:58px;height:26px;box-sizing:border-box;font:500 12px var(--sans);color:var(--fg);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:0 6px}'+
+  '#dcMenu.pgPop{max-width:252px}.pgGT{font:500 11px var(--sans);color:var(--muted);padding:6px 10px 2px;border-top:1px solid var(--line);margin-top:4px}'+
+  '.pgGal{display:grid;grid-template-columns:repeat(3,72px);gap:6px;padding:4px 6px 2px}.pgTh{width:72px;height:54px;padding:3px!important;border:1px solid var(--line)!important;background:var(--paper)!important;border-radius:6px!important;display:flex;align-items:center;justify-content:center}'+
+  '.pgTh img{max-width:100%;max-height:100%;object-fit:contain}.pgTh:hover{border-color:var(--acc)!important}';document.head.appendChild(st)})();
+window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuovo(b,u,v);return !!b},set:p=>pgCambia(p),scelto:()=>{const q=pgScelto();return q&&q.m},
+  posa:k=>pfPosa(k),assets:()=>pgTuttiAsset(),progetto:()=>pgImmaginiProgetto(),pronte:L=>pgPronte(L),img:k=>{const o=pfImg(k);return {ok:!!o.ok,none:!!o.none,w:o.w,h:o.h,fmt:o.fmt}}};
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
