@@ -9,7 +9,6 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Gesto">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 /* Layout: barra petrolio in alto, foglio infinito a quadretti sotto, pannelli a scomparsa a destra */
 :root{
@@ -6784,7 +6783,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.106';
+const VERSIONE_GESTO='0.107';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -10124,17 +10123,6 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
   const via=()=>{eti.style.display='none'};addEventListener('pointerup',via,true);addEventListener('pointercancel',via,true);
   window.__gestoAL={eti:()=>eti.style.display==='block'?eti.textContent:''};
 })();
-
-/* ===== Phase 106 (ST1): on iPad the status bar strip takes Gesto's petrol =====
-   black-translucent lets the page run under the iPadOS status bar; the top keys
-   step down by the safe-area inset so they never sit under the clock. */
-(()=>{const st=document.createElement('style');st.textContent=
-  '@media not (display-mode: window-controls-overlay){:root{'+
-  '--T:calc(17px + env(safe-area-inset-top,0px));--TL:calc(17px + env(safe-area-inset-top,0px))}}';
-document.head.appendChild(st);
-window.__gestoST={meta:()=>{const m=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');return m?m.content:null},
-  T:()=>getComputedStyle(document.documentElement).getPropertyValue('--T').trim(),
-  TL:()=>getComputedStyle(document.documentElement).getPropertyValue('--TL').trim()};})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
