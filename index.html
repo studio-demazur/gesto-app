@@ -5574,7 +5574,24 @@ const _aggCtx36=aggCtx;aggCtx=function(){[...GR_SEL].forEach(gr=>{if(!membriGr(g
 /* ---------- pannello delle proprietà ---------- */
 const ppAttivo=()=>innerWidth>720;
 const pp=document.createElement('section');pp.className='pan pp';pp.id='pp';pp.hidden=true;pp.setAttribute('aria-label','Proprietà della selezione');$('wrap').appendChild(pp);
-function rendiPP(){const es=selEnts();if(!ppAttivo()||!es.length||S.tool!=='sel'||rac){pp.hidden=true;return}const ae=document.activeElement;if(ae&&pp.contains(ae)&&(ae.tagName==='INPUT'||ae.tagName==='SELECT')&&!pp.hidden)return;
+/* SC2 (owner, 25.11.2026): the properties panel in one body. The layers of phases 41-108 run here in their order.
+   Each step is active from the point of the loading where its phase stood (PP_FASI), as the layer was; a phase living inside
+   its own closure gives its step through PP_PASSO (gizmo, structure, view, spline points, pivot). */
+const PP_PASSO={},PP_FASI=new Set(),ppF=k=>PP_FASI.has(k);
+function rendiPP(){
+  const auto=ppF('f11');if(auto)PR.auto=true;
+  try{
+    (()=>{
+      /* phase 47: strokes chosen */if(ppF('f47')){const es=selEnts();if(ppAttivo()&&es.length&&S.tool==='sel'&&!rac&&es.some(isT)){
+    const ae=document.activeElement;if(ae&&pp.contains(ae)&&(ae.tagName==='INPUT'||ae.tagName==='SELECT')&&!pp.hidden)return;return ppTratti(es)}
+  }
+      /* phase 46: layout without a choice */if(ppF('f46')){if(IMPAG&&!sel.size){pp.hidden=true;const P=$('pEsporta');
+    if(FSEL!==FSEL_PRIMA){const nuovo=!!FSEL;FSEL_PRIMA=FSEL;if(nuovo){TAB_IMP='finestra';if(P.hidden&&ppAttivo()){pannello('pEsporta');return}}if(!P.hidden)rendiTavole();return}
+    if(!P.hidden&&TAB_IMP==='finestra'&&!finFocus()){const box=P.querySelector('.finPP');if(box)riempiFin(box)}return}
+  }
+      /* phase 41: window of the plate */if(ppF('f41')){if(IMPAG&&FSEL&&!sel.size&&!rac&&ppAttivo()){if(!$('pEsporta').hidden){pp.hidden=true;return}return ppFin()}}
+      /* the panel of the object */
+const es=selEnts();if(!ppAttivo()||!es.length||S.tool!=='sel'||rac){pp.hidden=true;return}const ae=document.activeElement;if(ae&&pp.contains(ae)&&(ae.tagName==='INPUT'||ae.tagName==='SELECT')&&!pp.hidden)return;
   pp.hidden=false;pp.textContent='';const uno=es.length===1?es[0]:null;
   const h=document.createElement('div');h.className='ph';h.textContent=uno?(NOMI_K[uno.k]||uno.k):es.length+' oggetti';pp.appendChild(h);
   const sez=t=>{const d=document.createElement('div');d.className='sez';d.textContent=t;pp.appendChild(d)};
@@ -5623,7 +5640,63 @@ function rendiPP(){const es=selEnts();if(!ppAttivo()||!es.length||S.tool!=='sel'
     const x=bottone('×',()=>esegui({add:[],del:[v]}));x.className='ico';x.title='Togli il vincolo';x.setAttribute('aria-label','Togli il vincolo '+VNOMI[v.t]);
     if(v.v!=null)riga(VNOMI[v.t],cmp(v.v,'Valore di '+VNOMI[v.t],t=>{valoreEspr(t,v.t==='ang');esegui({add:[Object.assign({},v,{v:t})],del:[v]})}),x);
     else riga(VNOMI[v.t],testo(entiDi(v).length>1?'con '+(entiDi(v).length-1)+(entiDi(v).length===2?' altro elemento':' altri elementi'):'','num'+col),x)});
-    const s=STATO_V.get(es[0].id);if(s){const d=document.createElement('div');d.className='stato';d.textContent=s.stato==='completo'?'Disegno vincolato completamente':s.stato==='conflitto'?'Vincoli in conflitto: il disegno non è cambiato':'Ancora libero: '+s.dof+(s.dof===1?' grado':' gradi');pp.appendChild(d)}}}
+    const s=STATO_V.get(es[0].id);if(s){const d=document.createElement('div');d.className='stato';d.textContent=s.stato==='completo'?'Disegno vincolato completamente':s.stato==='conflitto'?'Vincoli in conflitto: il disegno non è cambiato':'Ancora libero: '+s.dof+(s.dof===1?' grado':' gradi');pp.appendChild(d)}}
+    })();
+    /* phase 53 */if(ppF('f53'))(()=>{if(!IMPAG||sel.size)sezPivot();return})();
+    /* components and axes */if(ppF('f5'))(()=>{if(!IMPAG||sel.size){sezComponenti();sezAssi()}return})();
+    /* outline of a hatch */if(ppF('f6'))(()=>{const es=selEnts();if(pp.hidden||es.length!==1||es[0].k!=='retino'||pp.querySelector('.rcRow'))return;const e=es[0];
+  const r=document.createElement('div');r.className='pr rcRow';const k=document.createElement('span');k.className='k';k.textContent='Contorno';r.appendChild(k);
+  if(e.g.own){const t=document.createElement('span');t.className='v';t.textContent='Indipendente';r.appendChild(t)}
+  else{const n=1+(e.g.dentro||[]).length+(e.g.isole||[]).length,t=document.createElement('span');t.className='v';t.textContent='Legato a '+n+(n===1?' oggetto':' oggetti');r.appendChild(t);
+    const b=bottone('Stacca',()=>staccaRetino(e));b.title='Rendi il tratteggio indipendente dagli oggetti che lo delimitano';r.appendChild(b)}
+  const s=[...pp.querySelectorAll('.sez')].find(d=>/^Aspetto/.test(d.textContent));if(s){let z=s.nextElementSibling;while(z&&z.nextElementSibling&&!z.nextElementSibling.classList.contains('sez'))z=z.nextElementSibling;(z||s).after(r)}else pp.appendChild(r);return})();
+    /* pattern of the hatches */if(ppF('f7'))(()=>{const es=selEnts();if(pp.hidden||!es.length||!es.every(e=>e.k==='retino')||pp.querySelector('.tpRow'))return;
+  const com=f=>{const v=es.map(f);return v.every(q=>q===v[0])?v[0]:null};
+  const modifica=patch=>{modificaSel(o=>{o.g=Object.assign({},o.g,patch);if(patch.sc===1)delete o.g.sc;if(patch.op===1)delete o.g.op});aggCtx()};
+  const pat=com(e=>e.g.pat||'l45'),sc=com(e=>+e.g.sc||1),tr=com(e=>Math.round((1-(e.g.op==null?1:e.g.op))*100));
+  const sel=scelta((pat==null?[['—','Motivi diversi']]:[]).concat(Object.entries(RETINI).map(([k,r])=>[k,r.n])),pat==null?'—':pat,v=>{if(v!=='—')modifica({pat:v})});sel.setAttribute('aria-label','Motivo del tratteggio');
+  const r1=cpRiga('Motivo',sel),r2=cpRiga('Scala',cpCampo(sc==null?'':sc,'Scala del motivo','×',v=>{if(!(v>0))throw new Error('scala');modifica({sc:Math.round(v*1000)/1000})},cpNumAng)),
+    r3_=cpRiga('Trasparenza',cpCampo(tr==null?'':tr,'Trasparenza del tratteggio, 0 opaco, 95 quasi invisibile','%',v=>{if(!(v>=0&&v<=95))throw new Error('tr');modifica({op:Math.round((1-v/100)*100)/100})},cpNumAng));
+  [r1,r2,r3_].forEach(r=>r.classList.add('tpRow'));
+  if(sc==null)r2.querySelector('input').value='';if(tr==null)r3_.querySelector('input').value='';
+  const sez=document.createElement('div');sez.className='sez tpSez';sez.textContent=es.length>1?'Tratteggi':'Tratteggio';
+  const dopo=pp.querySelector('.rcRow')||[...pp.querySelectorAll('.sez')].find(d=>/^Aspetto/.test(d.textContent));
+  if(dopo&&dopo.classList.contains('rcRow'))dopo.after(r1,r2,r3_);else{const h=pp.querySelector('.ph');(h||pp.firstChild).after(sez,r1,r2,r3_)}return})();
+    /* gizmo */try{PP_PASSO.gizmo&&PP_PASSO.gizmo()}catch(e){console.warn(e)}
+    /* points */if(ppF('f9'))(()=>{try{if(pp.hidden)return;const es=selEnts();if(es.length!==1)return;const e=es[0];if(!e.g||!PT_KINDS.has(e.k)||e.bk)return;
+  const box=document.createDocumentFragment(),el=(t,c,x)=>{const o=document.createElement(t);if(c)o.className=c;if(x!=null)o.textContent=x;return o},row=(k,...xs)=>{const r=el('div','pr');if(k!=null)r.appendChild(el('span','k',k));xs.forEach(x=>r.appendChild(x));box.appendChild(r);return r};
+  const place=()=>{const ref=[...pp.querySelectorAll(':scope>.sez')].find(x=>x.textContent==='Oggetto');pp.insertBefore(box,ref||null)};
+  box.appendChild(el('div','sez','Punti'));
+  const add=bottone('Aggiungi punto',()=>addPointMode(!ADDPT));add.setAttribute('aria-pressed',String(ADDPT));add.title='Poi tocca l’elemento dove serve il punto';if(ADDPT)add.classList.add('att');
+  const mine=PARTI.filter(r=>r.e===e.id&&r.k);const parts=[add];if(mine.length&&pointsFree(e))parts.push(bottone(mine.length===1?'Togli punto':'Togli i punti',()=>removeChosenPoints()));
+  row(null,el('span','num',countPoints(e)+(countPoints(e)===1?' punto':' punti')),...parts);
+  if(e.k!=='spline'){place();return}
+  box.appendChild(el('div','sez','Continuità'));const G=splineG(e.g),eff=splineGEff(e.g);
+  const seg=cpSeg([[1,'G1','G1 · tangente continua; un punto spostato cambia solo i tratti vicini'],[2,'G2','G2 · curvatura continua'],[3,'G3','G3 · anche la variazione della curvatura è continua'],[4,'G4','G4 · continuità di quarto ordine']],G,v=>setSplineG(e,v),'Continuità della spline');
+  row('Curva',seg);if(eff<G)row(null,el('span','num','Con '+countPoints(e)+' punti vale G'+eff+'; i punti restano, G'+G+' torna con più punti'));
+  const n=e.g.f.length>>1,C=new Set(splineCorners(e.g,n)),idx=mine.map(r=>keyIdx(r.k,'f')).filter(i=>i!=null);
+  if(idx.length){const all=idx.every(i=>C.has(i)),none=idx.every(i=>!C.has(i));
+    row(idx.length===1?'Punto scelto':'Punti scelti',cpSeg([['g0','G0','G0 · spigolo: qui la curva cambia direzione'],['c','Come la curva','Il punto segue la continuità della curva']],all?'g0':none?'c':null,v=>setCorners(e,idx,v==='g0'),'Continuità dei punti scelti'))}
+  else if(C.size)row(null,el('span','num',C.size+(C.size===1?' spigolo G0':' spigoli G0')+' · scegli un punto per cambiarlo'));place()}catch(err){console.error(err)}})();
+    /* densify and simplify */if(ppF('f10'))(()=>{try{if(pp.hidden)return;const es=selEnts();if(es.length!==1)return;const e=es[0];if(!e.g||!PT_KINDS.has(e.k)||e.bk)return;
+  const sez=[...pp.querySelectorAll(':scope>.sez')].find(x=>x.textContent==='Punti');if(!sez)return;let row=sez.nextElementSibling;
+  const r=document.createElement('div');r.className='pr';r.appendChild(bottone('Infittisci',()=>densify()));if(e.k!=='linea')r.appendChild(bottone('Semplifica',()=>simplify()));
+  row.after(r);if(e.k==='linea')return;
+  const t=document.createElement('div');t.className='pr';const k=document.createElement('span');k.className='k';k.textContent='Tolleranza';const inp=document.createElement('input');inp.type='text';inp.inputMode='decimal';
+  inp.value=fmt(ptTolPaper(),2);inp.setAttribute('aria-label','Tolleranza di «Semplifica» in mm di carta');inp.title='mm di carta: a 1:'+den()+' valgono '+fmt(ptTolModel(),1)+' mm sul disegno';
+  inp.onchange=()=>{const v=parseFloat(String(inp.value).replace(',','.'));if(v>0&&isFinite(v)){S.ptTol=v;salvaPref()}inp.value=fmt(ptTolPaper(),2);inp.title='mm di carta: a 1:'+den()+' valgono '+fmt(ptTolModel(),1)+' mm sul disegno'};
+  inp.className='cmp';const u=document.createElement('span');u.className='u nw';u.textContent='mm carta';const cw=document.createElement('span');cw.className='cw';cw.append(inp,u);t.append(k,cw);r.after(t)}catch(err){console.error(err)}})();
+  }finally{if(auto)PR.auto=false}
+  /* panel hidden or closable */if(auto)(()=>{
+  if(PR.nasc)pp.hidden=true;else if(!pp.hidden&&sel.size){const h=pp.querySelector(':scope>.ph');if(h&&!h.querySelector('.x')){const x=document.createElement('button');x.className='x';x.title='Nascondi le proprietà';x.setAttribute('aria-label','Nascondi le proprietà');x.textContent='×';x.onclick=e=>{e.stopPropagation();prNascondi()};h.appendChild(x)}}
+  erPanApri();return})();
+  /* key to put the panel back, folding sections */if(ppF('f12'))(()=>{const x=pp.querySelector(':scope>.ph>.x');if(x){x.replaceWith(pnRiponiBtn())}pnPieghe(pp);return})();
+  /* full window */if(ppF('f13'))(()=>{if(ER.full&&IMPAG){pp.hidden=true;erPanApri()}return})();
+  /* structure panel */PP_PASSO.struttura&&PP_PASSO.struttura();
+  /* view */try{PP_PASSO.vista&&PP_PASSO.vista()}catch(e){console.warn(e)}
+  /* spline points shown */PP_PASSO.splVis&&PP_PASSO.splVis();
+  /* pivot of the rotation */PP_PASSO.perno&&PP_PASSO.perno();
+}
 const _rendiPP_prop=rendiProp;
 const _ricomponi36=ricomponi;ricomponi=function(){_ricomponi36();rendiPP()};
 const _strumento36=strumento;strumento=function(k){_strumento36(k);rendiPP()};
@@ -6002,7 +6075,7 @@ function ppFin(){const t=tavAtt(),G=t&&tavGeo(t),f=t&&finCarta(t).find(x=>x.id==
   sez('Più finestre');riga(null,bt('Aggiungi',()=>{FMULTI=!FMULTI;aggCtx()},'Ogni tocco aggiunge o toglie una finestra; anche Maiusc + tocco',FMULTI),bt('Tutte',()=>{finCarta(t).forEach(q=>FSET.add(q.id));aggCtx();richiedi('sopra')}),bt('Una',()=>{FSET.clear();FSET.add(f.id);FMULTI=false;aggCtx();richiedi('sopra')}));
   if(lk){const n=document.createElement('div');n.className='stato';n.textContent='Finestra bloccata: posizione e misure restano ferme.';pp.appendChild(n)}}
 /* con il pannello della tavola aperto, sullo stesso lato, le proprietà della finestra restano nascoste */
-const _rendiPP41=rendiPP;rendiPP=function(){if(IMPAG&&FSEL&&!sel.size&&!rac&&ppAttivo()){if(!$('pEsporta').hidden){pp.hidden=true;return}return ppFin()}return _rendiPP41()};
+PP_FASI.add('f41');
 const _pannello41=pannello;pannello=function(...a){const r=_pannello41(...a);if(IMPAG)rendiPP();return r};
 const _aggCtx41=aggCtx;aggCtx=function(){_aggCtx41();if(IMPAG)rendiPP()};
 /* ---------- 42. Parametri della penna a destra (Vlad, 21.11.2026) ----------
@@ -6130,10 +6203,7 @@ const _rendiTavole46=rendiTavole;rendiTavole=function(){if(finFocus())return;_re
     if(r.classList.contains('tvis'))t='esporta';else if(r.classList.contains('nota')&&prec==='finestra')t='finestra';else if(k&&(TAB_DI[k.textContent]||/^Scala/.test(k.textContent)))t=TAB_DI[k.textContent]||'finestra';else t='tavola';
     prec=t;r.style.display=t===TAB_IMP?'':'none'});
   if(TAB_IMP==='finestra'){const box=document.createElement('div');box.className='finPP';B.appendChild(box);riempiFin(box)}};
-const _rendiPP46=rendiPP;rendiPP=function(){if(IMPAG&&!sel.size){pp.hidden=true;const P=$('pEsporta');
-    if(FSEL!==FSEL_PRIMA){const nuovo=!!FSEL;FSEL_PRIMA=FSEL;if(nuovo){TAB_IMP='finestra';if(P.hidden&&ppAttivo()){pannello('pEsporta');return}}if(!P.hidden)rendiTavole();return}
-    if(!P.hidden&&TAB_IMP==='finestra'&&!finFocus()){const box=P.querySelector('.finPP');if(box)riempiFin(box)}return}
-  return _rendiPP46()};
+PP_FASI.add('f46');
 /* UI15: la vecchia vista carta porta all'Impaginazione */
 apriCarta=function(){chiudiCarta();if(!IMPAG)entraImpag()};
 COMANDI.forEach(c=>{if(c.ab==='CAR')c.f=()=>apriCarta()});
@@ -6202,9 +6272,7 @@ function ppTratti(es){const ts=es.filter(isT),solo=ts.length===es.length,uno=es.
   const s=scelta(opz,ugL?l0:'—',v=>{if(v==='—')return;const l=lyDi(v);if(l.bl){avviso('Il layer «'+l.nome+'» è bloccato');return}modT({l:v==='schizzo'?undefined:v})});s.className='cs';s.setAttribute('aria-label','Layer del tratto');
   riga('Layer',s);
   const nota=document.createElement('div');nota.className='nota';nota.textContent=solo?'Spostare, ruotare, scalare, specchiare e copiare dalla barra in alto. Il tratto resta a mano, con la sua pressione.':'Colore, spessore e layer valgono qui per i soli tratti a mano; per gli oggetti CAD sceglierli da soli.';pp.appendChild(nota)}
-const _rendiPP47=rendiPP;rendiPP=function(){const es=selEnts();if(ppAttivo()&&es.length&&S.tool==='sel'&&!rac&&es.some(isT)){
-    const ae=document.activeElement;if(ae&&pp.contains(ae)&&(ae.tagName==='INPUT'||ae.tagName==='SELECT')&&!pp.hidden)return;return ppTratti(es)}
-  return _rendiPP47()};
+PP_FASI.add('f47');
 /* comandi che valgono per i tratti a mano; gli altri si nascondono e non agiscono finché un tratto è scelto */
 const T_SI=new Set(['Sposta','Copia','Ruota','Scala','Specchio','Serie','Polare','Distribuisci ↔','Distribuisci ↕','Elimina']);
 const T_NO=new Set(['Stira','Pivot','Dividi','Misura','Esplodi','Blocco','Copia proprietà','Clona','Esporta blocco','Unisci','Raggruppa','Nuova collezione']);
@@ -6343,7 +6411,7 @@ function sezPivot(){const es=selEnts();if(!es.length||pp.hidden||pp.querySelecto
   const rB=riga(null,bc,bt,bp);
   const dopo=[...pp.querySelectorAll('.sez')].find(d=>/^Posizione e ingombro/.test(d.textContent));
   if(dopo){dopo.before(sez,rX,rY,rB)}else pp.append(sez,rX,rY,rB)}
-const _rendiPP53=rendiPP;rendiPP=function(){const r=_rendiPP53();if(!IMPAG||sel.size)sezPivot();return r};
+PP_FASI.add('f53');
 /* ---------- 54. Famiglie di strumenti: tocco sceglie, tenuta o doppio tocco apre (titolare, 21.11.2026) ----------
    FS1 Un tocco sul pulsante di una famiglia prende lo strumento già scelto in quella famiglia; il pannello non si apre.
    FS2 Il pannello della famiglia si apre tenendo premuto o con il doppio tocco, e si chiude da sé appena si sceglie uno strumento o si tocca la tela.
@@ -6560,7 +6628,7 @@ function sezAssi(){const pv0=pp.querySelector('.pvSez');if(pv0&&!pp.querySelecto
   if(L&&!L.curvo){const bl=bottone('Lungo il lato',()=>assiOggetto(e,Math.atan2(L.B[1]-L.A[1],L.B[0]-L.A[0])));bl.title='Asse X dell’oggetto lungo il lato scelto';cpIcona(bl,'cpAssiLato','Lungo il lato');bl.setAttribute('aria-label',bl.title);r2.appendChild(bl)}
   if(S.rif==='lib'){const bg=bottone('Dal gizmo',()=>assiOggetto(e,S.gzA||0));bg.title='Fissa l’angolo libero del gizmo come assi dell’oggetto';cpIcona(bg,'cpAssiGz','Dal gizmo');bg.setAttribute('aria-label',bg.title);r2.appendChild(bg)}
   r.after(riga,r2)}
-{const _r=rendiPP;rendiPP=function(){const x=_r();if(!IMPAG||sel.size){sezComponenti();sezAssi()}return x}}
+{PP_FASI.add('f5');}
 
 /* ---------- gizmo ---------- */
 const GZ={drag:null,buf:'',hover:null};
@@ -6775,12 +6843,7 @@ creaRetino=function(P){const chiusi=[];
 /* TR3 staccare: il tratteggio prende il contorno attuale e diventa indipendente */
 function staccaRetino(e){const b=rifRet(e);if(!b){avviso('Contorno non disponibile');return}const own=[b].concat(isoleRet(e)).map(c=>{const ct=contorno(c);return ct?ct.map(r3):null}).filter(Boolean);
   if(!own.length)return;const g=Object.assign({},e.g);delete g.rif;delete g.isole;delete g.dentro;delete g.comp;delete g.seme;g.own=own;esegui({add:[fattaEnt(Object.assign({},e,{g}))],del:[e]});aggCtx()}
-{const _r=rendiPP;rendiPP=function(){const x=_r();const es=selEnts();if(pp.hidden||es.length!==1||es[0].k!=='retino'||pp.querySelector('.rcRow'))return x;const e=es[0];
-  const r=document.createElement('div');r.className='pr rcRow';const k=document.createElement('span');k.className='k';k.textContent='Contorno';r.appendChild(k);
-  if(e.g.own){const t=document.createElement('span');t.className='v';t.textContent='Indipendente';r.appendChild(t)}
-  else{const n=1+(e.g.dentro||[]).length+(e.g.isole||[]).length,t=document.createElement('span');t.className='v';t.textContent='Legato a '+n+(n===1?' oggetto':' oggetti');r.appendChild(t);
-    const b=bottone('Stacca',()=>staccaRetino(e));b.title='Rendi il tratteggio indipendente dagli oggetti che lo delimitano';r.appendChild(b)}
-  const s=[...pp.querySelectorAll('.sez')].find(d=>/^Aspetto/.test(d.textContent));if(s){let z=s.nextElementSibling;while(z&&z.nextElementSibling&&!z.nextElementSibling.classList.contains('sez'))z=z.nextElementSibling;(z||s).after(r)}else pp.appendChild(r);return x}}
+{PP_FASI.add('f6');}
 
 /* ---------- 61. Parametri del tratteggio (titolare, 22.11.2026) ----------
    TP1 Ogni tratteggio scelto si modifica: motivo, scala, trasparenza, angolo, layer; anche più tratteggi insieme.
@@ -6792,18 +6855,7 @@ function staccaRetino(e){const b=rifRet(e);if(!b){avviso('Contorno non disponibi
     RETINI[p]=Object.assign({},R0,{f:R0.f.map(f=>Object.assign({},f,{s:f.s*k},f.d?{d:f.d*k}:{}))});try{return _d(x,ee,col,lw,pxs)}finally{RETINI[p]=R0}};
   if(op!=null&&op<1){x.save();x.globalAlpha*=Math.max(0.03,op);try{fai()}finally{x.restore()}}else fai()}}
 {const _l=lineeRetino;lineeRetino=function(e,fm,b){const k=+(e.g&&e.g.sc)||1;return _l(e,k===1?fm:Object.assign({},fm,{s:fm.s*k},fm.d?{d:fm.d*k}:{}),b)}}
-{const _r=rendiPP;rendiPP=function(){const x=_r();const es=selEnts();if(pp.hidden||!es.length||!es.every(e=>e.k==='retino')||pp.querySelector('.tpRow'))return x;
-  const com=f=>{const v=es.map(f);return v.every(q=>q===v[0])?v[0]:null};
-  const modifica=patch=>{modificaSel(o=>{o.g=Object.assign({},o.g,patch);if(patch.sc===1)delete o.g.sc;if(patch.op===1)delete o.g.op});aggCtx()};
-  const pat=com(e=>e.g.pat||'l45'),sc=com(e=>+e.g.sc||1),tr=com(e=>Math.round((1-(e.g.op==null?1:e.g.op))*100));
-  const sel=scelta((pat==null?[['—','Motivi diversi']]:[]).concat(Object.entries(RETINI).map(([k,r])=>[k,r.n])),pat==null?'—':pat,v=>{if(v!=='—')modifica({pat:v})});sel.setAttribute('aria-label','Motivo del tratteggio');
-  const r1=cpRiga('Motivo',sel),r2=cpRiga('Scala',cpCampo(sc==null?'':sc,'Scala del motivo','×',v=>{if(!(v>0))throw new Error('scala');modifica({sc:Math.round(v*1000)/1000})},cpNumAng)),
-    r3_=cpRiga('Trasparenza',cpCampo(tr==null?'':tr,'Trasparenza del tratteggio, 0 opaco, 95 quasi invisibile','%',v=>{if(!(v>=0&&v<=95))throw new Error('tr');modifica({op:Math.round((1-v/100)*100)/100})},cpNumAng));
-  [r1,r2,r3_].forEach(r=>r.classList.add('tpRow'));
-  if(sc==null)r2.querySelector('input').value='';if(tr==null)r3_.querySelector('input').value='';
-  const sez=document.createElement('div');sez.className='sez tpSez';sez.textContent=es.length>1?'Tratteggi':'Tratteggio';
-  const dopo=pp.querySelector('.rcRow')||[...pp.querySelectorAll('.sez')].find(d=>/^Aspetto/.test(d.textContent));
-  if(dopo&&dopo.classList.contains('rcRow'))dopo.after(r1,r2,r3_);else{const h=pp.querySelector('.ph');(h||pp.firstChild).after(sez,r1,r2,r3_)}return x}}
+{PP_FASI.add('f7');}
 
 /* ---------- 62. Scelta fra oggetti sovrapposti (titolare, 22.11.2026) ----------
    SO1 Con il puntatore, un tocco dove più oggetti si sovrappongono apre un piccolo elenco di quegli oggetti; si sceglie quello che interessa.
@@ -6840,7 +6892,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.112';
+const VERSIONE_GESTO='0.113';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -7116,7 +7168,7 @@ logo.innerHTML=GESTO_SVG;
   ICP.gzScelto='<rect x="3.5" y="7.5" width="9" height="9"/><path d="M8 12h12.5M18 9.5l2.5 2.5-2.5 2.5"/><circle cx="8" cy="12" r="1.6" fill="currentColor"/>';
   ICP.gzSolo='<circle cx="7" cy="17" r="2.4"/><path d="M9.8 17h10.7M7 14.2V3.5M18 14.5l2.5 2.5-2.5 2.5M4.5 6L7 3.5 9.5 6"/>';
   ICP.gzOrig='<rect x="9.5" y="3.5" width="11" height="11" stroke-dasharray="2 2"/><path d="M5 19h8.5M5 19v-8.5M11.5 17l2 2-2 2M3 12.5l2-2 2 2"/><circle cx="5" cy="19" r="1.6" fill="currentColor"/>';
-  {const _r=rendiPP;rendiPP=function(){const x=_r.apply(this,arguments);try{sezGizmo()}catch(e){console.warn(e)}return x}}
+  {PP_PASSO.gizmo=()=>sezGizmo();}
   function sezGizmo(){if(pp.hidden||!sel.size)return;const pv=pp.querySelector('.pvSez');if(!pv||pp.querySelector('.gzModi'))return;const es=selEnts();if(!es.length)return;
     pv.textContent=es.length>1&&!(collezioneIntera(es))?'Perno dell’insieme':es.length>1?'Origine dell’insieme':'Origine';
     /* «Tocca» dell'origine sposta l'origine */
@@ -7526,21 +7578,7 @@ function bottoniPartiFree(c){const P=PARTI.filter(r=>r.k),t=document.createEleme
 ['Togli punto','Togli i punti'].forEach(n=>NOMI_PARTI.add(n));
 
 /* ---- properties panel ---- */
-{const _rp=rendiPP;rendiPP=function(){_rp();try{if(pp.hidden)return;const es=selEnts();if(es.length!==1)return;const e=es[0];if(!e.g||!PT_KINDS.has(e.k)||e.bk)return;
-  const box=document.createDocumentFragment(),el=(t,c,x)=>{const o=document.createElement(t);if(c)o.className=c;if(x!=null)o.textContent=x;return o},row=(k,...xs)=>{const r=el('div','pr');if(k!=null)r.appendChild(el('span','k',k));xs.forEach(x=>r.appendChild(x));box.appendChild(r);return r};
-  const place=()=>{const ref=[...pp.querySelectorAll(':scope>.sez')].find(x=>x.textContent==='Oggetto');pp.insertBefore(box,ref||null)};
-  box.appendChild(el('div','sez','Punti'));
-  const add=bottone('Aggiungi punto',()=>addPointMode(!ADDPT));add.setAttribute('aria-pressed',String(ADDPT));add.title='Poi tocca l’elemento dove serve il punto';if(ADDPT)add.classList.add('att');
-  const mine=PARTI.filter(r=>r.e===e.id&&r.k);const parts=[add];if(mine.length&&pointsFree(e))parts.push(bottone(mine.length===1?'Togli punto':'Togli i punti',()=>removeChosenPoints()));
-  row(null,el('span','num',countPoints(e)+(countPoints(e)===1?' punto':' punti')),...parts);
-  if(e.k!=='spline'){place();return}
-  box.appendChild(el('div','sez','Continuità'));const G=splineG(e.g),eff=splineGEff(e.g);
-  const seg=cpSeg([[1,'G1','G1 · tangente continua; un punto spostato cambia solo i tratti vicini'],[2,'G2','G2 · curvatura continua'],[3,'G3','G3 · anche la variazione della curvatura è continua'],[4,'G4','G4 · continuità di quarto ordine']],G,v=>setSplineG(e,v),'Continuità della spline');
-  row('Curva',seg);if(eff<G)row(null,el('span','num','Con '+countPoints(e)+' punti vale G'+eff+'; i punti restano, G'+G+' torna con più punti'));
-  const n=e.g.f.length>>1,C=new Set(splineCorners(e.g,n)),idx=mine.map(r=>keyIdx(r.k,'f')).filter(i=>i!=null);
-  if(idx.length){const all=idx.every(i=>C.has(i)),none=idx.every(i=>!C.has(i));
-    row(idx.length===1?'Punto scelto':'Punti scelti',cpSeg([['g0','G0','G0 · spigolo: qui la curva cambia direzione'],['c','Come la curva','Il punto segue la continuità della curva']],all?'g0':none?'c':null,v=>setCorners(e,idx,v==='g0'),'Continuità dei punti scelti'))}
-  else if(C.size)row(null,el('span','num',C.size+(C.size===1?' spigolo G0':' spigoli G0')+' · scegli un punto per cambiarlo'));place()}catch(err){console.error(err)}}}
+{PP_FASI.add('f9');}
 
 {const st=document.createElement('style');st.textContent='body.addPt #wrap canvas{cursor:copy}';document.head.appendChild(st)}
 try{COMANDI.push({k:'addpoint',n:'Aggiungi punto',en:'Add point',ab:'APT',f:()=>addPointMode(true),al:['aggiungi punto','inserisci punto']});
@@ -7643,14 +7681,7 @@ function simplify(){const es=selEnts().filter(e=>e.g&&PT_KINDS.has(e.k)&&e.k!=='
   avviso('Tolti '+tot+(tot===1?' punto':' punti')+' · scarto massimo '+fmt(dev,2)+' mm sul disegno, '+fmt(dev/den(),3)+' mm sulla carta · Ctrl+Z torna indietro')}
 
 /* ---- properties: «Infittisci», «Semplifica», tolerance ---- */
-{const _rp=rendiPP;rendiPP=function(){_rp();try{if(pp.hidden)return;const es=selEnts();if(es.length!==1)return;const e=es[0];if(!e.g||!PT_KINDS.has(e.k)||e.bk)return;
-  const sez=[...pp.querySelectorAll(':scope>.sez')].find(x=>x.textContent==='Punti');if(!sez)return;let row=sez.nextElementSibling;
-  const r=document.createElement('div');r.className='pr';r.appendChild(bottone('Infittisci',()=>densify()));if(e.k!=='linea')r.appendChild(bottone('Semplifica',()=>simplify()));
-  row.after(r);if(e.k==='linea')return;
-  const t=document.createElement('div');t.className='pr';const k=document.createElement('span');k.className='k';k.textContent='Tolleranza';const inp=document.createElement('input');inp.type='text';inp.inputMode='decimal';
-  inp.value=fmt(ptTolPaper(),2);inp.setAttribute('aria-label','Tolleranza di «Semplifica» in mm di carta');inp.title='mm di carta: a 1:'+den()+' valgono '+fmt(ptTolModel(),1)+' mm sul disegno';
-  inp.onchange=()=>{const v=parseFloat(String(inp.value).replace(',','.'));if(v>0&&isFinite(v)){S.ptTol=v;salvaPref()}inp.value=fmt(ptTolPaper(),2);inp.title='mm di carta: a 1:'+den()+' valgono '+fmt(ptTolModel(),1)+' mm sul disegno'};
-  inp.className='cmp';const u=document.createElement('span');u.className='u nw';u.textContent='mm carta';const cw=document.createElement('span');cw.className='cw';cw.append(inp,u);t.append(k,cw);r.after(t)}catch(err){console.error(err)}}}
+{PP_FASI.add('f10');}
 {const st=document.createElement('style');st.textContent='#pp .u.nw{white-space:nowrap;width:auto;flex:none;overflow:visible}#pp .cw:has(.u.nw) .cmp{flex:1;min-width:0;width:auto}';document.head.appendChild(st)}
 try{COMANDI.push({k:'densify',n:'Infittisci',en:'Densify',ab:'DNS',f:()=>densify(),al:['infittisci punti']});
   COMANDI.push({k:'simplify',n:'Semplifica',en:'Simplify',ab:'SMP',f:()=>simplify(),al:['semplifica punti']})}catch(e){self.__re&&self.__re(e)}
@@ -8520,9 +8551,7 @@ function prNascondi(){PR.nasc=true;prSalvaNasc();pp.hidden=true;if(IMPAG&&!$('pE
 PR.eraImp=!!IMPAG;new MutationObserver(()=>{PR.eraImp=document.body.classList.contains('impagina')}).observe(document.body,{attributes:true,attributeFilter:['class']});
 {const _p=pannello;pannello=function(id,...a){if(id==='pEsporta'&&IMPAG){const auto=PR.auto||!PR.eraImp;if(auto&&PR.nasc)return;if(PR.nasc){PR.nasc=false;prSalvaNasc()}}return _p(id,...a)}}
 {const _e=entraImpag;entraImpag=function(...a){PR.auto=true;let r;try{r=_e(...a)}finally{PR.auto=false}if(PR.nasc&&!$('pEsporta').hidden)pannello(null);erPanApri();return r}}
-{const _r=rendiPP;rendiPP=function(...a){PR.auto=true;let r;try{r=_r(...a)}finally{PR.auto=false}
-  if(PR.nasc)pp.hidden=true;else if(!pp.hidden&&sel.size){const h=pp.querySelector(':scope>.ph');if(h&&!h.querySelector('.x')){const x=document.createElement('button');x.className='x';x.title='Nascondi le proprietà';x.setAttribute('aria-label','Nascondi le proprietà');x.textContent='×';x.onclick=e=>{e.stopPropagation();prNascondi()};h.appendChild(x)}}
-  erPanApri();return r}}
+{PP_FASI.add('f11');}
 (()=>{const x=$('pEsporta').querySelector('[data-chiudi]'),f=x.onclick;x.title='Nascondi';x.onclick=e=>{if(IMPAG){prNascondi();return}f&&f(e)}})();
 erPanApri=function(){const aperto=[...document.querySelectorAll('.pan')].some(p=>!p.hidden&&p.id!=='pp');
   const vis=IMPAG?!aperto&&!(sel.size&&!pp.hidden):PR.nasc&&sel.size>0&&S.tool==='sel'&&ppAttivo();panApri.classList.toggle('vis',!!vis)};
@@ -8583,14 +8612,14 @@ function pnTesta(){const P=$('pEsporta'),x=P.querySelector('.ph [data-chiudi]');
   if(IMPAG){if(x)x.style.display='none';if(!r){r=pnRiponiBtn();P.querySelector('.ph').appendChild(r)}r.style.display=''}
   else{if(x){x.style.display='';x.title='Chiudi';x.setAttribute('aria-label','Chiudi')}if(r)r.style.display='none'}}
 {const _a=aggSpazi;aggSpazi=function(){_a();pnTesta();pnPiegheP()}}
-{const _r=rendiPP;rendiPP=function(...a){const v=_r(...a);const x=pp.querySelector(':scope>.ph>.x');if(x){x.replaceWith(pnRiponiBtn())}pnPieghe(pp);return v}}
+{PP_FASI.add('f12');}
 
 /* ---- PN4: full screen puts both away and gives them back ---- */
 erSchermoPieno=function(v){ER.full=v==null?!ER.full:!!v;try{localStorage.setItem('gesto.full',ER.full?'1':'0')}catch(e){self.__re&&self.__re(e)}
   if(ER.full){document.body.classList.add('colChiusa');pannello(null);pp.hidden=true}
   else{document.body.classList.toggle('colChiusa',!PN.doc);if(IMPAG&&!PR.nasc&&!sel.size&&$('pEsporta').hidden)pannello('pEsporta');rendiPP()}
   erPanApri();erNav();requestAnimationFrame(()=>{if(IMPAG)adattaCartaVista()})};
-{const _r=rendiPP;rendiPP=function(...a){const v=_r(...a);if(ER.full&&IMPAG){pp.hidden=true;erPanApri()}return v}}
+{PP_FASI.add('f13');}
 /* the tab of Proprietà brings back the panel and leaves full screen, like the tab of Documenti */
 {const f=panApri.onclick;panApri.onclick=e=>{if(ER.full){ER.full=false;try{localStorage.setItem('gesto.full','0')}catch(_){self.__re&&self.__re(_)}document.body.classList.toggle('colChiusa',!PN.doc)}f&&f(e);erNav()}}
 
@@ -9217,7 +9246,7 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){self.__re&&self.__
     /* the bar of the tool keeps only what is not in the panel; empty, it goes */
     if(![...ctx.children].some(x=>!x.hasAttribute('data-pp')&&getComputedStyle(x).display!=='none'))ctx.classList.add('soloPP');
     if(typeof pnPieghe==='function')pnPieghe(pp)}
-  const _r=rendiPP;rendiPP=function(...a){const v=_r(...a);if(pp.hidden||!selEnts().length)rendiStr();else{document.body.classList.remove('strPP');ctx.classList.remove('soloPP')}return v};
+  PP_PASSO.struttura=()=>{if(pp.hidden||!selEnts().length)rendiStr();else{document.body.classList.remove('strPP');ctx.classList.remove('soloPP')}};
   const _s=strumento;strumento=function(...a){const v=_s(...a);rendiPP();return v};
   let tm=0;new MutationObserver(()=>{if(!mostra)return;clearTimeout(tm);tm=setTimeout(rendiStr,40)}).observe(ctx,{childList:true});
   setTimeout(rendiPP,0);
@@ -9387,13 +9416,7 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){self.__re&&self.__
     if(segs.length>=Math.floor((an.length-1)/3))return null;const g={p:bezPunti(segs)};if(ch)g.ch=true;return {k:'curva',g}}
   window.__gestoOF={bez:e=>{const P=densa(e),I=[0,P.length-1];I.angoli=new Set();return bezSuAncore(P,I,false).length+1},tol:v=>{TOL=v},offsetPulito,semplificaE,adatta,offset:(...a)=>offsetE(...a),poly:e=>polyCurva(e)};
   const nPunti=e=>e.k==='spline'?e.g.f.length>>1:Math.floor((e.g.p.length/2-1)/3)+1;
-  const _rp=rendiPP;rendiPP=function(...a){const v=_rp(...a);try{return v;const es=[];
-    const sz=document.createElement('div');sz.className='sez';sz.textContent='Curva';pp.appendChild(sz);
-    const r=document.createElement('div');r.className='pr';const k=document.createElement('span');k.className='k';k.textContent='Punti';const n=document.createElement('span');n.className='num';n.textContent=String(es.reduce((s,e)=>s+nPunti(e),0));
-    const b=document.createElement('button');b.type='button';b.className='pb';b.textContent='Semplifica';b.title='Il minimo dei punti che conserva la forma entro 0,1 mm';
-    b.onclick=()=>{const addL=[],del=[];let prima=0,dopo=0;es.forEach(e=>{const g=semplificaE(e);prima+=nPunti(e);if(!g){dopo+=nPunti(e);return}const o=fattaEnt(Object.assign({},e,{k:g.k,g:arrotondaG(g.g)}));delete o._poly;addL.push(o);del.push(e);dopo+=nPunti(o)});
-      if(addL.length){esegui({add:addL,del});avviso('Punti: da '+prima+' a '+dopo)}else avviso('Già al minimo dei punti')};
-    r.append(k,n,b);pp.appendChild(r);if(typeof pnPieghe==='function')pnPieghe(pp)}catch(err){console.warn(err)}return v};
+  
 })();
 /* AN7 Leaving the layout, the model comes back alone: the panel of the export that served the layout closes.
    When the export is opened in the model it stands like the other panels on the left: 8 px from the tools, on the
@@ -9595,7 +9618,7 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){self.__re&&self.__
   if(typeof disegnaVivo==='function'){const _dv=disegnaVivo;disegnaVivo=con(_dv)}
   const rid=()=>{try{if(typeof ridisegnaTutto==='function')ridisegnaTutto();else{richiedi();cambioVista()}}catch(e){richiedi()}};
   /* SV4: the choice in Proprietà */
-  const _rp=rendiPP;rendiPP=function(...a){const v=_rp(...a);try{sezVista()}catch(e){console.warn(e)}return v};
+  PP_PASSO.vista=()=>sezVista();
   function sezVista(){if(pp.hidden||IMPAG||pp.querySelector('.svSez'))return;
     const sel=selEnts(),tool=S.tool,ok=sel.some(e=>SENS.has(e.k)||(e.st&&e.st.lt&&e.st.lt!=='continua'))||(!sel.length&&['retino','quota','testo','dir'].includes(tool));if(!ok)return;
     const sz=document.createElement('div');sz.className='sez svSez';sz.textContent='Vista';pp.appendChild(sz);
@@ -10085,12 +10108,12 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
     const b=document.createElement('button');b.className='pb ic spVis';const ctrl=S.splVis==='ctrl',t=ctrl?'Mostra i punti di passaggio':'Mostra i punti di controllo';
     b.title=t;b.setAttribute('aria-label',t);b.setAttribute('aria-pressed',String(ctrl));b.innerHTML=ctrl?ICS.ctrl:ICS.pass;b.onclick=ev=>{ev.stopPropagation();setVis(ctrl?'pass':'ctrl')};
     const altro=[...c.children].find(x=>/…|altro/i.test((x.title||'')+(x.textContent||'')));c.insertBefore(b,altro||null)}
-  {const _rp=rendiPP;rendiPP=function(){_rp.apply(this,arguments);try{if(pp.hidden)return;const es=selEnts();if(es.length!==1||es[0].k!=='spline')return;
+  {PP_PASSO.splVis=()=>{try{if(pp.hidden)return;const es=selEnts();if(es.length!==1||es[0].k!=='spline')return;
       const sez=[...pp.querySelectorAll('.sez')].find(x=>x.textContent.trim()==='Continuità');if(!sez||pp.querySelector('.spVisRow'))return;
       const seg=cpSeg([['pass','Passaggio','Punti di passaggio: la curva passa per i punti'],['ctrl','Controllo','Punti di controllo: maniglie che danno forma alla curva']],S.splVis,v=>setVis(v),'Punti mostrati');
       let ref=sez.nextElementSibling;const row=document.createElement('div');row.className=(ref&&ref.className)||'pr';row.classList.add('spVisRow');
       const lab=document.createElement('span');const ls=ref&&ref.firstElementChild;lab.className=(ls&&ls.tagName==='SPAN'&&ls.className)||'k';lab.textContent='Punti';row.append(lab,seg);
-      sez.parentNode.insertBefore(row,sez)}catch(e){console.warn(e)}}}
+      sez.parentNode.insertBefore(row,sez)}catch(e){console.warn(e)}};}
 
   /* GZ1, GZ2: the gizmo of points */
   S.gzPv1='vic';S.gzPvN='m';
@@ -10133,11 +10156,11 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
     else{const ord=['m','1','2'];S.gzPvN=ord[(ord.indexOf(B.pivM)+1)%3]}
     const nb=gzBersaglio();if(nb&&nb.pivT)avviso(nb.pivT);richiedi('sopra')},true);
   const giraPerno=v=>{if(v==null)return;const B=gzBersaglio();if(!B)return;if(B.tipo==='pt1')S.gzPv1=v;else S.gzPvN=v;try{rendiPP()}catch(e){self.__re&&self.__re(e)}richiedi('sopra')};
-  {const _rp=rendiPP;rendiPP=function(){_rp.apply(this,arguments);try{if(pp.hidden||pp.querySelector('.gzPvRow'))return;const B=gzBersaglio();if(!B||(B.tipo!=='pt1'&&B.tipo!=='punti'))return;
+  {PP_PASSO.perno=()=>{try{if(pp.hidden||pp.querySelector('.gzPvRow'))return;const B=gzBersaglio();if(!B||(B.tipo!=='pt1'&&B.tipo!=='punti'))return;
       const L=B.tipo==='pt1'?[['vic','Vicino','Perno sul vertice vicino'],['suc','Successivo','Perno sul vertice successivo'],['cen','Centro','Perno al centro dell’oggetto']]:[['m','Metà','Perno a metà fra i punti'],['1','Primo','Perno sul primo punto'],['2',B.ps.length>2?'Ultimo':'Secondo',B.ps.length>2?'Perno sull’ultimo punto':'Perno sul secondo punto']];
       const seg=cpSeg(L,B.pivM,v=>giraPerno(v),'Perno della rotazione');const sez=document.createElement('div');sez.className='sez';sez.textContent='Perno';
       const ref=pp.querySelector('.pr');const row=document.createElement('div');row.className=((ref&&ref.className)||'pr')+' gzPvRow';const lab=document.createElement('span');const ls=ref&&ref.firstElementChild;lab.className=(ls&&ls.tagName==='SPAN'&&ls.className)||'k';lab.textContent='Rotazione';row.append(lab,seg);
-      pp.append(sez,row)}catch(e){console.warn(e)}}}
+      pp.append(sez,row)}catch(e){console.warn(e)}};}
   window.__gestoRG={rv:()=>[V.rx,V.ry],grips:()=>selEnts().flatMap(e=>gripsDi(e).map(([k,P,f])=>{const q=w2s(P[0],P[1]);return [e.id,k,q[0]+V.rx,q[1]+V.ry,f]})),scr:(x,y)=>{const q=w2s(x,y);return [q[0]+V.rx,q[1]+V.ry]},gzOn:()=>{S.gz=true;richiedi('sopra')},posCT,gz:()=>{const B=gzBersaglio();return B?{tipo:B.tipo,O:B.O,piv:B.piv||null,pivM:B.pivM||null,n:B.ps?B.ps.length:1}:null},splVis:v=>{if(v)setVis(v);return S.splVis}};
   requestAnimationFrame(posCT);
 })();
