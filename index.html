@@ -4835,8 +4835,8 @@ async function esportaFoglio(){
   RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
   if(!n){notaEx('Il foglio è vuoto');return}
   notaEx('Preparo il file del foglio…');
-  for(const b of elencoSfondi()){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
-  for(const b of elencoSfondi()){const a=b.pdf&&b.pdf.a;if(!a||o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
+  for(const b of tuttiSfondi()){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
+  for(const b of tuttiSfondi()){const a=b.pdf&&b.pdf.a;if(!a||o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
   for(const tv of MOS.tavole.values()){const a=tv.pdf&&tv.pdf.a;if(!a||o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
   for(const tv of MOS.tavole.values()){const a=tv.cart&&tv.cart.kp;if(!a||o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
   for(const a of pgTuttiAsset()){if(o.immagini[a])continue;try{o.immagini[a]=await datiSfondo({a})}catch(e){persi++}}
@@ -7883,7 +7883,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.123';
+const VERSIONE_GESTO='0.124';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -7914,7 +7914,7 @@ logo.innerHTML=GESTO_SVG;
     const f=foglio(),o={formato:'gesto',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
     ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(Array.isArray(f.fgl)&&f.fgl.length)o.foglio.fgl=f.fgl;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
     let n=0,persi=0;RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
-    const imm=[...elencoSfondi()];elencoSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a});if(tv.pdf&&tv.pdf.a)imm.push({a:tv.pdf.a})});pgTuttiAsset().forEach(a=>imm.push({a}));
+    const imm=[...tuttiSfondi()];tuttiSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a});if(tv.pdf&&tv.pdf.a)imm.push({a:tv.pdf.a})});pgTuttiAsset().forEach(a=>imm.push({a}));
     if(!f.uuid)fogliSet({uuid:uuid7()});const u=f.uuid,nome=f.nome||'Foglio';
     for(const b of imm){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
     const c=senzaNull(o);delete c.formato;delete c.versione;
@@ -11809,6 +11809,11 @@ function finSceltaFoglio(f,cls){const s=scelta(fgLista().map(x=>[x.id,x.nome]),f
    MS1 the areas of the windows are drawn in the model only, each in the model of its own sheet; the layout never draws them. */
 function finAree(t){return t?finestre(t).filter(f=>finFg(f)===fgAtt()):[]}
 (()=>{const g=window.__gestoFG||{};g.aree=()=>IMPAG?[]:finAree(tavAtt()).map(f=>f.id);window.__gestoFG=g})();
+
+/* ---------- 124 SF1 (v0.124) ----------
+   SF1 the file keeps every background image of the project, whatever a window of the layout shows or hides. */
+const tuttiSfondi=()=>[...sfondi.values()].sort((a,b)=>(a.t||0)-(b.t||0));
+(()=>{const g=window.__gestoFG||{};g.visFin=v=>visSalva(v);window.__gestoFG=g})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{if(localStorage.getItem('gesto.avvio')==='ultimo')foglioId=localStorage.getItem('gesto.sheet')||'f1';else{AVVIO_ZERO=true;NOME_NUOVO='Nuovo progetto';foglioId='f'+Date.now().toString(36)}}catch(e){self.__re&&self.__re(e)}
