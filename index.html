@@ -7884,7 +7884,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.125';
+const VERSIONE_GESTO='0.126';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -11852,15 +11852,24 @@ const dF=a=>Number(a.m)/Math.pow(10,a.e);
 function dCanon(a){let s=(a.m<0n?-a.m:a.m).toString();if(a.e>0){s=s.padStart(a.e+1,'0');s=s.slice(0,s.length-a.e)+'.'+s.slice(s.length-a.e)}return (a.m<0n?'-':'')+s}
 
 /* ---- functions: one closed, numbered list per version (DZ-083 b) ---- */
-const FUNZ_VERSIONE=1;
+const FUNZ_VERSIONE=2;
 const FUNZ=[ // [neutral name, Italian name, group, min args, max args]
   ['SUM','SOMMA','mat',1,255],['AVERAGE','MEDIA','mat',1,255],['MIN','MIN','mat',1,255],['MAX','MAX','mat',1,255],
   ['ROUND','ARROTONDA','mat',2,2],['ROUNDUP','ARROTONDA.PER.ECC','mat',2,2],['ROUNDDOWN','ARROTONDA.PER.DIF','mat',2,2],
   ['ABS','ASS','mat',1,1],['INT','INT','mat',1,1],['MOD','RESTO','mat',2,2],['POWER','POTENZA','mat',2,2],['SQRT','RADQ','mat',1,1],
-  ['PRODUCT','PRODOTTO','mat',1,255],['COUNT','CONTA.NUMERI','mat',1,255],['COUNTA','CONTA.VALORI','mat',1,255],['PI','PI.GRECO','mat',0,0]];
+  ['PRODUCT','PRODOTTO','mat',1,255],['COUNT','CONTA.NUMERI','mat',1,255],['COUNTA','CONTA.VALORI','mat',1,255],['PI','PI.GRECO','mat',0,0],
+  /* version 2 (v0.126): logic, text, lookup, dates */
+  ['IF','SE','log',2,3],['AND','E','log',1,255],['OR','O','log',1,255],['NOT','NON','log',1,1],['IFERROR','SE.ERRORE','log',2,2],
+  ['SUMIF','SOMMA.SE','log',2,3],['COUNTIF','CONTA.SE','log',2,2],['AVERAGEIF','MEDIA.SE','log',2,3],
+  ['CONCATENATE','CONCATENA','txt',1,255],['LEFT','SINISTRA','txt',1,2],['RIGHT','DESTRA','txt',1,2],['MID','STRINGA.ESTRAI','txt',3,3],['LEN','LUNGHEZZA','txt',1,1],
+  ['UPPER','MAIUSC','txt',1,1],['LOWER','MINUSC','txt',1,1],['TRIM','ANNULLA.SPAZI','txt',1,1],['SUBSTITUTE','SOSTITUISCI','txt',3,4],['FIND','TROVA','txt',2,3],
+  ['TEXT','TESTO','txt',2,2],['VALUE','VALORE','txt',1,1],
+  ['VLOOKUP','CERCA.VERT','cer',3,4],['HLOOKUP','CERCA.ORIZZ','cer',3,4],['INDEX','INDICE','cer',2,3],['MATCH','CONFRONTA','cer',2,3],['CHOOSE','SCEGLI','cer',2,255],
+  ['TODAY','OGGI','dat',0,0],['DATE','DATA','dat',3,3],['YEAR','ANNO','dat',1,1],['MONTH','MESE','dat',1,1],['DAY','GIORNO','dat',1,1],['WEEKDAY','GIORNO.SETTIMANA','dat',1,2],
+  ['DAYS','GIORNI','dat',2,2],['EDATE','DATA.MESE','dat',2,2],['NETWORKDAYS','GIORNI.LAVORATIVI.TOT','dat',2,3],['WORKDAY','GIORNO.LAVORATIVO','dat',2,3]];
 const DA_IT={},A_IT={},INFO={};FUNZ.forEach(([n,i,g,a,b])=>{DA_IT[i]=n;A_IT[n]=i;INFO[n]={g,a,b}});
 /* ---- errors, as Italian Excel shows them ---- */
-const ERR={div:'#DIV/0!',val:'#VALORE!',rif:'#RIF!',nome:'#NOME?',num:'#NUM!',ciclo:'#CICLO!'};
+const ERR={nd:'#N/D',div:'#DIV/0!',val:'#VALORE!',rif:'#RIF!',nome:'#NOME?',num:'#NUM!',ciclo:'#CICLO!'};
 const isE=x=>x&&x.E;const E=k=>({E:ERR[k]||k});
 
 /* ---- cell references ---- */
@@ -11938,8 +11947,8 @@ function calcola(a,tab,ctx){const C=x=>calcola(x,tab,ctx);
     case 'num':return a.v;case 'str':return a.v;case 'bool':return a.v;case 'par':return C(a.a);
     case 'ref':return valuta(tab,a.v,ctx);
     case 'rng':{const r=[];const c0=Math.min(a.a.c,a.b.c),c1=Math.max(a.a.c,a.b.c),r0=Math.min(a.a.r,a.b.r),r1=Math.max(a.a.r,a.b.r);
-      if((c1-c0+1)*(r1-r0+1)>200000)return E('rif');for(let r_=r0;r_<=r1;r_++)for(let c_=c0;c_<=c1;c_++)r.push(valuta(tab,{c:c_,r:r_},ctx));return r}
-    case 'nome':return E('nome');
+      if((c1-c0+1)*(r1-r0+1)>200000)return E('rif');for(let r_=r0;r_<=r1;r_++)for(let c_=c0;c_<=c1;c_++)r.push(valuta(tab,{c:c_,r:r_},ctx));r.R=r1-r0+1;r.C=c1-c0+1;return r}
+    case 'nome':{const t=nomeDi(tab,a.v);if(!t)return E('nome');let q;try{q=parse(t,'neutro')}catch(e){return E('rif')}return (q.k==='ref'||q.k==='rng')?C(q):E('rif')}
     case 'neg':{const x=num(sc(C(a.a)));return isE(x)?x:dNeg(x)}
     case 'pct':{const x=num(sc(C(a.a)));return isE(x)?x:dDiv(x,D(100,0))}
     case 'bin':{let x=sc(C(a.a)),y=sc(C(a.b));if(isE(x))return x;if(isE(y))return y;
@@ -11955,6 +11964,21 @@ const testo=v=>v==null?'':isD(v)?dCanon(v).replace('.',','):typeof v==='boolean'
 const confronta=(x,y)=>{if(x==null)x=isD(y)?D(0,0):typeof y==='boolean'?false:'';if(y==null)y=isD(x)?D(0,0):typeof x==='boolean'?false:'';
   const rk=v=>isD(v)?0:typeof v==='string'?1:2;if(rk(x)!==rk(y))return rk(x)-rk(y);
   if(isD(x))return dCmp(x,y);if(typeof x==='string'){const a=x.toLowerCase(),b=y.toLowerCase();return a<b?-1:a>b?1:0}return (x?1:0)-(y?1:0)};
+const nomeDi=(tab,n)=>{const N=tab.nomi||{};if(N[n])return N[n];const u=String(n).toUpperCase();for(const k in N)if(k.toUpperCase()===u)return N[k];return null};
+/* a name: a letter first, then letters, digits, '_' and '.'; never a reference, never a function, never VERO, FALSO, TRUE, FALSE */
+function nomeValido(n){n=String(n||'');if(!/^[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_.]{0,63}$/.test(n))return false;if(/^[A-Za-z]{1,3}\d{1,7}$/.test(n))return false;const u=n.toUpperCase();
+  if(INFO[u]||DA_IT[u]||['VERO','FALSO','TRUE','FALSE'].includes(u))return false;return true}
+/* dates as Excel keeps them: whole days from 30 December 1899 */
+const G0=Date.UTC(1899,11,30),DAY=86400000;
+const seriale=(y,m,d)=>Math.round((Date.UTC(y,m-1,d)-G0)/DAY);
+const daSeriale=n=>{const t=new Date(G0+Math.floor(n)*DAY);return {y:t.getUTCFullYear(),m:t.getUTCMonth()+1,d:t.getUTCDate(),w:t.getUTCDay()}};
+const MESI=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+/* a criterion of SUMIF, COUNTIF, AVERAGEIF: ">10", "<>0", "=Gres", "G*", or a value */
+function criterio(c){c=sc(c);if(isD(c))return v=>isD(v)&&dCmp(v,c)===0;if(typeof c==='boolean')return v=>v===c;
+  const s=String(c==null?'':c),g=/^(<=|>=|<>|<|>|=)?(.*)$/.exec(s),op=g[1]||'=',rest=g[2],n=dParse(rest.replace(/\./g,'').replace(',','.'))||dParse(rest);
+  if(n&&rest!==''){return v=>{if(!isD(v))return op==='<>';const k=dCmp(v,n);return {'=':k===0,'<>':k!==0,'<':k<0,'>':k>0,'<=':k<=0,'>=':k>=0}[op]}}
+  const re=new RegExp('^'+rest.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.')+'$','i');
+  return v=>{const t=v==null?'':isD(v)?testo(v):String(v);const m=re.test(t);return op==='<>'?!m:op==='='?m:false}}
 function funzione(a,tab,ctx){const f=a.n,I=INFO[f];if(!I)return E('nome');if(a.args.length<I.a||a.args.length>I.b)return E('val');
   const args=a.args.map(x=>calcola(x,tab,ctx));
   /* numbers of the arguments as Excel takes them: typed values count, values from ranges only when numbers */
@@ -11976,13 +12000,67 @@ function funzione(a,tab,ctx){const f=a.n,I=INFO[f];if(!I)return E('nome');if(a.a
     case 'POWER':{const x=uno(0),y=uno(1);if(isE(x))return x;if(isE(y))return y;return dPow(x,y)||E('num')}
     case 'SQRT':{const x=uno(0);if(isE(x))return x;if(x.m<0n)return E('num');return dNum(Math.sqrt(dF(x)))}
     case 'PI':return dParse('3.14159265358979')}
+  return funzione2(f,args)}
+const intero=v=>{const x=num(sc(v));return isE(x)?x:Number(dInt(x).m)/Math.pow(10,dInt(x).e)};
+const tx=v=>{v=sc(v);return isE(v)?v:testo(v)};
+const lin=v=>Array.isArray(v)?v:[v];
+function funzione2(f,args){const A=args;
+  switch(f){
+    case 'IF':{const c=sc(A[0]);if(isE(c))return c;const k=typeof c==='boolean'?c:isD(c)?!dZero(c):c==null?false:E('val');if(isE(k))return k;return k?sc(A[1]):(A.length>2?sc(A[2]):false)}
+    case 'AND':case 'OR':{let r=f==='AND',n=0;for(const v of A)for(const q of lin(v)){if(isE(q))return q;if(q==null||typeof q==='string')continue;const b=typeof q==='boolean'?q:!dZero(q);n++;r=f==='AND'?r&&b:r||b}return n?r:E('val')}
+    case 'NOT':{const c=sc(A[0]);if(isE(c))return c;return typeof c==='boolean'?!c:isD(c)?dZero(c):E('val')}
+    case 'IFERROR':{const v=sc(A[0]);return isE(v)?sc(A[1]):v}
+    case 'SUMIF':case 'COUNTIF':case 'AVERAGEIF':{const R=lin(A[0]),p=criterio(A[1]),S=f==='COUNTIF'?null:lin(A.length>2?A[2]:A[0]);let s=D(0,0),n=0;
+      R.forEach((v,i)=>{if(!p(v))return;if(f==='COUNTIF'){n++;return}const q=S[i];if(isD(q)){s=dAdd(s,q);n++}});
+      return f==='COUNTIF'?D(n,0):f==='SUMIF'?s:(n?dDiv(s,D(n,0)):E('div'))}
+    case 'CONCATENATE':{let s='';for(const v of A){const t=tx(v);if(isE(t))return t;s+=t}return s}
+    case 'LEFT':case 'RIGHT':{const s=tx(A[0]);if(isE(s))return s;const n=A.length>1?intero(A[1]):1;if(isE(n))return n;if(n<0)return E('val');return f==='LEFT'?s.slice(0,n):(n?s.slice(-n):'')}
+    case 'MID':{const s=tx(A[0]),p=intero(A[1]),n=intero(A[2]);for(const x of [s,p,n])if(isE(x))return x;if(p<1||n<0)return E('val');return s.substr(p-1,n)}
+    case 'LEN':{const s=tx(A[0]);return isE(s)?s:D(s.length,0)}
+    case 'UPPER':case 'LOWER':{const s=tx(A[0]);return isE(s)?s:f==='UPPER'?s.toUpperCase():s.toLowerCase()}
+    case 'TRIM':{const s=tx(A[0]);return isE(s)?s:s.trim().replace(/ +/g,' ')}
+    case 'SUBSTITUTE':{const s=tx(A[0]),o=tx(A[1]),n=tx(A[2]);for(const x of [s,o,n])if(isE(x))return x;if(!o)return s;
+      if(A.length>3){const k=intero(A[3]);if(isE(k))return k;let i=-1;for(let j=0;j<k;j++){i=s.indexOf(o,i+1);if(i<0)return s}return s.slice(0,i)+n+s.slice(i+o.length)}return s.split(o).join(n)}
+    case 'FIND':{const o=tx(A[0]),s=tx(A[1]);if(isE(o))return o;if(isE(s))return s;const p=A.length>2?intero(A[2]):1;if(isE(p))return p;const i=s.indexOf(o,p-1);return i<0?E('val'):D(i+1,0)}
+    case 'TEXT':{const v=sc(A[0]),fm=tx(A[1]);if(isE(v))return v;if(isE(fm))return fm;return formatta(isD(v)?v:(typeof v==='string'&&!isE(num(v))?num(v):v),formatoNeutro(fm))}
+    case 'VALUE':{const v=sc(A[0]);if(isD(v))return v;const n=num(v);return isE(n)?E('val'):n}
+    case 'VLOOKUP':case 'HLOOKUP':{const t=A[1];if(!Array.isArray(t))return E('val');const k=intero(A[2]);if(isE(k))return k;
+      const vert=f==='VLOOKUP',N=vert?t.R:t.C,M=vert?t.C:t.R;if(k<1||k>M)return E('rif');
+      const at=(i,j)=>vert?t[i*t.C+j]:t[j*t.C+i];const v=sc(A[0]);if(isE(v))return v;
+      const esatto=A.length>3?(()=>{const q=sc(A[3]);return q===false||(isD(q)&&dZero(q))})():false;
+      if(esatto){for(let i=0;i<N;i++)if(confronta(at(i,0),v)===0&&at(i,0)!=null)return at(i,k-1);return E('nd')}
+      let best=-1;for(let i=0;i<N;i++){const q=at(i,0);if(q==null)continue;if(confronta(q,v)<=0)best=i;else break}return best<0?E('nd'):at(best,k-1)}
+    case 'INDEX':{const t=A[0];if(!Array.isArray(t))return A[0];const r=intero(A[1]),c=A.length>2?intero(A[2]):1;if(isE(r))return r;if(isE(c))return c;
+      const R=t.R||1,C=t.C||t.length;if(R===1&&A.length===2){if(r<1||r>C)return E('rif');return t[r-1]}if(r<1||r>R||c<1||c>C)return E('rif');return t[(r-1)*C+(c-1)]}
+    case 'MATCH':{const v=sc(A[0]),L=lin(A[1]),ty=A.length>2?intero(A[2]):1;if(isE(v))return v;if(isE(ty))return ty;
+      if(ty===0){for(let i=0;i<L.length;i++)if(L[i]!=null&&criterio(v)(L[i]))return D(i+1,0);return E('nd')}
+      let best=-1;for(let i=0;i<L.length;i++){if(L[i]==null)continue;const k=confronta(L[i],v);if(ty>0?k<=0:k>=0)best=i;else break}return best<0?E('nd'):D(best+1,0)}
+    case 'CHOOSE':{const k=intero(A[0]);if(isE(k))return k;if(k<1||k>=A.length)return E('val');return sc(A[k])}
+    case 'TODAY':{const t=new Date();return D(seriale(t.getFullYear(),t.getMonth()+1,t.getDate()),0)}
+    case 'DATE':{const y=intero(A[0]),m=intero(A[1]),d=intero(A[2]);for(const x of [y,m,d])if(isE(x))return x;const s=seriale(y,m,d);return s<0?E('num'):D(s,0)}
+    case 'YEAR':case 'MONTH':case 'DAY':{const n=intero(A[0]);if(isE(n))return n;if(n<0)return E('num');const q=daSeriale(n);return D(f==='YEAR'?q.y:f==='MONTH'?q.m:q.d,0)}
+    case 'WEEKDAY':{const n=intero(A[0]),ty=A.length>1?intero(A[1]):1;if(isE(n))return n;if(isE(ty))return ty;const w=daSeriale(n).w;return D(ty===2?(w+6)%7+1:ty===3?(w+6)%7:w+1,0)}
+    case 'DAYS':{const b=intero(A[0]),a=intero(A[1]);if(isE(a))return a;if(isE(b))return b;return D(b-a,0)}
+    case 'EDATE':{const n=intero(A[0]),k=intero(A[1]);if(isE(n))return n;if(isE(k))return k;const q=daSeriale(n),m0=q.m-1+k,y=q.y+Math.floor(m0/12),m=((m0%12)+12)%12+1;
+      const ult=new Date(Date.UTC(y,m,0)).getUTCDate();return D(seriale(y,m,Math.min(q.d,ult)),0)}
+    case 'NETWORKDAYS':case 'WORKDAY':{const a=intero(A[0]),b=intero(A[1]);if(isE(a))return a;if(isE(b))return b;const fest=new Set();
+      if(A.length>2)for(const q of lin(A[2])){if(isD(q))fest.add(Number(dInt(q).m))}
+      const lav=n=>{const w=daSeriale(n).w;return w!==0&&w!==6&&!fest.has(n)};
+      if(f==='NETWORKDAYS'){const s=Math.sign(b-a)||1;let n=0;for(let d=a;s>0?d<=b:d>=b;d+=s)if(lav(d))n++;return D(s*n,0)}
+      let d=a,k=Math.abs(b),s=Math.sign(b);while(k>0){d+=s;if(lav(d))k--}return D(d,0)}}
   return E('nome')}
+/* a format written inside TEXT: the neutral grammar, or the Italian one of Excel (#.##0,00 · gg/mm/aaaa) */
+function formatoNeutro(f){if(/[gGaA]/.test(f)&&/^[gGmMaAdDyY\/\-. ]+$/.test(f))return f.replace(/[gG]/g,'d').replace(/[aA]/g,'y');
+  if(/^(?:"[^"]*"\s?)?(#,##)?0+(?:\.0+)?%?$/.test(f)||/^[dmy\/\-. ]+$/i.test(f)||f==='General')return f;
+  const g=f.replace(/[.,]/g,c=>c==='.'?',':'.');return g}
 
 /* ---- formats: Excel's grammar in its neutral, English form (DZ-083 e); shown the Italian way ---- */
-const FORMATI=[['General','Generale'],['0','Intero'],['0.00','Due decimali'],['#,##0','Migliaia'],['#,##0.00','Migliaia, due decimali'],['0%','Percentuale'],['0.00%','Percentuale, due decimali'],['"€" #,##0.00','Euro']];
+const FORMATI=[['General','Generale'],['dd/mm/yyyy','Data'],['d mmmm yyyy','Data per esteso'],['0','Intero'],['0.00','Due decimali'],['#,##0','Migliaia'],['#,##0.00','Migliaia, due decimali'],['0%','Percentuale'],['0.00%','Percentuale, due decimali'],['"€" #,##0.00','Euro']];
 function formatta(v,fmt){if(v==null)return '';if(isE(v))return v.E;if(typeof v==='boolean')return v?'VERO':'FALSO';if(typeof v==='string')return v;
   fmt=fmt||'General';
   if(fmt==='General'){let x=v;const s=dCanon(x);const [ip,fp]=s.split('.');if(fp&&ip.replace('-','').length+fp.length>15)x=dRound(x,Math.max(0,15-ip.replace('-','').length),'');return dCanon(x).replace('.',',')}
+  if(/^[dmy][dmy\/\-. ]*$/i.test(fmt)&&/[dy]/i.test(fmt)){const q=daSeriale(Number(dInt(v).m)/Math.pow(10,dInt(v).e));
+    return fmt.replace(/yyyy|yy|mmmm|mmm|mm|m|dd|d/gi,t=>{t=t.toLowerCase();return t==='yyyy'?String(q.y):t==='yy'?String(q.y%100).padStart(2,'0'):t==='mmmm'?MESI[q.m-1]:t==='mmm'?MESI[q.m-1].slice(0,3):t==='mm'?String(q.m).padStart(2,'0'):t==='m'?String(q.m):t==='dd'?String(q.d).padStart(2,'0'):String(q.d)})}
   const g=/^(?:"([^"]*)"\s?)?(#,##)?(0+)(?:\.(0+))?(%)?$/.exec(fmt);if(!g)return dCanon(v).replace('.',',');
   let x=v;if(g[5])x=dMul(x,D(100,0));const dec=g[4]?g[4].length:0;x=dRound(x,dec,'');
   let s=dCanon(x),neg=s[0]==='-';if(neg)s=s.slice(1);let [ip,fp]=s.split('.');fp=(fp||'').padEnd(dec,'0');ip=ip.padStart(g[3].length,'0');
@@ -11993,6 +12071,9 @@ function formatta(v,fmt){if(v==null)return '';if(isE(v))return v.E;if(typeof v==
 function leggi(txt){const s=String(txt);if(s==='')return null;if(s[0]==="'")return {t:s.slice(1)};
   if(s[0]==='='){return {f:neutra(s,'it')}}
   const u=s.trim().toUpperCase();if(u==='VERO')return {b:true};if(u==='FALSO')return {b:false};
+  const dt=/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(s.trim());
+  if(dt){let y=+dt[3];if(dt[3].length===2)y+=y<30?2000:1900;const m=+dt[2],d=+dt[1],x=new Date(Date.UTC(y,m-1,d));
+    if(x.getUTCMonth()===m-1&&x.getUTCDate()===d)return {n:String(seriale(y,m,d)),fmt:'dd/mm/yyyy'}}
   const t=s.trim();let g=/^([+-]?)(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d+))?(%?)$/.exec(t);
   if(g){let d=dParse(g[1]+g[2].replace(/\./g,'')+(g[3]?'.'+g[3]:''));if(g[4]){d=dDiv(d,D(100,0));return {n:dCanon(d),fmt:'0%'}}return {n:dCanon(d)}}
   return {t:s}}
@@ -12001,7 +12082,7 @@ function scritto(c){if(!c)return '';if(c.f!=null){try{return locale(c.f,'it')}ca
   if(c.t!=null){const l=leggi(c.t);return l&&l.t===c.t?c.t:"'"+c.t}return ''}
 
 return {D,dParse,dNum,dAdd,dSub,dMul,dDiv,dCmp,dRound,dCanon,dF,isD,isE,parse,scrivi,neutra,locale,valuta,formatta,leggi,scritto,
-  colS,colN,rifParse,rifS,FUNZ,FUNZ_VERSIONE,FORMATI,ERR,nomiUsati};
+  colS,colN,rifParse,rifS,FUNZ,FUNZ_VERSIONE,FORMATI,ERR,nomiUsati,nomeValido,seriale};
 })();
 /* ---------- 125 TB1, TB8, TB9 (owner, 25.11.2026 · presidio DZ-083) ----------
    The spreadsheets of the project: entries of the Project Manager, opened over the plate in a grid written with keyboard and pen.
@@ -12036,7 +12117,7 @@ function tbRiempi(box){box.textContent='';const st=tbStato();
 /* ---- the grid ---- */
 var TBV=null;
 function tbVista(){if(TBV)return TBV;const v=document.createElement('div');v.id='tbV';v.hidden=true;v.tabIndex=-1;
-  v.innerHTML='<div class="tbBar"><input class="tbNome" title="Cella scelta" aria-label="Cella scelta" readonly><span class="tbFx">fx</span><input class="tbF" aria-label="Contenuto della cella" spellcheck="false">'+
+  v.innerHTML='<div class="tbBar"><input class="tbNome" title="Cella scelta · scrivi un nome per dare un nome alla scelta, o un nome o un indirizzo per andarci" aria-label="Cella scelta" spellcheck="false"><span class="tbFx">fx</span><input class="tbF" aria-label="Contenuto della cella" spellcheck="false">'+
     '<select class="tbFmt" title="Formato del numero" aria-label="Formato del numero"></select><button type="button" class="tbX" title="Chiudi la tabella" aria-label="Chiudi la tabella"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'+
     '<div class="tbTit"></div><div class="tbG"><table class="tbT"></table><input class="tbE" spellcheck="false" hidden><input class="tbKc" aria-label="Tabella" autocomplete="off" spellcheck="false"></div>';
   document.body.appendChild(v);TBV=v;
@@ -12077,7 +12158,8 @@ function tbRendi(){const st=tbStato(),o=MOS.tabelle.get(st.id);if(!TBV)return;if
       h+='<td data-k="'+k+'"'+(cls?' class="'+cls.trim()+'"':'')+'>'+esc(tx)+'</td>'}h+='</tr>'}
   T.innerHTML=h+'</tbody>';tbBarra()}
 function tbBarra(){const st=tbStato(),o=MOS.tabelle.get(st.id);if(!o||!TBV)return;const R=tbRange(),k=TBM.colS(st.c)+st.r,q=(o.celle||{})[k];
-  TBV.querySelector('.tbNome').value=(R.c0!==R.c1||R.r0!==R.r1)?TBM.colS(R.c0)+R.r0+':'+TBM.colS(R.c1)+R.r1:k;
+  const dove='$'+TBM.colS(R.c0)+'$'+R.r0+((R.c0!==R.c1||R.r0!==R.r1)?':$'+TBM.colS(R.c1)+'$'+R.r1:''),nm=Object.keys(o.nomi||{}).find(x=>o.nomi[x]===dove);
+  if(document.activeElement!==TBV.querySelector('.tbNome'))TBV.querySelector('.tbNome').value=nm||((R.c0!==R.c1||R.r0!==R.r1)?TBM.colS(R.c0)+R.r0+':'+TBM.colS(R.c1)+R.r1:k);
   if(!st.ed)TBV.querySelector('.tbF').value=TBM.scritto(q);TBV.querySelector('.tbFmt').value=(q&&q.fmt)||'General'}
 function tbVai(c,r,est){const st=tbStato();c=Math.max(1,c);r=Math.max(1,r);if(est){st.c2=c;st.r2=r}else{st.c=st.c2=c;st.r=st.r2=r}
   tbRendi();const td=TBV.querySelector('td[data-k="'+TBM.colS(est?st.c2:st.c)+(est?st.r2:st.r)+'"]');if(td)td.scrollIntoView({block:'nearest',inline:'nearest'})}
@@ -12092,9 +12174,19 @@ function tbConferma(ok){const st=tbStato(),E=TBV.querySelector('.tbE'),F=TBV.que
     tbCambia(st.id,n=>{const prima=n.celle[k]||null,fmt=prima&&prima.fmt;if(!nuova){if(!prima)return false;if(fmt)n.celle[k]={fmt};else delete n.celle[k];return}
       const q=Object.assign({},nuova);if(!q.fmt&&fmt)q.fmt=fmt;if(JSON.stringify(q)===JSON.stringify(prima))return false;n.celle[k]=q})}
   st.ed=false;E.hidden=true;E.classList.remove('err');tbRendi();tbFuoco();return true}
+/* the name box: a name gives a name to the choice; an existing name or an address goes there */
+function tbNomina(t){const st=tbStato(),o=MOS.tabelle.get(st.id);if(!o||!t){tbFuoco();tbBarra();return}
+  const vai=s=>{const p=s.replace(/\$/g,'').split(':'),a=TBM.rifParse(p[0]),b=p[1]?TBM.rifParse(p[1]):a;if(!a||!b)return false;st.c=a.c;st.r=a.r;st.c2=b.c;st.r2=b.r;tbRendi();tbFuoco();return true};
+  if(/^\$?[A-Za-z]{1,3}\$?\d{1,7}(:\$?[A-Za-z]{1,3}\$?\d{1,7})?$/.test(t)&&vai(t.toUpperCase()))return;
+  const N=o.nomi||{},es=Object.keys(N).find(k=>k.toUpperCase()===t.toUpperCase());
+  const R=tbRange(),dove='$'+TBM.colS(R.c0)+'$'+R.r0+((R.c0!==R.c1||R.r0!==R.r1)?':$'+TBM.colS(R.c1)+'$'+R.r1:'');
+  if(es){if(vai(N[es]))return}
+  if(!TBM.nomeValido(t)){avviso('«'+t+'» non può essere un nome: una lettera all’inizio, poi lettere, cifre, «_» o «.»; non un indirizzo né una funzione');tbFuoco();tbBarra();return}
+  tbCambia(st.id,n=>{n.nomi=n.nomi||{};n.nomi[t]=dove});avviso('«'+t+'» è il nome di '+dove.replace(/\$/g,''));tbFuoco()}
 function tbCancella(){const st=tbStato(),R=tbRange();tbCambia(st.id,n=>{let x=false;for(let r=R.r0;r<=R.r1;r++)for(let c=R.c0;c<=R.c1;c++){const k=TBM.colS(c)+r,q=n.celle[k];if(!q)continue;
   const f=q.fmt;delete n.celle[k];if(f)n.celle[k]={fmt:f};x=true}if(!x)return false})}
 function tbTasto(e){const st=tbStato(),k=e.key,mod=e.ctrlKey||e.metaKey;
+  if(e.target&&e.target.classList&&e.target.classList.contains('tbNome')){if(k==='Enter'){e.preventDefault();tbNomina(e.target.value.trim())}else if(k==='Escape'){e.preventDefault();tbBarra();tbFuoco()}return}
   if(mod&&!e.altKey&&(k==='z'||k==='Z')){e.preventDefault();if(st.ed)return;e.shiftKey?ripeti():annulla();return}
   if(mod&&!e.altKey&&(k==='y'||k==='Y')){e.preventDefault();if(!st.ed)ripeti();return}
   if(st.ed){if(k==='Enter'){e.preventDefault();if(tbConferma(true))tbVai(st.c,st.r+(e.shiftKey?-1:1))}
@@ -12140,7 +12232,7 @@ function tbIncolla(e){const st=tbStato();if(st.ed||!st.id)return;const t=e.clipb
   const st=document.createElement('style');st.textContent=
     '#tbV{position:fixed;z-index:30;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(15,35,44,.16);overflow:hidden}#tbV[hidden]{display:none}'+
     '#tbV .tbBar{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line)}'+
-    '#tbV .tbNome{width:86px;height:30px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--fg);font:600 12.5px var(--sans);text-align:center}'+
+    '#tbV .tbNome{width:120px;height:30px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--fg);font:600 12.5px var(--sans);text-align:center}'+
     '#tbV .tbFx{font:italic 600 12.5px var(--serif,Georgia);color:var(--muted);padding:0 2px}'+
     '#tbV .tbF{flex:1;min-width:0;height:30px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--fg);font:500 13px var(--mono,ui-monospace,monospace);padding:0 8px}'+
     '#tbV .tbFmt{height:30px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--fg);font:500 12.5px var(--sans);padding:0 6px}'+
@@ -12160,7 +12252,7 @@ function tbIncolla(e){const st=tbStato();if(st.ed||!st.id)return;const t=e.clipb
     '#tbV .tbE{position:absolute;z-index:5;border:0;box-shadow:0 0 0 2px var(--fg);background:var(--panel);color:var(--fg);font:400 13px var(--sans);padding:0 6px;outline:none}#tbV .tbE.err{box-shadow:0 0 0 2px #AC7853}'+
     '.dcTb .tbR svg{flex:none}.dcTb{border-bottom:1px solid var(--line)}';
   document.head.appendChild(st);
-  window.__gestoTB={lista:()=>tbLista().map(x=>({id:x.id,nome:x.nome,celle:x.celle,col:x.col,rig:x.rig})),nuova:tbNuova,apri:tbApri,chiudi:tbChiudi,stato:()=>Object.assign({},tbStato()),
+  window.__gestoTB={lista:()=>tbLista().map(x=>({id:x.id,nome:x.nome,celle:x.celle,col:x.col,rig:x.rig,nomi:x.nomi})),nuova:tbNuova,apri:tbApri,chiudi:tbChiudi,stato:()=>Object.assign({},tbStato()),
     imposta:(id,celle,col,rig)=>tbCambia(id,n=>{n.celle=JSON.parse(JSON.stringify(celle));if(col)n.col=col;if(rig)n.rig=rig}),
     valore:(id,k)=>{const o=MOS.tabelle.get(id);return o?TBM.formatta(TBM.valuta(o,TBM.rifParse(k)),(o.celle[k]||{}).fmt):null},M:TBM};
 })();
