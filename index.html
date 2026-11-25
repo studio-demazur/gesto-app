@@ -914,7 +914,7 @@ function cambioVista(){
   if(ED.on)posizionaEd();
   $('zoom').textContent=(V.s>=0.995?Math.round(V.s*100):fmt(V.s*100,V.s<0.1?2:1))+'%';richiedi('fondo','vivo','sopra');
   const k=V.s/inkV.s,dr=V.r-(inkV.r||0);L.inch.c.style.transform=dr?'translate('+V.ox+'px,'+V.oy+'px) rotate('+dr+'rad) scale('+k+') translate('+(-inkV.ox)+'px,'+(-inkV.oy)+'px)':'translate('+(V.ox-inkV.ox*k)+'px,'+(V.oy-inkV.oy*k)+'px) scale('+k+')';
-  clearTimeout(inkT);inkT=setTimeout(()=>{richiedi('inch');try{localStorage.setItem('gesto.view.'+foglioId,JSON.stringify([V.s,V.ox,V.oy,V.r]))}catch(e){self.__re&&self.__re(e)}},90);
+  clearTimeout(inkT);inkT=setTimeout(()=>{richiedi('inch');try{localStorage.setItem(vistaChiave(),JSON.stringify([V.s,V.ox,V.oy,V.r]))}catch(e){self.__re&&self.__re(e)}},90);
 };
   const s1=on('s1')?function(){s0();posSel()}:s0;
   const s2=on('s2')?function(){s1();const z=$('zoom').textContent;if(z&&z!==zoomU){if(zoomU){zoomT.textContent=z;zoomT.hidden=false;clearTimeout(zoomTm);zoomTm=setTimeout(()=>zoomT.hidden=true,1100)}zoomU=z}}:s1;
@@ -952,8 +952,8 @@ function aggStato(){
   stato(inVolo?'Salvataggio…':caricato?(locale?'Salvato sul dispositivo':'Salvato'):'Caricamento…');
 }
 function nuovoId(r){if(db){try{return db.collection(colDi(r||'tratti')).doc().id}catch(e){self.__re&&self.__re(e)}}return (r==='cad'?'e':'t')+Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
-function corpoT(t){const o={p:t.p,c:t.c,w:t.w,t:t.t};if(t.pr)o.pr=t.pr;if(t.ti)o.ti=t.ti;if(t.l)o.l=t.l;if(t.tv)o.tv=t.tv;if(t.pv)o.pv=t.pv;if(t.ax)o.ax=t.ax;return o}
-function corpoSf(b){const r=v=>Math.round(v*10)/10;return {a:b.a,x:r(b.x),y:r(b.y),w:r(b.w),h:r(b.h),o:b.o,f:b.f,nome:b.nome||'',t:b.t,pdf:b.pdf&&typeof b.pdf==='object'?b.pdf:undefined}}
+function corpoT(t){const o={p:t.p,c:t.c,w:t.w,t:t.t};if(t.pr)o.pr=t.pr;if(t.ti)o.ti=t.ti;if(t.l)o.l=t.l;if(t.tv)o.tv=t.tv;if(t.pv)o.pv=t.pv;if(t.ax)o.ax=t.ax;if(t.fg)o.fg=t.fg;return o}
+function corpoSf(b){const r=v=>Math.round(v*10)/10;return {a:b.a,x:r(b.x),y:r(b.y),w:r(b.w),h:r(b.h),o:b.o,f:b.f,nome:b.nome||'',t:b.t,pdf:b.pdf&&typeof b.pdf==='object'?b.pdf:undefined,fg:b.fg||undefined}}
 function corpo(r,o){if(r==='tratti')return corpoT(o);if(r==='sfondi')return corpoSf(o);const c={};for(const k in o)if(k!=='id'&&k[0]!=='_'&&o[k]!==undefined)c[k]=o[k];return c}
 function traccia(key,fn){
   inVolo++;aggStato();
@@ -1011,7 +1011,7 @@ function fogliSet(patch){
   const on=k=>!!(fogliSet_FASI&&fogliSet_FASI.has(k));
   const s0=function(patch){
   const f=foglio();Object.assign(f,patch);haFoglio=true;
-  const b={nome:f.nome||'Foglio 1',t:f.t||Date.now()};if(f.sc)b.sc=f.sc;if(f.o)b.o=f.o;if(f.qu)b.qu=f.qu;if(f.ts)b.ts=f.ts;else delete f.ts;if(f.formati&&f.formati.length)b.formati=f.formati;if(f.cartigli&&f.cartigli.length)b.cartigli=f.cartigli;if(f.cartDef)b.cartDef=f.cartDef;if(f.dp)b.dp=f.dp;if(f.uuid)b.uuid=f.uuid;if(Array.isArray(f.viste)&&f.viste.length)b.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)b.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)b.strutture=f.strutture;tsVer++;
+  const b={nome:f.nome||'Foglio 1',t:f.t||Date.now()};if(f.sc)b.sc=f.sc;if(f.o)b.o=f.o;if(f.qu)b.qu=f.qu;if(f.ts)b.ts=f.ts;else delete f.ts;if(f.formati&&f.formati.length)b.formati=f.formati;if(f.cartigli&&f.cartigli.length)b.cartigli=f.cartigli;if(f.cartDef)b.cartDef=f.cartDef;if(f.dp)b.dp=f.dp;if(f.uuid)b.uuid=f.uuid;if(Array.isArray(f.viste)&&f.viste.length)b.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)b.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)b.strutture=f.strutture;if(Array.isArray(f.fgl)&&f.fgl.length)b.fgl=f.fgl;tsVer++;
   if(db)traccia('fogli/'+f.id,()=>db.doc('fogli/'+f.id).set(b)).catch(()=>{});
   aggScala();datiVer++;indiceCad=null;richiedi();
 };
@@ -1045,7 +1045,7 @@ function esegui(cmd,registra){
   if(tutto)vincoliE().filter(v=>v.v!=null).forEach(ancora);cmd.add.filter(o=>o._r==='vincoli'&&o.v!=null).forEach(ancora);
   risolvi(tutto?null:tocca,{unisci:cmd,fissi:cmd.add.some(o=>o._r==='vincoli')?null:fissi,ancore}).catch(e=>console.warn(e))}:s0;
   const s2=on('s2')?function(c,r){s1(c,r);setTimeout(rendiPP,0)}:s1;
-  const s3=on('s3')?function(c,r){(c.add||[]).forEach(o=>{if((o._r||'tratti')!=='tratti'||o.tv!==undefined)return;const prec=MOS.tratti.get(o.id);if(prec&&prec.tv)o.tv=prec.tv;else if(!prec&&IMPAG&&TAV_FILTRO===null&&S.tav)o.tv=S.tav});return s2(c,r)}:s2;
+  const s3=on('s3')?function(c,r){(c.add||[]).forEach(o=>{if((o._r||'tratti')!=='tratti')return;const prec=MOS.tratti.get(o.id);if(o.fg===undefined){if(prec&&prec.fg)o.fg=prec.fg;else if(!prec&&o.tv===undefined&&!(IMPAG&&TAV_FILTRO===null&&S.tav))fgTimbra(o)}if(o.tv!==undefined)return;if(prec&&prec.tv)o.tv=prec.tv;else if(!prec&&IMPAG&&TAV_FILTRO===null&&S.tav)o.tv=S.tav});return s2(c,r)}:s2;
   const s4=on('s4')?function(cmd,...a){if(!RV.copia&&cmd&&[...(cmd.add||[]),...(cmd.del||[])].some(o=>o&&rvFrozen(o.tv))){rvAvviso();ricomponi();return}return s3(cmd,...a)}:s3;
   const s5=esegui_PASSO&&esegui_PASSO.p5?esegui_PASSO.p5(s4):s4;
   return s5.apply(this,arguments);
@@ -1056,9 +1056,9 @@ function ripeti(){if(ED.on){ripristinaSel();document.execCommand('redo');posizio
 
 const PARSE={
   tratti:(id,b)=>{if(!Array.isArray(b.p))return null;const prec=MOS.tratti.get(id)||SRV.tratti.get(id);
-    if(prec&&prec.t===b.t&&prec.p.length===b.p.length&&prec.l===b.l&&prec.tv===(b.tv||undefined))return prec;
-    return {id,p:b.p,pr:Array.isArray(b.pr)?b.pr:undefined,ti:Array.isArray(b.ti)?b.ti:undefined,c:b.c,w:+b.w||3,t:+b.t||0,l:b.l||undefined,tv:b.tv||undefined,pv:Array.isArray(b.pv)?b.pv:undefined,ax:typeof b.ax==='number'?b.ax:undefined}},
-  sfondi:(id,q)=>q.a?{id,_r:'sfondi',a:q.a,x:+q.x||0,y:+q.y||0,w:+q.w||100,h:+q.h||100,o:q.o==null?0.6:+q.o,f:q.f||'jpg',nome:q.nome||'',t:q.t||0,pdf:q.pdf&&typeof q.pdf==='object'?q.pdf:undefined}:null,
+    if(prec&&prec.t===b.t&&prec.p.length===b.p.length&&prec.l===b.l&&prec.tv===(b.tv||undefined)&&prec.fg===(b.fg||undefined))return prec;
+    return {id,p:b.p,pr:Array.isArray(b.pr)?b.pr:undefined,ti:Array.isArray(b.ti)?b.ti:undefined,c:b.c,w:+b.w||3,t:+b.t||0,l:b.l||undefined,tv:b.tv||undefined,pv:Array.isArray(b.pv)?b.pv:undefined,ax:typeof b.ax==='number'?b.ax:undefined,fg:b.fg||undefined}},
+  sfondi:(id,q)=>q.a?{id,_r:'sfondi',a:q.a,x:+q.x||0,y:+q.y||0,w:+q.w||100,h:+q.h||100,o:q.o==null?0.6:+q.o,f:q.f||'jpg',nome:q.nome||'',t:q.t||0,pdf:q.pdf&&typeof q.pdf==='object'?q.pdf:undefined,fg:q.fg||undefined}:null,
   parametri:(id,b)=>b.nome?Object.assign({id,_r:'parametri'},b):null,
   vincoli:(id,b)=>b.t&&Array.isArray(b.r)?Object.assign({id,_r:'vincoli'},b):null,
   cad:(id,b)=>{if(!b.k||!b.g)return null;const j=JSON.stringify(b),prec=MOS.cad.get(id)||SRV.cad.get(id);if(prec&&prec._j===j)return prec;return Object.assign({id,_r:'cad',_j:j},b)},
@@ -1082,7 +1082,7 @@ function apriFoglio(id){
   try{localStorage.setItem('gesto.sheet',id)}catch(e){self.__re&&self.__re(e)}
   unsub.forEach(u=>{try{u()}catch(e){self.__re&&self.__re(e)}});unsub=[];
   ricomponi();aggStato();aggScala();
-  vistaDaInquadrare=true;vrImposta(0);try{const v=JSON.parse(localStorage.getItem('gesto.view.'+id)||'null');if(v){V.s=v[0];V.ox=v[1];V.oy=v[2];vrImposta(IMPAG?0:(v[3]||0));vistaDaInquadrare=false;cambioVista()}}catch(e){self.__re&&self.__re(e)}
+  vistaDaInquadrare=true;vrImposta(0);try{const v=JSON.parse(localStorage.getItem(vistaChiave())||'null');if(v){V.s=v[0];V.ox=v[1];V.oy=v[2];vrImposta(IMPAG?0:(v[3]||0));vistaDaInquadrare=false;cambioVista()}}catch(e){self.__re&&self.__re(e)}
   if(!db){if(vistaDaInquadrare)inquadra();return}
   clearTimeout(timerCar);timerCar=setTimeout(()=>{if(!caricato)stato('Archivio non raggiungibile per ora')},10000);
   RAMI.forEach(r=>{const col=colDi(r);
@@ -1213,7 +1213,7 @@ var fattaEnt_FASI=new Set();
 function fattaEnt(o){
   const on=k=>!!(fattaEnt_FASI&&fattaEnt_FASI.has(k));
   const s0=function(o){for(const k in o)if(k[0]==='_')delete o[k];o._r='cad';if(bloccoMod&&!o.bk)o.bk=bloccoMod;o._j=JSON.stringify(corpo('cad',o));return o};
-  const s1=on('s1')?function(o){const prec=o.id&&MOS.cad.get(o.id);if(o.tv===undefined){if(prec&&prec.tv)o.tv=prec.tv;else if(!prec&&IMPAG&&TAV_FILTRO===null&&!o.bk&&S.tav)o.tv=S.tav}return s0(o)}:s0;
+  const s1=on('s1')?function(o){const prec=o.id&&MOS.cad.get(o.id);if(o.tv===undefined){if(prec&&prec.tv)o.tv=prec.tv;else if(!prec&&IMPAG&&TAV_FILTRO===null&&!o.bk&&S.tav)o.tv=S.tav}if(o.fg===undefined){if(prec&&prec.fg)o.fg=prec.fg;else if(!prec)fgTimbra(o)}return s0(o)}:s0;
   const s2=on('s2')?function(o){if(isT(o)){for(const k in o)if(k[0]==='_')delete o[k];o._r='tratti';return o}return s1(o)}:s1;
   return s2.apply(this,arguments);
 }
@@ -3711,7 +3711,7 @@ let bloccoMod=null,revBlocchi=0,defVer=-1,defMap=new Map(),profIns=0;const defPv
 var visibileBase_FASI=new Set();
 function visibileBase(e){
   const on=k=>!!(visibileBase_FASI&&visibileBase_FASI.has(k));
-  const s0=function(e){if(lyDi(e.l||'generale').vis===false)return false;if(e.col){const c=MOS.collezioni.get(e.col);if(c&&c.vis===false)return false}const tf=filtroTav();if(tf&&!visTav(e,tf))return false;return true};
+  const s0=function(e){if(!fgVede(e,filtroTav()))return false;if(lyDi(e.l||'generale').vis===false)return false;if(e.col){const c=MOS.collezioni.get(e.col);if(c&&c.vis===false)return false}const tf=filtroTav();if(tf&&!visTav(e,tf))return false;return true};
   const s1=on('s1')?function(e){const tf=TAV_FILTRO;
   if(tf&&tf.carta)return e.tv===tf.carta&&baseLyCol(e);
   if(e.tv){if(tf!==null)return false;return !!IMPAG&&e.tv===S.tav&&baseLyCol(e)}
@@ -4169,7 +4169,7 @@ function pdfFinale(doc){
    è diversa da quella del foglio. */
 function pdfModello(doc,f,ox,oy,pesoFisso){
   const d=den(),carta=f*d,kl=pesoFisso?1:carta,X=x=>x*f+ox,Y=y=>y*f+oy;
-  elencoSfondi().forEach(b=>{if(b.pdf&&PF_SKIP)return;const r=immagine(b.a);if(!r.ok)return;
+  sfondiVisti().forEach(b=>{if(b.pdf&&PF_SKIP)return;const r=immagine(b.a);if(!r.ok)return;
     try{doc.setGState(new doc.GState({opacity:b.o}));doc.addImage(r.img,b.f==='png'?'PNG':'JPEG',X(b.x),Y(b.y),b.w*f,b.h*f,undefined,'FAST');doc.setGState(new doc.GState({opacity:1}))}catch(e){console.warn(e)}});
   const q2c=(ax,ay,kx,ky,bx,by)=>doc.curveTo(ax+2/3*(kx-ax),ay+2/3*(ky-ay),bx+2/3*(kx-bx),by+2/3*(ky-by),bx,by);
   doc.setLineDashPattern([],0);doc.setLineCap('round');doc.setLineJoin('round');
@@ -4784,8 +4784,8 @@ function avviaArchivio(d){
   db=d;
   db.collection('fogli').onSnapshot(snap=>{
     const loc=fogli.find(f=>f.id===foglioId);
-    fogli=snap.docs.map(x=>{const b=x.data()||{};return {id:x.id,nome:b.nome,t:b.t||0,sc:b.sc,o:b.o,qu:b.qu,ts:b.ts||undefined,formati:Array.isArray(b.formati)?b.formati:undefined,cartigli:Array.isArray(b.cartigli)?b.cartigli:undefined,cartDef:b.cartDef||undefined,dp:b.dp||undefined,uuid:b.uuid||undefined,viste:Array.isArray(b.viste)?b.viste:undefined,cartelle:Array.isArray(b.cartelle)?b.cartelle:undefined,strutture:Array.isArray(b.strutture)?b.strutture:undefined,esiste:true}}).sort((a,b)=>a.t-b.t);
-    if(loc&&catene.has('fogli/'+loc.id)){const i=fogli.findIndex(f=>f.id===loc.id);if(i>=0)fogli[i]=Object.assign(fogli[i],{sc:loc.sc,o:loc.o,qu:loc.qu,ts:loc.ts,formati:loc.formati,cartigli:loc.cartigli,cartDef:loc.cartDef,dp:loc.dp,uuid:loc.uuid,viste:loc.viste,cartelle:loc.cartelle,strutture:loc.strutture});else fogli.push(loc)}
+    fogli=snap.docs.map(x=>{const b=x.data()||{};return {id:x.id,nome:b.nome,t:b.t||0,sc:b.sc,o:b.o,qu:b.qu,ts:b.ts||undefined,formati:Array.isArray(b.formati)?b.formati:undefined,cartigli:Array.isArray(b.cartigli)?b.cartigli:undefined,cartDef:b.cartDef||undefined,dp:b.dp||undefined,uuid:b.uuid||undefined,viste:Array.isArray(b.viste)?b.viste:undefined,cartelle:Array.isArray(b.cartelle)?b.cartelle:undefined,strutture:Array.isArray(b.strutture)?b.strutture:undefined,fgl:Array.isArray(b.fgl)?b.fgl:undefined,esiste:true}}).sort((a,b)=>a.t-b.t);
+    if(loc&&catene.has('fogli/'+loc.id)){const i=fogli.findIndex(f=>f.id===loc.id);if(i>=0)fogli[i]=Object.assign(fogli[i],{sc:loc.sc,o:loc.o,qu:loc.qu,ts:loc.ts,formati:loc.formati,cartigli:loc.cartigli,cartDef:loc.cartDef,dp:loc.dp,uuid:loc.uuid,viste:loc.viste,cartelle:loc.cartelle,strutture:loc.strutture,fgl:loc.fgl});else fogli.push(loc)}
     if(fogli.some(f=>f.id===foglioId))haFoglio=true;
     else if(fogli.length&&!tratti.size&&!(snap.metadata&&snap.metadata.fromCache)&&foglioId==='f1'){foglioId=fogli[0].id;apriFoglio(foglioId)}
     menuFogli();aggScala();tsVer++;datiVer++;richiedi();
@@ -4830,7 +4830,7 @@ async function datiSfondo(b){
 }
 async function esportaFoglio(){
   const f=foglio(),o={formato:'gesto',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
-  if(f.sc)o.foglio.sc=f.sc;if(f.o)o.foglio.o=f.o;if(f.qu)o.foglio.qu=f.qu;if(f.ts)o.foglio.ts=f.ts;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;if(f.cartDef)o.foglio.cartDef=f.cartDef;if(f.dp)o.foglio.dp=f.dp;if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;let n=0,persi=0;
+  if(f.sc)o.foglio.sc=f.sc;if(f.o)o.foglio.o=f.o;if(f.qu)o.foglio.qu=f.qu;if(f.ts)o.foglio.ts=f.ts;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;if(f.cartDef)o.foglio.cartDef=f.cartDef;if(f.dp)o.foglio.dp=f.dp;if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(Array.isArray(f.fgl)&&f.fgl.length)o.foglio.fgl=f.fgl;let n=0,persi=0;
   RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
   if(!n){notaEx('Il foglio è vuoto');return}
   notaEx('Preparo il file del foglio…');
@@ -4869,7 +4869,7 @@ async function importaFoglio(file){
   for(const r of [...(o.rami.sfondi||[]),...(o.rami.tavole||[])]){for(const a of pgAssetsPdf(r.pdf)){if(mappa.has(a))continue;const dati=o.immagini&&o.immagini[a];if(!dati||!assets){persi++;continue}
     try{const q=daData(dati),u=await assets.upload(q,{type:q.type});mappa.set(a,u.id);immagine(u.id,u.url)}catch(e){persi++}}pgRimappa(r,mappa)}
   const base=(o.foglio&&o.foglio.nome)||'Foglio';let nome=base,k=1;while(fogli.some(f=>f.nome===nome)){nome=base+(k===1?' (copia)':' (copia '+k+')');k++}
-  const id=idCasuale('f'),nf={id,nome,t:Date.now()};if(o.foglio){if(o.foglio.sc)nf.sc=o.foglio.sc;if(o.foglio.o)nf.o=o.foglio.o;if(o.foglio.qu)nf.qu=o.foglio.qu;if(o.foglio.ts)nf.ts=o.foglio.ts;if(Array.isArray(o.foglio.formati))nf.formati=o.foglio.formati;if(Array.isArray(o.foglio.cartigli))nf.cartigli=o.foglio.cartigli;if(o.foglio.cartDef)nf.cartDef=o.foglio.cartDef;if(o.foglio.dp)nf.dp=o.foglio.dp;if(Array.isArray(o.foglio.viste)){nf.viste=o.foglio.viste;setTimeout(()=>vsWarn(nf.viste),0)}if(Array.isArray(o.foglio.cartelle))nf.cartelle=o.foglio.cartelle;if(Array.isArray(o.foglio.strutture))nf.strutture=o.foglio.strutture;}if(o._doc&&!fogli.some(q=>q.uuid===o._doc))nf.uuid=o._doc;
+  const id=idCasuale('f'),nf={id,nome,t:Date.now()};if(o.foglio){if(o.foglio.sc)nf.sc=o.foglio.sc;if(o.foglio.o)nf.o=o.foglio.o;if(o.foglio.qu)nf.qu=o.foglio.qu;if(o.foglio.ts)nf.ts=o.foglio.ts;if(Array.isArray(o.foglio.formati))nf.formati=o.foglio.formati;if(Array.isArray(o.foglio.cartigli))nf.cartigli=o.foglio.cartigli;if(o.foglio.cartDef)nf.cartDef=o.foglio.cartDef;if(o.foglio.dp)nf.dp=o.foglio.dp;if(Array.isArray(o.foglio.viste)){nf.viste=o.foglio.viste;setTimeout(()=>vsWarn(nf.viste),0)}if(Array.isArray(o.foglio.cartelle))nf.cartelle=o.foglio.cartelle;if(Array.isArray(o.foglio.strutture))nf.strutture=o.foglio.strutture;if(Array.isArray(o.foglio.fgl))nf.fgl=o.foglio.fgl;}if(o._doc&&!fogli.some(q=>q.uuid===o._doc))nf.uuid=o._doc;
   fogli.push(nf);foglioId=id;menuFogli();apriFoglio(id);fogliSet({});
   const add=[];let n=0;
   RAMI.forEach(r=>(o.rami[r]||[]).forEach(d=>{if(!d||!d.id)return;const c=Object.assign({},d);delete c.id;
@@ -4898,6 +4898,7 @@ function immagine(a,url){
   if(url)img.src=url;else if(assets&&assets.locale)assets.url(a).then(u=>{img.src=u},()=>{r.err=true;richiedi('fondo')});else img.src='/_blob/'+a;return r;
 }
 const elencoSfondi=()=>catSpentaSfondi()?[]:[...sfondi.values()].sort((a,b)=>(a.t||0)-(b.t||0));
+const sfondiVisti=()=>elencoSfondi().filter(b=>fgVede(b,filtroTav()));
 /* SC2 (owner, 25.11.2026): disegnaSfondi in one body.
    The layers are the stages of this one body, written as they were, each calling the stage it held below it; each stage is active from the point
    of the loading where its layer stood (disegnaSfondi_FASI). */
@@ -4905,7 +4906,7 @@ var disegnaSfondi_FASI=new Set();
 function disegnaSfondi(x,esporta){
   const on=k=>!!(disegnaSfondi_FASI&&disegnaSfondi_FASI.has(k));
   const s0=function(x,esporta){
-  elencoSfondi().forEach(b=>{const r=immagine(b.a);
+  sfondiVisti().forEach(b=>{const r=immagine(b.a);
     if(r.ok){x.save();x.globalAlpha=b.o;x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(r.img,b.x,b.y,b.w,b.h);x.restore()}
     else if(!esporta){x.save();x.strokeStyle=T.line;x.lineWidth=1/V.s;x.setLineDash([6/V.s,4/V.s]);x.strokeRect(b.x,b.y,b.w,b.h);x.restore()}});
 };
@@ -4925,7 +4926,7 @@ function disegnaSfondi(x,esporta){
 function iniziaSfondo(sx,sy){
   const [wx,wy]=s2w(sx,sy),b=sfondi.get(selSf),dentro=q=>wx>=q.x&&wx<=q.x+q.w&&wy>=q.y&&wy<=q.y+q.h;
   if(b){const h=w2s(b.x+b.w,b.y+b.h);if(Math.hypot(h[0]-sx,h[1]-sy)<24){Object.assign(ptr,{b,modo:'scala',r:b.h/b.w});return}}
-  let hit=null;if(b&&dentro(b))hit=b;else elencoSfondi().forEach(q=>{if(dentro(q))hit=q});
+  let hit=null;if(b&&dentro(b))hit=b;else sfondiVisti().forEach(q=>{if(dentro(q))hit=q});
   if(!hit)return;
   if(hit.id!==selSf){selSf=hit.id;rendiSf()}
   Object.assign(ptr,{b:hit,modo:'muovi',dx:wx-hit.x,dy:wy-hit.y});richiedi('sopra');
@@ -4943,7 +4944,7 @@ var rendiSf_FASI=new Set();
 function rendiSf(){
   const on=k=>!!(rendiSf_FASI&&rendiSf_FASI.has(k));
   const s0=function(){
-  const Ls=$('listaSf');Ls.textContent='';const a=elencoSfondi();
+  const Ls=$('listaSf');Ls.textContent='';const a=sfondiVisti();
   if(!a.length){const d=document.createElement('div');d.className='vuoto';d.textContent='Nessuno sfondo su questo foglio';Ls.appendChild(d)}
   a.forEach(b=>{const r=document.createElement('button');r.className='voce';r.setAttribute('aria-pressed',String(b.id===selSf));r.textContent=b.nome||'Sfondo';
     r.onclick=()=>{selSf=b.id;rendiSf();richiedi('sopra')};Ls.appendChild(r)});
@@ -5025,7 +5026,7 @@ async function inserisci(blob,f,pw,ph,nome){
   immagine(r.id,r.url);
   const ww=Math.min(V.W*0.8,V.H*0.8*pw/ph)/V.s,hh=ww*ph/pw,[cx,cy]=s2w(V.W/2,V.H/2);
   const id=db.collection(colDi('sfondi')).doc().id,b={id,_r:'sfondi',a:r.id,x:cx-ww/2,y:cy-hh/2,w:ww,h:hh,o:0.6,f,nome:nome||'Sfondo',t:Date.now()};
-  assicuraFoglio();salva('sfondi',id,'set',b);selSf=id;ricomponi();
+  assicuraFoglio();fgTimbra(b);salva('sfondi',id,'set',b);selSf=id;ricomponi();
   notaSf('Sfondo inserito. «Tara» per portarlo in scala.');
 }
 
@@ -5697,7 +5698,7 @@ function visTav(e,t){
 var visTavT_FASI=new Set();
 function visTavT(tr){
   const on=k=>!!(visTavT_FASI&&visTavT_FASI.has(k));
-  const s0=function(tr){const t=filtroTav();if(!t||!t.vis)return true;const v=t.vis;
+  const s0=function(tr){const t=filtroTav();if(!fgVede(tr,t))return false;if(!t||!t.vis)return true;const v=t.vis;
   if(v.solo&&v.solo.length)return false;if(v.cat&&v.cat.includes('schizzi'))return false;if(v.ly&&v.ly.includes(tr.l||'schizzo'))return false;return true};
   const s1=on('s1')?function(tr){const tf=TAV_FILTRO;if(tf&&tf.carta)return tr.tv===tf.carta;if(tr.tv){if(tf!==null)return false;return !!IMPAG&&tr.tv===S.tav}if(IMPAG&&tf===null)return false;return s0(tr)}:s0;
   return s1.apply(this,arguments);
@@ -5891,7 +5892,7 @@ function finestre(t,G){if(!t||t.pdf||(t.noFin&&!(t.fin&&t.fin.length)))return []
   return [{id:'f1',n:1,x:G.ax0,y:G.ay0,w:G.aw,h:G.ah,c:t.c||[0,0],sc:G.sc,vis:t.vis,sost:t.sost,tit:t.tit,virt:true}]}
 const finGeo=f=>({mx0:f.c[0]-f.w*f.sc/2,my0:f.c[1]-f.h*f.sc/2,mw:f.w*f.sc,mh:f.h*f.sc});
 const finAtt=t=>{const L=finestre(t);return L.find(f=>f.id===S.finAtt)||L[0]||null};
-let filtroFin=(t,f)=>({id:t.id+'/'+f.id,vis:f.vis||{},sost:f.sost||null});
+let filtroFin=(t,f)=>({id:t.id+'/'+f.id,vis:f.vis||{},sost:f.sost||null,fg:f.fg||null});
 const recFin=f=>{const o={id:f.id,x:r1m(f.x),y:r1m(f.y),w:r1m(f.w),h:r1m(f.h),c:f.c,sc:f.sc};['vis','sost','tit'].forEach(k=>{if(f[k]!=null&&f[k]!=='')o[k]=f[k]});return o};
 function finSet(id,patch){const t=tavAtt();if(!t)return;
   if(!(t.fin&&t.fin.length)&&Object.keys(patch).every(k=>['c','sc','vis','sost','tit'].includes(k))){tavSet(patch);richiedi();return}
@@ -6735,8 +6736,8 @@ function rendiCol(){
   clearTimeout(miniT);miniT=setTimeout(miniature,700)};
   const s1=on('s1')?function(){if(!IMPAG)return;const cur=tavAtt();if(cur&&cur.pdf)DC.aperti.add(cur.pdf.d);
   if(cur){let p=dcDir(cur);while(p){DC.chiuse.delete(p);const c=dcCartelle().find(x=>x.id===p);p=c&&dcEsiste(c.p)?c.p:''}}
-  const key=JSON.stringify([ordineTav().map(t=>[t.id,t.nome,t.dir,t.fmt,t.pdf&&[t.pdf.d,t.pdf.nm,t.pdf.p]]),dcCartelle(),[...DC.chiuse],[...DC.aperti],[...DC.docChiusi],S.tav,DC.rinomina]);
-  if(key!==dcChiave){dcChiave=key;dcL.textContent='';dcRiempi('',dcL);if(!dcL.children.length){const v=document.createElement('div');v.className='dcVuoto';v.textContent='Nessuna tavola';dcL.appendChild(v)}}
+  const key=JSON.stringify([ordineTav().map(t=>[t.id,t.nome,t.dir,t.fmt,t.pdf&&[t.pdf.d,t.pdf.nm,t.pdf.p]]),dcCartelle(),[...DC.chiuse],[...DC.aperti],[...DC.docChiusi],S.tav,DC.rinomina,fgLista()]);
+  if(key!==dcChiave){dcChiave=key;dcL.textContent='';const fgb=document.createElement('div');fgb.id='dcFg';fgb.className='lmFg dcFg';dcL.appendChild(fgb);fgMenu();dcRiempi('',dcL);if(!dcL.children.length){const v=document.createElement('div');v.className='dcVuoto';v.textContent='Nessuna tavola';dcL.appendChild(v)}}
   else dcL.querySelectorAll('.dcI').forEach(it=>it.classList.toggle('att',it.dataset.id===S.tav));
   clearTimeout(miniT);miniT=setTimeout(miniature,700)}:s0;
   const s2=on('s2')?function(){s1();erNav();erPanApri()}:s1;
@@ -7880,7 +7881,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.118';
+const VERSIONE_GESTO='0.119';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -7909,7 +7910,7 @@ logo.innerHTML=GESTO_SVG;
   /* ---- il contenuto del foglio corrente, letto subito: il cambio di foglio durante la lettura delle immagini non lo altera ---- */
   async function contenuto(){
     const f=foglio(),o={formato:'gesto',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
-    ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
+    ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(Array.isArray(f.fgl)&&f.fgl.length)o.foglio.fgl=f.fgl;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
     let n=0,persi=0;RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
     const imm=[...elencoSfondi()];elencoSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a});if(tv.pdf&&tv.pdf.a)imm.push({a:tv.pdf.a})});pgTuttiAsset().forEach(a=>imm.push({a}));
     if(!f.uuid)fogliSet({uuid:uuid7()});const u=f.uuid,nome=f.nome||'Foglio';
@@ -8746,7 +8747,7 @@ async function pfApri(file,only){
     const id=db.collection(colDi('sfondi')).doc().id;
     const b={id,_r:'sfondi',a:r.id,x:x0,y,w,h,o:1,f,nome:nm+(N>1?' · p. '+n:''),t:t0+n,
       pdf:{a:up.id,d:docId,nm,p:n,n:N,W:pfR2(W),H:pfR2(H),T:v1.transform.map(q=>Math.round(q*1e6)/1e6),fl,v,im:[],fx:1}};
-    salva('sfondi',id,'set',b);if(!first)first=b;y+=h+gap}
+    fgTimbra(b);salva('sfondi',id,'set',b);if(!first)first=b;y+=h+gap}
   PF.docs.set(up.id,Promise.resolve(doc));
   selSf=first.id;ricomponi();rendiSf();
   const p=first.w*0.04;vistaLibera(first.x-p,first.y-p,first.w+2*p,first.h+2*p);
@@ -11521,9 +11522,9 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
   /* ---- the row in the logo menu ---- */
   const riga=document.createElement('div');riga.className='lmR lmRec';(document.querySelector('.lmenu')||document.body).appendChild(riga);
   function aggMenu(){const c=REG.cartella;
-    riga.innerHTML='<span class="recDot"></span><span class="recS"></span>'+(FSOK?'<button type="button" data-a="c">'+(c?'Cartella':'Scegli cartella')+'</button>':'')+'<button type="button" class="rec" data-a="r">'+(REC.on?'Ferma':'Registra')+'</button>';
-    riga.querySelector('.recS').textContent=REC.on?'Registrazione in corso':c?'In «'+c.name+'»':FSOK?'Cartella non scelta':'Nell’app';
-    riga.title='Registra le operazioni per la diagnosi (Ctrl + Alt + R)';
+    riga.innerHTML=(FSOK?'<button type="button" class="b" data-a="c" title="'+(c?'Cartella delle registrazioni: «'+c.name+'»':'Scegli la cartella delle registrazioni')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>':'')+'<button type="button" class="b rec" data-a="r" title="'+(REC.on?'Ferma la registrazione':'Registra le operazioni (Ctrl + Alt + R)')+'">'+(REC.on?'<svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="#AC7853"/></svg>':'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="#AC7853"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>')+'</button>';
+    
+    riga.title='';
     riga.querySelectorAll('button').forEach(x=>x.onclick=e=>{e.stopPropagation();if(x.dataset.a==='c')scegliCartella();else REC.on?ferma():avvia()})}
   /* REC1: Ctrl + Alt + R (Ctrl + Maiusc + R ricarica la pagina in Edge e perderebbe la registrazione) */
   addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&!e.metaKey&&(e.code==='KeyR')){e.preventDefault();e.stopImmediatePropagation();REC.on?ferma():avvia()}},true);
@@ -11562,6 +11563,98 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
       const s0=tr.stato0||{};if(s0.impag&&!IMPAG)$('tSpazio').click();if(s0.tool)strumento(s0.tool);
       const v=s0.vista;if(v){V.s=v[0];V.ox=v[1];V.oy=v[2];V.r=v[3]||0;V.c=Math.cos(V.r);V.n=Math.sin(V.r);cambioVista()}sel.clear();PARTI=[];aggCtx();richiedi();return true},
     geometria:()=>{const o={};RAMI.forEach(r=>{o[r]=[...MOS[r].values()].map(x=>corpo(r,x))});return o}};
+})();
+
+/* ---------- 119 PR1-PR5, MN1-MN7 (owner, 25.11.2026) ----------
+   PR1 a .dmz file is a project. PR3 a project holds several sheets, like the sheets of a spreadsheet; each sheet is its own model space.
+   PR4 one Project Manager and one layout per project. PR5 a file written before holds one sheet: nothing changes in it.
+   Data: the project keeps its sheets as fgl:[{id,nome}] (absent: one sheet 'm1'); an element of a sheet other than the first carries fg:id.
+   Elements of the first sheet carry nothing, so every drawing written before is the first sheet as it was.
+   MN1 the logo menu is the panel of the app and of the project, in sections with a title. MN2 the head stands on one baseline.
+   MN3 every command once. MN4 the file state names the file. MN6 a name is renamed with a double tap. MN7 recording: two icons. */
+function fgStato(){return fgStato.s||(fgStato.s={att:null,per:null})}
+function fgLista(){const f=foglio();return Array.isArray(f.fgl)&&f.fgl.length?f.fgl:[{id:'m1',nome:'Foglio 1'}]}
+function fgPrimo(){return fgLista()[0].id}
+function fgAtt(){const st=fgStato(),L=fgLista();if(st.per!==foglioId){st.per=foglioId;st.att=null}
+  if(!st.att||!L.some(x=>x.id===st.att)){let s=null;try{s=localStorage.getItem('gesto.fg.'+foglioId)}catch(e){self.__re&&self.__re(e)}st.att=L.some(x=>x.id===s)?s:L[0].id}return st.att}
+/* the sheet of an element: what it carries, or the first */
+function fgDi(o){return o&&o.fg||fgPrimo()}
+/* PR3: in the model only the open sheet; in a window of a plate the sheet of the window (the first, until the window chooses); paper is paper */
+function fgVede(o,tf){if(!o||o.tv||o.bk)return true;if(tf&&tf.carta)return true;if(tf)return fgDi(o)===(tf.fg||fgPrimo());if(IMPAG)return true;return fgDi(o)===fgAtt()}
+/* a new element of the model goes to the open sheet */
+function fgTimbra(o){if(!o||o.fg!==undefined||o.tv||o.bk||IMPAG)return o;const a=fgAtt();if(a!==fgPrimo())o.fg=a;return o}
+function vistaChiave(){return 'gesto.view.'+foglioId+(IMPAG||fgAtt()===fgPrimo()?'':'.'+fgAtt())}
+function fgVai(id){if(id===fgAtt())return;
+  try{localStorage.setItem(vistaChiave(),JSON.stringify([V.s,V.ox,V.oy,V.r]))}catch(e){self.__re&&self.__re(e)}
+  if(ED.on)chiudiEd(true);if(ptr)termina();sel.clear();pivotTemp=null;
+  fgStato().att=id;try{localStorage.setItem('gesto.fg.'+foglioId,id)}catch(e){self.__re&&self.__re(e)}
+  indice=null;indiceCad=null;datiVer++;tsVer++;
+  let v=null;try{v=JSON.parse(localStorage.getItem(vistaChiave())||'null')}catch(e){self.__re&&self.__re(e)}
+  if(v){V.s=v[0];V.ox=v[1];V.oy=v[2];vrImposta(v[3]||0);cambioVista()}else{vrImposta(0);inquadra()}
+  richiedi();rendiSf();aggCtx();try{rendiPP()}catch(e){self.__re&&self.__re(e)}fgMenu()}
+function fgNuovo(){const L=fgLista().slice();let n=L.length+1;const nomi=new Set(L.map(x=>x.nome));while(nomi.has('Foglio '+n))n++;
+  const id='m'+Date.now().toString(36);L.push({id,nome:'Foglio '+n});fogliSet({fgl:L});fgVai(id);fgMenu();return id}
+function fgRinomina(id,nome){nome=(nome||'').trim();if(!nome)return;const L=fgLista().map(x=>x.id===id?{id:x.id,nome}:x);fogliSet({fgl:L});fgMenu();try{rendiCol()}catch(e){self.__re&&self.__re(e)}}
+/* the list of sheets in the menu and in the Project Manager: a tap opens, a double tap renames */
+function fgRiga(x,onApri){const r=document.createElement('div');r.className='fgR'+(x.id===fgAtt()&&!IMPAG?' att':'');r.dataset.id=x.id;r.title=x.nome;
+  r.innerHTML='<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16" opacity=".55"/></svg><span></span>';r.querySelector('span').textContent=x.nome;
+  let tapT=0;r.onclick=e=>{e.stopPropagation();const now=Date.now();if(now-tapT<350){tapT=0;fgEdita(r,x);return}tapT=now;setTimeout(()=>{if(tapT===now)onApri(x.id)},360)};return r}
+function fgEdita(r,x){const sp=r.querySelector('span'),i=document.createElement('input');i.type='text';i.value=x.nome;i.className='fgIn';sp.replaceWith(i);i.focus();i.select();
+  let fatto=false;const fine=ok=>{if(fatto)return;fatto=true;if(ok)fgRinomina(x.id,i.value);else fgMenu()};
+  i.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();fine(true)}else if(e.key==='Escape'){e.preventDefault();fine(false)}});
+  i.addEventListener('blur',()=>fine(true));i.addEventListener('pointerdown',e=>e.stopPropagation())}
+function fgMenu(){['lmFg','dcFg'].forEach(i=>{const box=document.getElementById(i);if(box)fgRiempi(box)})}
+function fgRiempi(box){box.textContent='';
+  const h=document.createElement('div');h.className='fgH';h.innerHTML='<span>Fogli</span><button type="button" title="Nuovo foglio del progetto">+</button>';h.querySelector('button').onclick=e=>{e.stopPropagation();fgNuovo()};box.appendChild(h);
+  fgLista().forEach(x=>box.appendChild(fgRiga(x,id=>{if(IMPAG){esciImpag();setTimeout(()=>fgVai(id),60)}else fgVai(id)})))}
+(()=>{
+  /* MN1: sections with a title; the existing commands move in, each once (MN3) */
+  const lm=document.querySelector('.lmenu');if(!lm)return;
+  const sez=(nome,cls)=>{const s=document.createElement('div');s.className='lmSez'+(cls?' '+cls:'');const t=document.createElement('div');t.className='lmST';t.textContent=nome;s.appendChild(t);return s};
+  const bott=t=>[...lm.querySelectorAll('#lmA button,#lmB button')].find(b=>b.title===t);
+  const riga=(...els)=>{const r=document.createElement('div');r.className='lmR ic';els.filter(Boolean).forEach(e=>r.appendChild(e));return r};
+  const SV2=d=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
+  const testa=lm.querySelector('.lmT'),fileR=lm.querySelector('.lmFile'),nb=document.getElementById('nuovoBox'),scR=document.getElementById('lmS'),lmF=document.getElementById('lmF'),rec=lm.querySelector('.lmRec');
+  const salva=bott('Salva su file'),apri=bott('Apri da file');if(salva){salva.title='Salva';salva.innerHTML=SV2('<path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M8 3v5h7V3M7 21v-7h10v7"/>')}
+  if(apri)apri.title='Apri';
+  const nuovo=document.getElementById('nuovo');if(nuovo){nuovo.title='Nuovo progetto';nuovo.classList.add('b');nuovo.innerHTML=SV2('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/>')}
+  /* Progetto: name, file, commands, sheets */
+  const sP=sez('Progetto','lmSezP');const nome=document.createElement('div');nome.className='lmPrN';nome.title='Doppio tocco per rinominare il progetto';sP.appendChild(nome);
+  if(fileR)sP.appendChild(fileR);
+  const sel=document.getElementById('foglio');if(sel){sel.title='Progetti in questo dispositivo';sel.classList.add('lmPrSel')}
+  sP.appendChild(riga(nuovo,apri,salva,sel));if(nb)sP.appendChild(nb);
+  const fg=document.createElement('div');fg.id='lmFg';fg.className='lmFg';sP.appendChild(fg);
+  const sS=sez('Scambio');sS.appendChild(riga(bott('Importa DXF'),bott('Esporta'),bott('Aggancia blocco esterno'),bott('Importa blocco da DXF'),bott('Sfondo')));
+  const sD=sez('Disegno');const rD=riga(bott('Layer'),bott('Parametri e vincoli'),bott('Stili di testo'));if(scR){const s=scR.querySelector('select');if(s)rD.insertBefore(s,rD.firstChild)}sD.appendChild(rD);
+  const sI=sez('Impaginazione');sI.appendChild(riga(bott('Impaginazione'),bott('Identità'),bott('Dati di progetto')));
+  const sT=sez('Strumenti');sT.appendChild(riga(bott('Riga di comando'),bott('Trova e sostituisci'),bott('Taratura della scrittura'),bott('Impostazioni')));
+  const sR=sez('Registrazione','lmSezR');if(rec)sR.appendChild(rec);
+  /* what is left of the old rows (nothing on the desktop) stays, hidden when empty */
+  const prima=lm.querySelector('.lmL.soloTel')||null;
+  [sP,sS,sD,sI,sT,sR].forEach(s=>lm.insertBefore(s,prima&&prima.parentNode===lm?prima:null));
+  [lmF,scR,document.getElementById('lmA'),document.getElementById('lmB')].forEach(r=>{if(r&&!r.querySelector('button,select'))r.hidden=true});
+  /* MN6: the project renamed with a double tap */
+  const aggNome=()=>{if(nome.querySelector('input'))return;nome.textContent=foglio().nome||'Progetto'};
+  nome.addEventListener('dblclick',()=>{const i=document.createElement('input');i.type='text';i.className='fgIn';i.value=foglio().nome||'';nome.textContent='';nome.appendChild(i);i.focus();i.select();
+    let fatto=false;const fine=ok=>{if(fatto)return;fatto=true;const v=i.value.trim();i.remove();if(ok&&v){fogliSet({nome:v});try{menuFogli()}catch(e){self.__re&&self.__re(e)}}aggNome()};
+    i.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();fine(true)}else if(e.key==='Escape'){e.preventDefault();fine(false)}});i.addEventListener('blur',()=>fine(true))});
+  const st=document.createElement('style');st.textContent=
+    '.lmenu{width:auto;min-width:380px}'+
+    '.lmenu .lmT{flex-wrap:nowrap;align-items:baseline;white-space:nowrap}.lmenu .lmT .lmMotto{order:1;flex-basis:auto}.lmenu .lmT .lmVer{order:2;margin-left:auto;padding-left:14px}.lmenu .lmT .lmDm{order:3}'+
+    '.lmSez{display:flex;flex-direction:column;gap:6px;padding:9px 0 8px;border-bottom:1px solid var(--line)}.lmSez:last-of-type{border-bottom:0;padding-bottom:0}'+
+    '.lmST{font:600 10.5px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}'+
+    '.lmSez .lmR.ic{gap:4px;flex-wrap:wrap;align-items:center}.lmPrN{font:600 16px var(--sans);cursor:text;padding:1px 0}.lmPrN .fgIn{font:inherit}'+
+    '.lmSez .lmPrSel{margin-left:auto;max-width:170px}'+
+    '.lmFg{display:flex;flex-direction:column;gap:2px;margin-top:2px}.fgH{display:flex;align-items:center;justify-content:space-between;font:600 10.5px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding-top:2px}'+
+    '.fgH button{width:26px;height:24px;border:0;background:none;color:var(--fg);font:400 18px var(--sans);cursor:pointer;border-radius:6px}.fgH button:hover{box-shadow:inset 0 0 0 1px var(--line)}'+
+    '.fgR{display:flex;align-items:center;gap:8px;min-height:28px;padding:0 8px;border-radius:7px;cursor:pointer;font-size:13.5px}.fgR:hover{box-shadow:inset 0 0 0 1px var(--line)}'+
+    '.fgR.att{box-shadow:inset 0 0 0 1.5px var(--fg);font-weight:600}.fgR svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6}'+
+    '.fgIn{flex:1;min-width:0;height:24px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--fg);padding:0 6px;font:inherit}'+
+    '.dcFg{padding:0 2px 6px;border-bottom:1px solid var(--line);margin-bottom:2px}.lmSez.lmSezR{border-bottom:0;padding-bottom:0}.lmSezR .lmRec{gap:4px;justify-content:flex-start}.lmSezR .lmRec button{margin-left:0!important;width:40px;height:36px;padding:0;border:0!important;background:none;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;color:var(--fg)}.lmSezR .lmRec button:hover{box-shadow:inset 0 0 0 1px var(--line)}.lmSezR .lmRec svg{width:22px;height:22px}.lmSezR .lmRec .recDot,.lmSezR .lmRec .recS{display:none}';
+  document.head.appendChild(st);
+  const agg=()=>{aggNome();fgMenu()};agg();
+  const lg=document.getElementById('logo');if(lg)lg.addEventListener('click',()=>setTimeout(agg,0));
+  window.__gestoFG={lista:fgLista,att:fgAtt,vai:fgVai,nuovo:fgNuovo,rinomina:fgRinomina,di:fgDi};
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
