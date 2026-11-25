@@ -612,7 +612,7 @@ button.icn svg.icp{width:18px;height:18px;flex:none}
   <div class="grp">
     <select id="foglio" aria-label="Foglio"></select>
     <button class="b" id="nuovo" title="Nuovo foglio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">Foglio</span></button>
-    <span id="nuovoBox" class="grp" hidden><input type="text" id="nuovoNome" placeholder="Nome del foglio" aria-label="Nome del nuovo foglio"><button class="b" id="nuovoOk">Crea</button></span>
+    <span id="nuovoBox" class="grp" hidden><input type="text" id="nuovoNome" placeholder="Nome del progetto" aria-label="Nome del nuovo progetto"><button class="b" id="nuovoOk">Crea</button></span>
     <select id="scala" aria-label="Scala del foglio" title="Scala del disegno: il disegno resta sempre in scala reale; questa scala decide PDF, spessori e trattini sulla carta"></select>
     <button class="b" id="bStampa" title="Esporta: PDF, PNG e DXF (Ctrl+P)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="1.5"/><path d="M7 14h10v7H7z"/></svg><span>Stampa</span></button>
     <select id="layerAtt" aria-label="Layer attivo" title="Layer attivo"></select>
@@ -7882,7 +7882,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.120';
+const VERSIONE_GESTO='0.121';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -9204,7 +9204,7 @@ const dcL=document.createElement('div');dcL.id='dcL';$('icL').after(dcL);
 (()=>{const pm=$('icPiu').parentNode;const mk=(svg,tit,fn)=>{const b=document.createElement('button');b.className='pb pmB';b.title=tit;b.setAttribute('aria-label',tit);b.innerHTML=SV(svg);b.onclick=fn;pm.appendChild(b);return b};
   mk('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5h5"/>','Nuova cartella',()=>dcNuovaCartella(DC.cart||dcDir(tavAtt()||{})||''));
   mk('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 14h6M13 11v6"/>','Apri PDF',()=>dcScegliPdf(DC.cart||dcDir(tavAtt()||{})||''));
-  const T=document.querySelector('#impCol .icT span');if(T){T.textContent='Documenti';T.classList.add('dcRoot')}})();
+  const T=document.querySelector('#impCol .icT span');if(T){T.textContent='Project Manager';T.classList.add('dcRoot')}})();
 const DCI={giu:'<path d="M6 9l6 6 6-6"/>',dx:'<path d="M9 6l6 6-6 6"/>',piu:'<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'};
 /* SC2 (owner, 25.11.2026): dcCard in one body.
    The layers are the stages of this one body, written as they were, each calling the stage it held below it; each stage is active from the point
@@ -9212,8 +9212,8 @@ const DCI={giu:'<path d="M6 9l6 6 6-6"/>',dx:'<path d="M9 6l6 6-6 6"/>',piu:'<ci
 var dcCard_FASI=new Set(),dcCard_PASSO={};
 function dcCard(t,pag){
   const on=k=>!!(dcCard_FASI&&dcCard_FASI.has(k));
-  const s0=function(t,pag){const it=document.createElement('div');it.className='icI dcI';it.dataset.id=t.id;it.innerHTML='<div class="icM"><canvas></canvas></div><div class="icN"><b></b><span></span></div>';
-  it.querySelector('b').textContent=t.pdf?('p. '+t.pdf.p):String(numTav(t));it.querySelector('span').textContent=t.pdf?nomeFmt(t).replace(' · PDF',''):((t.nome||'Tavola')+' · '+nomeFmt(t));
+  const s0=function(t,pag){const it=document.createElement('div');it.className='icI dcI';it.dataset.id=t.id;it.innerHTML='<div class="icM"><canvas></canvas></div><div class="icN"><span class="dcIco">'+(t.pdf?icoPdf():icoTavola())+'</span><b></b><span></span></div>';
+  it.querySelector('b').textContent=t.pdf?('p. '+t.pdf.p):String(numTav(t));it.querySelector('.icN>span:last-child').textContent=t.pdf?nomeFmt(t).replace(' · PDF',''):((t.nome||'Tavola')+' · '+nomeFmt(t));
   const G=tavGeo(t),mi=MINI.get(t.id),cv=it.querySelector('canvas');if(mi&&mi.c){cv.width=mi.c.width;cv.height=mi.c.height;cv.getContext('2d').drawImage(mi.c,0,0);cv.dataset.k=mi.k}else{cv.width=156;cv.height=Math.round(156*G.H/G.W)}
   if(t.id===S.tav)it.classList.add('att');return it};
   const s1=dcCard_PASSO&&dcCard_PASSO.p1?dcCard_PASSO.p1(s0):s0;
@@ -9226,7 +9226,7 @@ var dcRiga_FASI=new Set(),dcRiga_PASSO={};
 function dcRiga(cls,nome,conta,aperta,menu,dati){
   const on=k=>!!(dcRiga_FASI&&dcRiga_FASI.has(k));
   const s0=function(cls,nome,conta,aperta,menu,dati){const r=document.createElement('div');r.className=cls;Object.assign(r.dataset,dati);
-  r.innerHTML='<button class="dcTw" tabindex="-1">'+SV(aperta?DCI.giu:DCI.dx)+'</button><span class="dcN"></span><span class="dcC"></span><button class="dcM" title="Azioni" aria-label="Azioni">'+SV(DCI.piu)+'</button>';
+  r.innerHTML='<button class="dcTw" tabindex="-1">'+SV(aperta?DCI.giu:DCI.dx)+'</button>'+(cls==='dcDh'?'<span class="dcIco">'+icoPdf()+'</span>':'')+'<span class="dcN"></span><span class="dcC"></span><button class="dcM" title="Azioni" aria-label="Azioni">'+SV(DCI.piu)+'</button>';
   r.querySelector('.dcN').textContent=nome;r.querySelector('.dcN').title=nome;r.querySelector('.dcC').textContent=conta;r.querySelector('.dcM').onclick=e=>{e.stopPropagation();menu(r.querySelector('.dcM'))};return r};
   const s1=dcRiga_PASSO&&dcRiga_PASSO.p1?dcRiga_PASSO.p1(s0):s0;
   return s1.apply(this,arguments);
@@ -9927,7 +9927,7 @@ function crRendi(){const q=CR.q.trim(),L=$('dcL');if(!q){crRis.hidden=true;if(L)
   const r=crCerca(q);if(!r.length){const v=document.createElement('div');v.className='crV';v.textContent='Nessun risultato per «'+q+'»';crRis.appendChild(v);return}
   r.slice(0,200).forEach(v=>{const e=document.createElement('div');e.className='crR'+((v.k!=='dir'&&MOS.tavole.get(v.id)&&(v.id===S.tav||(MOS.tavole.get(S.tav)||{}).pdf&&dcDocTs((MOS.tavole.get(v.id).pdf||{}).d||'').some(t=>t.id===S.tav)))?' att':'');
     e.innerHTML='<div class="a"><span></span></div><div class="b"><i></i><em></em></div>';e.querySelector('span').textContent=v.nome;const i=e.querySelector('i');i.textContent=v.stato+(v.data?' · '+v.data:'');if(v.stato==='vigente')i.className='vig';
-    e.querySelector('em').textContent=v.per.length?v.per.join(' › '):'Documenti';e.title=v.nome+'\n'+(v.per.length?v.per.join(' › '):'Documenti');
+    e.querySelector('em').textContent=v.per.length?v.per.join(' › '):'Project Manager';e.title=v.nome+'\n'+(v.per.length?v.per.join(' › '):'Project Manager');
     e.onclick=()=>{if(v.k==='dir'){let p=v.id;while(p){DC.chiuse.delete(p);const c=dcCartelle().find(x=>x.id===p);p=c&&dcEsiste(c.p)?c.p:''}DC.cart=v.id;crSvuota();dcChiave='';rendiCol();
         setTimeout(()=>{const h=$('dcL').querySelector('.dcF[data-f="'+v.id+'"]');if(h)h.scrollIntoView({block:'center'})},60);return}
       const t=MOS.tavole.get(v.id);if(t&&t.pdf){DC.docChiusi&&DC.docChiusi.delete(t.pdf.d);DC.aperti.add(t.pdf.d)}let p=v.dir;while(p){DC.chiuse.delete(p);const c=dcCartelle().find(x=>x.id===p);p=c&&dcEsiste(c.p)?c.p:''}
@@ -9966,7 +9966,7 @@ function crFiltra(){const L=$('dcL'),q=CR.q.trim();if(!L)return;L.querySelectorA
   if(!r.length){const m=document.createElement('div');m.className='crNessuno crV';m.textContent='Nessun risultato per «'+q+'»';L.prepend(m)}}
 {rendiCol_FASI.add('s7');}
 {const st=document.createElement('style');st.textContent='#dcL .crNo{display:none!important}#dcL .crHit{box-shadow:inset 0 0 0 1.5px var(--acc)}#dcL .dcI.crHit{box-shadow:none}#dcL .dcI.crHit .icM{box-shadow:0 0 0 2px var(--acc)}.dcRevR b,.dcRevR span{white-space:nowrap}';document.head.appendChild(st)}
-window.__gestoCR.type=q=>{const i=$('crQ');i.value=q;i.dispatchEvent(new Event('input'));return [...$('dcL').querySelectorAll('.dcF,.dcDh,.dcI')].filter(e=>!e.closest('.crNo')&&!e.classList.contains('crNo')&&e.offsetParent!==null).map(e=>(e.classList.contains('crHit')?'* ':'')+(e.querySelector('.dcN,.icN span')||e).textContent.trim())};
+window.__gestoCR.type=q=>{const i=$('crQ');i.value=q;i.dispatchEvent(new Event('input'));return [...$('dcL').querySelectorAll('.dcF,.dcDh,.dcI')].filter(e=>!e.closest('.crNo')&&!e.classList.contains('crNo')&&e.offsetParent!==null).map(e=>(e.classList.contains('crHit')?'* ':'')+(e.querySelector('.dcN,.icN span:not(.dcIco)')||e).textContent.trim())};
 
 /* ---------- 84. Panels that widen and narrow (owner, 23.11.2026) ----------
    PN8 Every panel and window widens or narrows by dragging its inner edge, the one toward the drawing: Documenti, Proprietà
@@ -11523,7 +11523,7 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
   /* ---- the row in the logo menu ---- */
   const riga=document.createElement('div');riga.className='lmR lmRec';(document.querySelector('.lmenu')||document.body).appendChild(riga);
   function aggMenu(){const c=REG.cartella;
-    riga.innerHTML=(FSOK?'<button type="button" class="b" data-a="c" title="'+(c?'Cartella delle registrazioni: «'+c.name+'»':'Scegli la cartella delle registrazioni')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>':'')+'<button type="button" class="b rec" data-a="r" title="'+(REC.on?'Ferma la registrazione':'Registra le operazioni (Ctrl + Alt + R)')+'">'+(REC.on?'<svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="#AC7853"/></svg>':'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="#AC7853"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>')+'</button>';
+    riga.innerHTML=(FSOK?'<button type="button" class="b" data-a="c" title="'+(c?'Cartella delle registrazioni: «'+c.name+'»':'Scegli la cartella delle registrazioni')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>':'')+'<button type="button" class="b rec" data-a="r" title="'+(REC.on?'Ferma la registrazione':'Registra le operazioni (Ctrl + Alt + R)')+'">'+(REC.on?'<svg viewBox="0 0 24 24" fill="none"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor"/></svg>':'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="6" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>')+'</button>'+(REC.on?'<span class="recT"></span>':'');
     
     riga.title='';
     riga.querySelectorAll('button').forEach(x=>x.onclick=e=>{e.stopPropagation();if(x.dataset.a==='c')scegliCartella();else REC.on?ferma():avvia()})}
@@ -11595,7 +11595,7 @@ function fgVai(id){if(id===fgAtt())return;
   richiedi();rendiSf();aggCtx();try{rendiPP()}catch(e){self.__re&&self.__re(e)}fgMenu()}
 function fgNuovo(){const L=fgLista().slice();let n=L.length+1;const nomi=new Set(L.map(x=>x.nome));while(nomi.has('Foglio '+n))n++;
   const id='m'+Date.now().toString(36);L.push({id,nome:'Foglio '+n});fogliSet({fgl:L});fgVai(id);fgMenu();return id}
-function fgRinomina(id,nome){nome=(nome||'').trim();if(!nome)return;const L=fgLista().map(x=>x.id===id?{id:x.id,nome}:x);fogliSet({fgl:L});fgMenu();try{rendiCol()}catch(e){self.__re&&self.__re(e)}}
+function fgRinomina(id,nome){nome=(nome||'').trim();if(!nome)return;const L=fgLista().map(x=>x.id===id?Object.assign({},x,{nome}):x);fogliSet({fgl:L});fgMenu();try{rendiCol()}catch(e){self.__re&&self.__re(e)}}
 /* the list of sheets in the menu and in the Project Manager: a tap opens, a double tap renames */
 function fgRiga(x,onApri){const r=document.createElement('div');r.className='fgR'+(x.id===fgAtt()&&!IMPAG?' att':'');r.dataset.id=x.id;r.title=x.nome;
   r.innerHTML='<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16" opacity=".55"/></svg><span></span>';r.querySelector('span').textContent=x.nome;
@@ -11605,9 +11605,7 @@ function fgEdita(r,x){const sp=r.querySelector('span'),i=document.createElement(
   i.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();fine(true)}else if(e.key==='Escape'){e.preventDefault();fine(false)}});
   i.addEventListener('blur',()=>fine(true));i.addEventListener('pointerdown',e=>e.stopPropagation())}
 function fgMenu(){['lmFg','dcFg'].forEach(i=>{const box=document.getElementById(i);if(box)fgRiempi(box)})}
-function fgRiempi(box){box.textContent='';
-  const h=document.createElement('div');h.className='fgH';h.innerHTML='<span>Fogli</span><button type="button" title="Nuovo foglio del progetto">+</button>';h.querySelector('button').onclick=e=>{e.stopPropagation();fgNuovo()};box.appendChild(h);
-  fgLista().forEach(x=>box.appendChild(fgRiga(x,id=>{if(IMPAG){esciImpag();setTimeout(()=>fgVai(id),60)}else fgVai(id)})))}
+function fgRiempi(box){if(box.id==='dcFg')fgRiempiPM(box);else fgRiempiMenu(box)}
 (()=>{
   /* MN1: sections with a title; the existing commands move in, each once (MN3) */
   const lm=document.querySelector('.lmenu');if(!lm)return;
@@ -11669,15 +11667,23 @@ function fgRiempi(box){box.textContent='';
   const sP=lm.querySelector('.lmSezP');if(sP)sP.after(sR);
   const recenti=()=>{let R={};try{R=JSON.parse(localStorage.getItem('gesto.recenti')||'{}')||{}}catch(e){self.__re&&self.__re(e)}return R};
   const fileDi=id=>{try{const v=window.__gestoFD&&window.__gestoFD.FD&&window.__gestoFD.FD.get(id);return v&&v.nome||''}catch(e){return ''}};
+  let rcAperto=false;
+  const nRec=()=>{let n=10;try{n=parseInt(localStorage.getItem('gesto.recenti.n')||'10',10)||10}catch(e){self.__re&&self.__re(e)}return n};
+  function rigaRec(f){const r=document.createElement('div');r.className='fgR rcR';r.title=f.nome||'Progetto';
+    r.innerHTML='<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="rcN"></span><span class="rcF"></span>';
+    r.querySelector('.rcN').textContent=f.nome||'Progetto';r.querySelector('.rcF').textContent=fileDi(f.id);
+    r.onclick=e=>{e.stopPropagation();rcAperto=false;lmChiudi();apriFoglio(f.id);menuFogli();setTimeout(()=>{try{fgMenu()}catch(x){self.__re&&self.__re(x)}},50)};return r}
   function rendiRec(){const box=sR.querySelector('.lmRc');box.textContent='';const R=recenti();
-    const L=fogli.filter(f=>f.esiste&&f.id!==foglioId).sort((a,b)=>(R[b.id]||b.t||0)-(R[a.id]||a.t||0)).slice(0,12);
-    sR.hidden=!L.length;
-    L.forEach(f=>{const r=document.createElement('div');r.className='fgR rcR';r.title=f.nome||'Progetto';
-      r.innerHTML='<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="rcN"></span><span class="rcF"></span>';
-      r.querySelector('.rcN').textContent=f.nome||'Progetto';const fn=fileDi(f.id);r.querySelector('.rcF').textContent=fn;
-      r.onclick=e=>{e.stopPropagation();lmChiudi();apriFoglio(f.id);menuFogli();setTimeout(()=>{try{fgMenu()}catch(x){self.__re&&self.__re(x)}},50)};box.appendChild(r)})}
+    const L=fogli.filter(f=>f.esiste&&f.id!==foglioId).sort((a,b)=>(R[b.id]||b.t||0)-(R[a.id]||a.t||0));
+    sR.hidden=!L.length;if(!L.length)return;
+    const c=rigaRec(L[0]);c.classList.add('rcCur');const tw=document.createElement('button');tw.type='button';tw.className='fgTw';tw.title=rcAperto?'Chiudi l’elenco':'Progetti recenti';tw.innerHTML=fgFreccia(rcAperto);
+    tw.onclick=e=>{e.stopPropagation();rcAperto=!rcAperto;rendiRec()};c.appendChild(tw);box.appendChild(c);
+    if(!rcAperto)return;const N=nRec(),l=document.createElement('div');l.className='fgL';L.slice(1,N).forEach(f=>l.appendChild(rigaRec(f)));box.appendChild(l);
+    const pie=document.createElement('div');pie.className='rcPie';pie.innerHTML='<span>Mostra</span><select title="Quanti progetti recenti mostrare"></select>';const sl=pie.querySelector('select');
+    [3,5,10,20,50].forEach(v=>{const o=document.createElement('option');o.value=String(v);o.textContent=String(v);sl.appendChild(o)});sl.value=String(N);
+    sl.onclick=e=>e.stopPropagation();sl.onchange=()=>{try{localStorage.setItem('gesto.recenti.n',sl.value)}catch(e){self.__re&&self.__re(e)}rendiRec()};box.appendChild(pie)}
   const st=document.createElement('style');st.textContent=
-    '.lmRc{display:flex;flex-direction:column;gap:2px;max-height:300px;overflow-y:auto}'+
+    '.lmRc{display:flex;flex-direction:column;gap:2px}'+
     '.rcR .rcN{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rcR .rcF{font-size:11.5px;color:var(--muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
     /* MN5: the notes of the panels and the saving error speak in the one line at the bottom right */
     '#notaEx,#notaSf{display:none!important}'+
@@ -11686,6 +11692,91 @@ function fgRiempi(box){box.textContent='';
   const lg=document.getElementById('logo');if(lg)['click','dblclick'].forEach(t=>lg.addEventListener(t,()=>setTimeout(rendiRec,0)));
   rendiRec();
   window.__gestoAV={zero:()=>AVVIO_ZERO,recenti:()=>[...sR.querySelectorAll('.rcN')].map(x=>x.textContent),rendi:rendiRec};
+})();
+
+/* ---------- 121 MN8-MN11, PM1-PM3 (owner, 25.11.2026) ----------
+   MN8 Recenti: one row with the last project and an arrow; the arrow opens the first projects (10, a number kept on the device).
+   MN9 Fogli: one row with the open sheet and an arrow; the arrow opens every sheet of the project.
+   MN10 sheets are made, renamed and removed only in the logo menu; a sheet is removed when empty, with a confirmation.
+   MN11 every icon of the menu in the one colour of the icons; recording shows its time.
+   PM1 the panel of the layout is the Project Manager. PM2 it shows the sheets chosen among those of the project; taking one out hides it there only.
+   PM3 two views of the Project Manager: thumbnails, or a list of names each with the icon of its kind. */
+function fgm(){return fgm.s||(fgm.s={aperto:false})}
+function fgFreccia(su){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="'+(su?'M6 15l6-6 6 6':'M6 9l6 6 6-6')+'"/></svg>'}
+function icoCestino(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>'}
+function icoTavola(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M15 5v14M15 15h6"/></svg>'}
+function icoPdf(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>'}
+/* MN10: a sheet is empty when no element of the model belongs to it */
+function fgVuoto(id){for(const m of [MOS.tratti,MOS.cad,MOS.sfondi])for(const o of m.values())if(o&&!o.tv&&!o.bk&&fgDi(o)===id)return false;return true}
+function fgElimina(id){const L=fgLista();if(L.length<2||!fgVuoto(id))return false;const R=L.filter(x=>x.id!==id);
+  if(!IMPAG&&id===fgAtt())fgVai(R[0].id);
+  fogliSet({fgl:R});try{localStorage.removeItem('gesto.view.'+foglioId+'.'+id)}catch(e){self.__re&&self.__re(e)}
+  fgStato().att=null;fgMenu();try{rendiCol()}catch(e){self.__re&&self.__re(e)}return true}
+/* PM2: a sheet in or out of the Project Manager; the sheet stays in the project */
+function fgNascondi(id,v){const L=fgLista().map(x=>{if(x.id!==id)return x;const y=Object.assign({},x);if(v)y.nasc=1;else delete y.nasc;return y});
+  fogliSet({fgl:L});fgMenu();try{rendiCol()}catch(e){self.__re&&self.__re(e)}}
+function fgApri(id){fgm().aperto=false;if(IMPAG){esciImpag();setTimeout(()=>fgVai(id),60)}else fgVai(id);fgMenu()}
+function fgRiempiMenu(box){box.textContent='';const L=fgLista(),cur=L.find(x=>x.id===fgAtt())||L[0];
+  const h=document.createElement('div');h.className='fgH';h.innerHTML='<span>Fogli</span><button type="button" title="Nuovo foglio del progetto">+</button>';
+  h.querySelector('button').onclick=e=>{e.stopPropagation();fgNuovo()};box.appendChild(h);
+  const r=fgRiga(cur,()=>{fgm().aperto=!fgm().aperto;fgMenu()});r.classList.add('fgCur');
+  const tw=document.createElement('button');tw.type='button';tw.className='fgTw';tw.title=fgm().aperto?'Chiudi l’elenco dei fogli':'Tutti i fogli del progetto';tw.innerHTML=fgFreccia(fgm().aperto);
+  tw.onclick=e=>{e.stopPropagation();fgm().aperto=!fgm().aperto;fgMenu()};r.appendChild(tw);box.appendChild(r);
+  if(!fgm().aperto)return;
+  const l=document.createElement('div');l.className='fgL';
+  L.forEach(x=>{const q=fgRiga(x,fgApri);
+    if(L.length>1){const d=document.createElement('button');d.type='button';d.className='fgDel';d.title='Elimina il foglio';d.innerHTML=icoCestino();
+      d.onclick=e=>{e.stopPropagation();if(!fgVuoto(x.id)){avviso('«'+x.nome+'» contiene elementi: si elimina un foglio vuoto');return}
+        if(!d.classList.contains('arm')){d.classList.add('arm');d.title='Tocca di nuovo per eliminare «'+x.nome+'»';return}fgElimina(x.id)};q.appendChild(d)}
+    l.appendChild(q)});box.appendChild(l)}
+function fgRiempiPM(box){box.textContent='';
+  const h=document.createElement('div');h.className='fgH';h.innerHTML='<span>Fogli</span><button type="button" class="fgScegli" title="Fogli nel Project Manager">'+fgFreccia(false)+'</button>';
+  const b=h.querySelector('button');b.onclick=e=>{e.stopPropagation();fgScelta(b)};box.appendChild(h);
+  fgLista().filter(x=>!x.nasc).forEach(x=>box.appendChild(fgRiga(x,fgApri)))}
+/* PM2: the choice of the sheets shown, a small list that stays open while ticking */
+function fgScelta(el){let m=document.getElementById('fgScelta');if(m){m.remove();return}
+  m=document.createElement('div');m.id='fgScelta';
+  const rendi=()=>{m.textContent='';const t=document.createElement('div');t.className='fsT';t.textContent='Fogli nel Project Manager';m.appendChild(t);
+    fgLista().forEach(x=>{const r=document.createElement('button');r.type='button';r.className='fsR'+(x.nasc?'':' on');
+      r.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/>'+(x.nasc?'':'<path d="M8 12.5l3 3 5-6"/>')+'</svg><span></span>';
+      r.querySelector('span').textContent=x.nome;r.onclick=e=>{e.stopPropagation();fgNascondi(x.id,!x.nasc);rendi()};m.appendChild(r)})};
+  rendi();$('wrap').appendChild(m);const r=el.getBoundingClientRect(),w=$('wrap').getBoundingClientRect();
+  m.style.left=Math.max(8,Math.min(r.left-w.left,w.width-m.offsetWidth-8))+'px';m.style.top=Math.min(r.bottom-w.top+4,w.height-m.offsetHeight-8)+'px'}
+addEventListener('pointerdown',e=>{const m=document.getElementById('fgScelta');if(m&&!m.contains(e.target)&&!e.target.closest('.fgScegli'))m.remove()},true);
+(()=>{
+  /* PM1 and PM3: the name of the panel and its two views */
+  const h=document.querySelector('#impCol .icT'),L=$('dcL');
+  let vista='mini';try{vista=localStorage.getItem('gesto.pm.vista')==='elenco'?'elenco':'mini'}catch(e){self.__re&&self.__re(e)}
+  const b=document.createElement('button');b.type='button';b.className='ico pmVista';
+  const agg=()=>{if(L)L.classList.toggle('pmElenco',vista==='elenco');b.title=vista==='elenco'?'Mostra le miniature':'Mostra l’elenco';b.setAttribute('aria-label',b.title);
+    b.innerHTML=vista==='elenco'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>'
+      :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>'};
+  b.onclick=e=>{e.stopPropagation();vista=vista==='elenco'?'mini':'elenco';try{localStorage.setItem('gesto.pm.vista',vista)}catch(x){self.__re&&self.__re(x)}agg()};
+  if(h){const x=document.getElementById('icChiudi');h.insertBefore(b,x||null)}agg();
+  const st=document.createElement('style');st.textContent=
+    '#impCol .icT span.dcRoot{white-space:nowrap;letter-spacing:.07em;min-width:0}#impCol .icT .pmVista{margin-left:auto}'+
+    '.lmenu{max-height:calc(100vh - 40px);overflow-y:auto;overscroll-behavior:contain}.fgL .fgR.att{box-shadow:none}'+
+    '.fgCur{position:relative}.fgTw,.fgDel{flex:none;margin-left:auto;width:26px;height:24px;border:0;background:none;color:var(--fg);padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer}'+
+    '.fgTw svg,.fgDel svg{width:16px;height:16px}.fgTw:hover,.fgDel:hover{box-shadow:inset 0 0 0 1px var(--line)}'+
+    '.fgR span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    '.fgL{display:flex;flex-direction:column;gap:2px;padding:2px 0 2px 10px;max-height:300px;overflow-y:auto}'+
+    '.fgL .fgDel{opacity:0}.fgL .fgR:hover .fgDel,.fgL .fgDel.arm{opacity:1}.fgDel.arm{background:#AC7853;color:#fff}'+
+    '.lmSezRec .rcPie{display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:11.5px;color:var(--muted);padding:2px 0 0}.lmSezRec .rcPie select{height:24px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg);font:inherit;padding:0 4px}'+
+    '.lmSezR .lmRec .recT{font:500 12.5px var(--sans);font-variant-numeric:tabular-nums;color:var(--fg)}'+
+    '#fgScelta{position:absolute;z-index:9;display:flex;flex-direction:column;gap:2px;min-width:200px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(15,35,44,.18)}'+
+    '#fgScelta .fsT{font:600 10.5px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:4px 8px 6px}'+
+    '#fgScelta .fsR{display:flex;align-items:center;gap:8px;text-align:left;border:0;background:transparent;color:var(--fg);font:500 12.5px var(--sans);padding:6px 8px;border-radius:6px;cursor:pointer}#fgScelta .fsR:hover{background:var(--on)}#fgScelta .fsR svg{width:16px;height:16px;flex:none}'+
+    '.dcFg .fgScegli svg{width:16px;height:16px}'+
+    '.dcIco{display:none;flex:none;width:16px;height:16px;color:var(--fg);align-self:center}.dcIco svg{width:16px;height:16px}'+
+    '#dcL.pmElenco{gap:2px}#dcL.pmElenco .dcIco{display:inline-flex}#dcL.pmElenco .icM,#dcL.pmElenco .dcI .alTag{display:none}'+
+    '#dcL.pmElenco .dcK.pag{display:flex;flex-direction:column;gap:2px}#dcL.pmElenco .dcK{gap:2px}'+
+    '#dcL.pmElenco .dcI .icN{align-items:center;gap:8px;min-height:28px;padding:0 8px;border-radius:7px;font-size:12.5px;color:var(--fg)}#dcL.pmElenco .dcI .icN:hover{box-shadow:inset 0 0 0 1px var(--line)}'+
+    '#dcL.pmElenco .dcI.att .icN{box-shadow:inset 0 0 0 1.5px var(--fg);font-weight:600}#dcL.pmElenco .dcI .icN b{font-weight:500;color:var(--muted);min-width:12px}'+
+    '#dcL.pmElenco .dcDh .dcIco{margin-right:2px}';
+  document.head.appendChild(st);
+  /* MN11: the time of the recording beside its icon */
+  setInterval(()=>{const e=document.querySelector('.lmRec .recT');if(!e)return;if(!REC.on){e.textContent='';return}
+    const s=Math.max(0,Math.floor((performance.now()-REC.t0)/1000));e.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0')},500);
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
