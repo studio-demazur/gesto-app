@@ -2874,7 +2874,7 @@ function aggCtx(){
   const tg=(s,on,fn,tit)=>{const b=bottone(s,fn);b.setAttribute('aria-pressed',String(!!on));if(tit)b.title=tit;c.appendChild(b);return b};
   if(FIN_NUOVA){c.textContent='';testo('Traccia sulla carta il riquadro della finestra');c.appendChild(bottone('Annulla',()=>{FIN_NUOVA=false;aggCtx()}));mostra();return}
   const f=FSEL&&finCarta(t).find(x=>x.id===FSEL);if(!f){FSEL=null;return}
-  c.textContent='';testo('Finestra '+f.n);
+  c.textContent='';testo('Finestra '+f.n);if(fgLista().length>1)c.appendChild(finSceltaFoglio(f));
   const op=SCALE.map(s=>[String(s),'1:'+s]);if(f.fs)op.unshift(['fs','Fuori scala']);else if(!SCALE.includes(f.sc))op.unshift([String(f.sc),'1:'+f.sc]);
   const sc=scelta(op,f.fs?'fs':String(f.sc),v=>{if(v==='fs')return;finSet(f.id,{sc:+v,fs:null});aggCtx()});sc.disabled=!!f.lk;sc.title='Scala normalizzata della finestra (UNI EN ISO 5455)';c.appendChild(sc);
   const bf=bottone('Fuori scala',()=>fuoriScala(f));bf.disabled=!!f.lk;bf.title='Il disegno intero entra nella finestra; la tavola scrive «fuori scala» e aggiunge la scala grafica';c.appendChild(bf);
@@ -2883,7 +2883,7 @@ function aggCtx(){
   if(f.nd){const i=document.createElement('input');i.type='text';i.inputMode='decimal';i.value=f.no!=null?String(f.no).replace('.',','):String(t.nord||0).replace('.',',');i.style.width='56px';i.title='Gradi del nord, in senso orario';i.setAttribute('aria-label','Gradi del nord');
     i.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')i.blur()};i.onchange=()=>{const n=parseFloat(i.value.replace(',','.'));finSet(f.id,{no:isFinite(n)?n:null});aggCtx()};c.appendChild(i)}
   tg(f.lk?'Bloccata':'Blocca',f.lk,()=>{finSet(f.id,{lk:f.lk?null:1});aggCtx();richiedi('sopra')},'Bloccata, la finestra non si sposta, non si ridimensiona e non cambia scala');
-  c.appendChild(bottone('Modello',()=>{const g=f;esciImpag();S.finAtt=g.id;apriModelloFin(g)}));
+  {const bm=bottone('Modello',()=>{const g=f;esciImpag();S.finAtt=g.id;apriModelloFin(g)});bm.title='Apri il foglio sorgente «'+fgNomeDi(finFg(f))+'» sull’area della finestra e lavora lì';c.appendChild(bm)}
   c.appendChild(bottone('Elimina',()=>togliFin(f)));mostra()})();
   if(on('s7'))(()=>{if(IMPAG)rendiPP()})();
   if(on('s8'))(()=>{if(!IMPAG||rac||sel.size||FIN_NUOVA||!FSEL)return;const c=$('ctx'),t=tavAtt(),f=t&&finCarta(t).find(x=>x.id===FSEL);if(!c||!f)return;
@@ -5893,7 +5893,7 @@ function finestre(t,G){if(!t||t.pdf||(t.noFin&&!(t.fin&&t.fin.length)))return []
   return [{id:'f1',n:1,x:G.ax0,y:G.ay0,w:G.aw,h:G.ah,c:t.c||[0,0],sc:G.sc,vis:t.vis,sost:t.sost,tit:t.tit,virt:true}]}
 const finGeo=f=>({mx0:f.c[0]-f.w*f.sc/2,my0:f.c[1]-f.h*f.sc/2,mw:f.w*f.sc,mh:f.h*f.sc});
 const finAtt=t=>{const L=finestre(t);return L.find(f=>f.id===S.finAtt)||L[0]||null};
-let filtroFin=(t,f)=>({id:t.id+'/'+f.id,vis:f.vis||{},sost:f.sost||null,fg:f.fg||null});
+let filtroFin=(t,f)=>({id:t.id+'/'+f.id,vis:f.vis||{},sost:f.sost||null,fg:f.fg&&fgLista().some(x=>x.id===f.fg)?f.fg:null});
 const recFin=f=>{const o={id:f.id,x:r1m(f.x),y:r1m(f.y),w:r1m(f.w),h:r1m(f.h),c:f.c,sc:f.sc};['vis','sost','tit'].forEach(k=>{if(f[k]!=null&&f[k]!=='')o[k]=f[k]});return o};
 function finSet(id,patch){const t=tavAtt();if(!t)return;
   if(!(t.fin&&t.fin.length)&&Object.keys(patch).every(k=>['c','sc','vis','sost','tit'].includes(k))){tavSet(patch);richiedi();return}
@@ -5937,7 +5937,7 @@ function creaFinestra(a,b){const t=tavAtt();if(!t)return;const G=tavGeo(t),mw=Ma
   const w=r1m(mw/sc),h=r1m(mh/sc),id=idCasuale('w'),L=t.fin&&t.fin.length?t.fin.map(f=>Object.assign({},f)):(t.c?[recFin(finestre(t,G)[0])]:[]);
   L.push({id,x:r1m(G.ax0+(G.aw-w)/2),y:r1m(G.ay0+(G.ah-h)/2),w,h,c:[r3((a[0]+b[0])/2),r3((a[1]+b[1])/2)],sc});tavSet({fin:L});S.finAtt=id;apriCarta()}
 function finCentro(p){const t=tavAtt();if(!t)return;finSet(finAtt(t).id,{c:p})}
-function apriModelloFin(f){chiudiCarta();const g=finGeo(f),s=Math.min(50,Math.max(0.002,Math.min((V.W-160)/g.mw,(V.H-100)/g.mh)));
+function apriModelloFin(f){chiudiCarta();try{const q=finFg(f);if(!IMPAG&&q!==fgAtt())fgVai(q)}catch(e){self.__re&&self.__re(e)}const g=finGeo(f),s=Math.min(50,Math.max(0.002,Math.min((V.W-160)/g.mw,(V.H-100)/g.mh)));
   V.s=s;V.ox=V.W/2-(g.mx0+g.mw/2)*s;V.oy=V.H/2-(g.my0+g.mh/2)*s;cambioVista();richiedi()}
 adattaTavola_FASI.add('s1');
 mostraTavola_FASI.add('s1');
@@ -6900,12 +6900,12 @@ function listaFin(t){const G=tavGeo(t);return t.fin&&t.fin.length?t.fin.map(f=>O
 function creaFinCarta(p0,p1){const t=tavAtt();if(!t)return;const G=tavGeo(t),lim=(v,a,b)=>Math.max(a,Math.min(b,v));
   const x=r01(lim(Math.min(p0[0],p1[0]),G.ax0,G.ax0+G.aw)),y=r01(lim(Math.min(p0[1],p1[1]),G.ay0,G.ay0+G.ah)),w=r01(lim(Math.max(p0[0],p1[0]),G.ax0,G.ax0+G.aw)-x),h=r01(lim(Math.max(p0[1],p1[1]),G.ay0,G.ay0+G.ah)-y);
   if(w<10||h<10){avviso('Riquadro troppo piccolo: almeno 10 × 10 mm');return}
-  const R=estremiDisegno();let c=[0,0],sc=G.sc,fs=null;
+  const R=estremiFoglio(fgAtt());let c=[0,0],sc=G.sc,fs=null;
   if(R&&isFinite(R.x0)&&R.x1>R.x0){const mw=R.x1-R.x0,mh=Math.max(R.y1-R.y0,1e-6);c=[(R.x0+R.x1)/2,(R.y0+R.y1)/2];const s=SCALE.find(s=>mw/s<=w*0.95&&mh/s<=h*0.95);
     if(s)sc=s;else{sc=Math.round(Math.max(mw/(w*0.92),mh/(h*0.92))*100)/100;fs=1}}
-  const L=listaFin(t),id=idCasuale('w'),f={id,x,y,w,h,c,sc};if(fs){f.fs=1;f.sg=1}L.push(f);tavSet({fin:L});FSEL=id;S.finAtt=id;rendiTavole();
+  const L=listaFin(t),id=idCasuale('w'),f={id,x,y,w,h,c,sc};if(fs){f.fs=1;f.sg=1}{const fa=fgAtt();if(fa!==fgPrimo())f.fg=fa}L.push(f);tavSet({fin:L});FSEL=id;S.finAtt=id;rendiTavole();
   avviso(fs?'Il disegno non entra a scala normalizzata: finestra fuori scala, con scala grafica':'Finestra a 1:'+sc)}
-function fuoriScala(f){const R=estremiDisegno();if(!R||!isFinite(R.x0)){avviso('Il modello è vuoto');return}
+function fuoriScala(f){const R=estremiFin(f);if(!R||!isFinite(R.x0)){avviso('Il modello è vuoto');return}
   const mw=R.x1-R.x0,mh=Math.max(R.y1-R.y0,1e-6),sc=Math.round(Math.max(mw/(f.w*0.92),mh/(f.h*0.92))*100)/100;
   finSet(f.id,{sc,c:[(R.x0+R.x1)/2,(R.y0+R.y1)/2],fs:1,sg:1});aggCtx();avviso('Fuori scala: il disegno intero entra nella finestra, con scala grafica')}
 function togliFin(f){const t=tavAtt();if(!t)return;const L=listaFin(t);if(L.length<2){avviso('Una tavola ha almeno una finestra');return}
@@ -6981,6 +6981,7 @@ function ppFin(){const t=tavAtt(),G=t&&tavGeo(t),f=t&&finCarta(t).find(x=>x.id==
     const w=document.createElement('span');w.className='cw';w.appendChild(i);w.appendChild(Object.assign(document.createElement('span'),{className:'u',textContent:'mm'}));return w};
   const bt=(s,fn,tit,on)=>{const b=bottone(s,fn);if(tit)b.title=tit;if(on!=null)b.setAttribute('aria-pressed',String(!!on));return b};
   const lk=!!f.lk,mv=n=>{finSet(f.id,n);aggCtx()},rs=n=>{const q=Object.assign({x:f.x,y:f.y,w:f.w,h:f.h},n);finSet(f.id,Object.assign(n,{c:centroFin(f,q)}));aggCtx()};
+  if(fgLista().length>1&&F.length<2){sez('Foglio');riga('Preleva da',finSceltaFoglio(f))}
   sez('Posizione · mm di carta');riga('X',num(f.x,'X dell’angolo in basso a sinistra',v=>mv({x:r01(v)}),lk));riga('Y',num(G.H-(f.y+f.h),'Y dell’angolo in basso a sinistra',v=>mv({y:r01(G.H-v-f.h)}),lk));
   riga('Larghezza',num(f.w,'Larghezza',v=>{if(v>=10)rs({w:r01(v)})},lk));riga('Altezza',num(f.h,'Altezza',v=>{if(v>=10)rs({y:r01(f.y+f.h-v),h:r01(v)})},lk));
   sez('Distanze e griglia');riga('Margine',num(mgT(t),'Margine dall’area grafica',v=>{tavSet({mg:Math.max(0,v)});aggCtx()}));riga('Spazio',num(gapT(t),'Spazio fra le finestre',v=>{tavSet({gap:Math.max(0,v)});aggCtx()}));
@@ -7012,7 +7013,7 @@ aggPenna();
    la finestra resta ferma sulla carta e cambia solo il centro sul modello. Durante il gesto un riquadro tratteggiato mostra dove va il disegno.
    «Centra»: il disegno intero va al centro della finestra, la scala non cambia. */
 let FCONT=false;
-function centraContenuto(f){const R=estremiDisegno();if(!R||!isFinite(R.x0)){avviso('Il modello è vuoto');return}finSet(f.id,{c:[(R.x0+R.x1)/2,(R.y0+R.y1)/2]});aggCtx();avviso('Disegno al centro della finestra '+f.n)}
+function centraContenuto(f){const R=estremiFin(f);if(!R||!isFinite(R.x0)){avviso('Il modello è vuoto');return}finSet(f.id,{c:[(R.x0+R.x1)/2,(R.y0+R.y1)/2]});aggCtx();avviso('Disegno al centro della finestra '+f.n)}
 selGiu_FASI.add('s2');
 selMuovi_FASI.add('s3');
 selSu_FASI.add('s6');
@@ -7882,7 +7883,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.121';
+const VERSIONE_GESTO='0.122';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -11777,6 +11778,30 @@ addEventListener('pointerdown',e=>{const m=document.getElementById('fgScelta');i
   /* MN11: the time of the recording beside its icon */
   setInterval(()=>{const e=document.querySelector('.lmRec .recT');if(!e)return;if(!REC.on){e.textContent='';return}
     const s=Math.max(0,Math.floor((performance.now()-REC.t0)/1000));e.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0')},500);
+})();
+
+/* ---------- 122 PR4 (owner, 25.11.2026) ----------
+   PR4 a plate may hold windows of different sheets. A window drawn on a plate takes the sheet open in the model; another sheet
+   is chosen for it in its bar and in its properties, and the drawing of that sheet comes to its centre at the same scale.
+   «Modello» on a window opens its source sheet on the area of the window, to work there.
+   Data: a window of a sheet other than the first carries fg; a window without fg, or with a sheet no longer in the project, shows the first. */
+function finFg(f){const L=fgLista();return f&&f.fg&&L.some(x=>x.id===f.fg)?f.fg:L[0].id}
+function fgNomeDi(id){const x=fgLista().find(q=>q.id===id);return x?x.nome:''}
+/* the extents of the drawing of one sheet, as a window would see it (its layers and categories), whichever sheet the model has open */
+function estremiFoglio(id,base){const sv=TAV_FILTRO;TAV_FILTRO=Object.assign({id:'fg/'+id,vis:{},sost:null},base||{},{fg:id===fgPrimo()?null:id});datiVer++;tsVer++;
+  try{return estremiDisegno()}finally{TAV_FILTRO=sv;datiVer++;tsVer++}}
+const estremiFin=f=>{const t=tavAtt();return estremiFoglio(finFg(f),t&&f?filtroFin(t,f):null)};
+function finFoglio(f,id){if(!f||!fgLista().some(x=>x.id===id))return;const t=tavAtt(),R=estremiFoglio(id,t?filtroFin(t,f):null),patch={fg:id===fgPrimo()?null:id};
+  if(R&&isFinite(R.x0))patch.c=[r3((R.x0+R.x1)/2),r3((R.y0+R.y1)/2)];finSet(f.id,patch);datiVer++;tsVer++;richiedi();
+  avviso('Finestra '+f.n+' sul foglio «'+fgNomeDi(id)+'»')}
+function finSceltaFoglio(f,cls){const s=scelta(fgLista().map(x=>[x.id,x.nome]),finFg(f),v=>{finFoglio(f,v);aggCtx()});s.title='Foglio da cui la finestra preleva il disegno';s.setAttribute('aria-label',s.title);if(cls)s.className=cls;return s}
+(()=>{
+  const g=window.__gestoFG||{};
+  Object.assign(g,{finFg,finFoglio,est:id=>estremiFoglio(id),creaFin:(a,b)=>creaFinCarta(a,b),fin:()=>finCarta(tavAtt()).map(f=>({id:f.id,n:f.n,fg:f.fg||null,c:f.c})),
+    selFin:id=>{FSEL=id;S.finAtt=id;aggCtx()},
+    conta:id=>{const t=tavAtt(),f=finCarta(t).find(x=>x.id===id);if(!f)return null;const sv=TAV_FILTRO;TAV_FILTRO=filtroFin(t,f);datiVer++;tsVer++;
+      try{const r=[];MOS.cad.forEach(e=>{if(visibileE(e))r.push(e.k)});tratti.forEach(x=>{if(visibileT(x))r.push('tratto')});return r}finally{TAV_FILTRO=sv;datiVer++;tsVer++}}});
+  window.__gestoFG=g;
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
