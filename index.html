@@ -935,7 +935,7 @@ function inquadra(){
    SRV = stato confermato dall'archivio; pend = scritture in corso o non ancora confermate.
    MOS (ciò che si mostra) = SRV con pend sovrapposto: un'istantanea vecchia non smentisce mai
    un gesto. Scritture in parallelo fra documenti, in sequenza sullo stesso documento. */
-const RAMI=['tratti','sfondi','cad','layer','collezioni','blocchi','tavole','parametri','vincoli'];
+const RAMI=['tratti','sfondi','cad','layer','collezioni','blocchi','tavole','parametri','vincoli','tabelle'];
 /* FG1 (owner, 25.11.2026): 256 MiB is the size limit of the .dmz container; above it nothing is written and the file on disk stays as it was */
 const FG={max:256*1048576,testo:(nome,b)=>'«'+nome+'»'+(b?' pesa '+Math.round(b/1048576)+' MB,':' è troppo grande:')+' oltre i '+Math.round(FG.max/1048576)+' MiB del file .dmz. Non è stato salvato: il file sul disco resta quello di prima.'};
 const SRV={},MOS={};RAMI.forEach(r=>{SRV[r]=new Map();MOS[r]=new Map()});
@@ -983,7 +983,7 @@ function sovrapponi(col,base){const m=new Map(base);pend.forEach(en=>{if(en.col!
    The layers are the stages of this one body, written as they were, each calling the stage it held below it; each stage is active from the point
    of the loading where its layer stood (ricomponi_FASI). */
 var ricomponi_FASI=new Set();
-function ricomponi(){
+function ricomponi(){try{if(TBV&&!TBV.hidden&&!tbStato().ed)queueMicrotask(tbRendi)}catch(e){self.__re&&self.__re(e)}
   const on=k=>!!(ricomponi_FASI&&ricomponi_FASI.has(k));
   const s0=function(){
   RAMI.forEach(r=>{MOS[r]=sovrapponi(colDi(r),SRV[r])});
@@ -1066,6 +1066,7 @@ const PARSE={
   layer:(id,b)=>Object.assign({id,_r:'layer'},b),
   collezioni:(id,b)=>Object.assign({id,_r:'collezioni'},b),
   blocchi:(id,b)=>Object.assign({id,_r:'blocchi'},b),
+  tabelle:(id,b)=>b&&typeof b.celle==='object'&&b.celle?Object.assign({id,_r:'tabelle'},b):null,
   tavole:(id,b)=>Object.assign({id,_r:'tavole'},b)
 };
 /* SC2 (owner, 25.11.2026): apriFoglio in one body.
@@ -4832,7 +4833,7 @@ async function datiSfondo(b){
 async function esportaFoglio(){
   const f=foglio(),o={formato:'gesto',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
   if(f.sc)o.foglio.sc=f.sc;if(f.o)o.foglio.o=f.o;if(f.qu)o.foglio.qu=f.qu;if(f.ts)o.foglio.ts=f.ts;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;if(f.cartDef)o.foglio.cartDef=f.cartDef;if(f.dp)o.foglio.dp=f.dp;if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(Array.isArray(f.fgl)&&f.fgl.length)o.foglio.fgl=f.fgl;let n=0,persi=0;
-  RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
+  RAMI.forEach(r=>{if(r==='tabelle'&&!MOS[r].size)return;o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
   if(!n){notaEx('Il foglio è vuoto');return}
   notaEx('Preparo il file del foglio…');
   for(const b of tuttiSfondi()){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
@@ -6682,7 +6683,7 @@ function entraImpag(){
 var esciImpag_FASI=new Set();
 function esciImpag(){
   const on=k=>!!(esciImpag_FASI&&esciImpag_FASI.has(k));
-  const s0=function(){if(!IMPAG)return;if(ED.on)chiudiEd(true);if(ptr)termina();V_IMP.set(S.tav,{s:V.s,ox:V.ox,oy:V.oy});sel.clear();PARTI=[];IMPAG=null;document.body.classList.remove('impagina');
+  const s0=function(){if(!IMPAG)return;tbChiudi();if(ED.on)chiudiEd(true);if(ptr)termina();V_IMP.set(S.tav,{s:V.s,ox:V.ox,oy:V.oy});sel.clear();PARTI=[];IMPAG=null;document.body.classList.remove('impagina');
   if(V_MOD){V.s=V_MOD.s;V.ox=V_MOD.ox;V.oy=V_MOD.oy}cambioVista();strumento('sel');ricomponi();aggSpazi();richiedi()};
   const s1=on('s1')?function(...a){FSEL=null;FIN_NUOVA=false;return s0(...a)}:s0;
   const s2=on('s2')?function(...a){FSET.clear();FMULTI=false;GUIDE=[];return s1(...a)}:s1;
@@ -6699,7 +6700,7 @@ function esciImpag(){
 var vaiTavola_FASI=new Set();
 function vaiTavola(id){
   const on=k=>!!(vaiTavola_FASI&&vaiTavola_FASI.has(k));
-  const s0=function(id){if(id===S.tav)return;if(IMPAG)V_IMP.set(S.tav,{s:V.s,ox:V.ox,oy:V.oy});S.tav=id;S.finAtt=null;salvaPref();sel.clear();PARTI=[];
+  const s0=function(id){tbChiudi();if(id===S.tav)return;if(IMPAG)V_IMP.set(S.tav,{s:V.s,ox:V.ox,oy:V.oy});S.tav=id;S.finAtt=null;salvaPref();sel.clear();PARTI=[];
   if(IMPAG){const v=V_IMP.get(id);BG.c=null;BG.key='';if(v){V.s=v.s;V.ox=v.ox;V.oy=v.oy;cambioVista()}else adattaCartaVista()}ricomponi();rendiCol();richiedi()};
   const s1=on('s1')?function(...a){FSEL=null;FIN_NUOVA=false;return s0(...a)}:s0;
   const s2=on('s2')?function(...a){FSET.clear();FMULTI=false;return s1(...a)}:s1;
@@ -6737,8 +6738,8 @@ function rendiCol(){
   clearTimeout(miniT);miniT=setTimeout(miniature,700)};
   const s1=on('s1')?function(){if(!IMPAG)return;const cur=tavAtt();if(cur&&cur.pdf)DC.aperti.add(cur.pdf.d);
   if(cur){let p=dcDir(cur);while(p){DC.chiuse.delete(p);const c=dcCartelle().find(x=>x.id===p);p=c&&dcEsiste(c.p)?c.p:''}}
-  const key=JSON.stringify([ordineTav().map(t=>[t.id,t.nome,t.dir,t.fmt,t.pdf&&[t.pdf.d,t.pdf.nm,t.pdf.p]]),dcCartelle(),[...DC.chiuse],[...DC.aperti],[...DC.docChiusi],S.tav,DC.rinomina,fgLista()]);
-  if(key!==dcChiave){dcChiave=key;dcL.textContent='';const fgb=document.createElement('div');fgb.id='dcFg';fgb.className='lmFg dcFg';dcL.appendChild(fgb);fgMenu();dcRiempi('',dcL);if(!dcL.children.length){const v=document.createElement('div');v.className='dcVuoto';v.textContent='Nessuna tavola';dcL.appendChild(v)}}
+  const key=JSON.stringify([ordineTav().map(t=>[t.id,t.nome,t.dir,t.fmt,t.pdf&&[t.pdf.d,t.pdf.nm,t.pdf.p]]),dcCartelle(),[...DC.chiuse],[...DC.aperti],[...DC.docChiusi],S.tav,DC.rinomina,fgLista(),tbLista().map(x=>[x.id,x.nome]),tbStato().id,tbStato().rin]);
+  if(key!==dcChiave){dcChiave=key;dcL.textContent='';const fgb=document.createElement('div');fgb.id='dcFg';fgb.className='lmFg dcFg';dcL.appendChild(fgb);fgMenu();const tbb=document.createElement('div');tbb.id='dcTb';tbb.className='lmFg dcFg dcTb';dcL.appendChild(tbb);tbRiempi(tbb);dcRiempi('',dcL);if(!dcL.children.length){const v=document.createElement('div');v.className='dcVuoto';v.textContent='Nessuna tavola';dcL.appendChild(v)}}
   else dcL.querySelectorAll('.dcI').forEach(it=>it.classList.toggle('att',it.dataset.id===S.tav));
   clearTimeout(miniT);miniT=setTimeout(miniature,700)}:s0;
   const s2=on('s2')?function(){s1();erNav();erPanApri()}:s1;
@@ -7883,7 +7884,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.124';
+const VERSIONE_GESTO='0.125';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -7913,7 +7914,7 @@ logo.innerHTML=GESTO_SVG;
   async function contenuto(){
     const f=foglio(),o={formato:'gesto',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
     ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(Array.isArray(f.fgl)&&f.fgl.length)o.foglio.fgl=f.fgl;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
-    let n=0,persi=0;RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
+    let n=0,persi=0;RAMI.forEach(r=>{if(r==='tabelle'&&!MOS[r].size)return;o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
     const imm=[...tuttiSfondi()];tuttiSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a});if(tv.pdf&&tv.pdf.a)imm.push({a:tv.pdf.a})});pgTuttiAsset().forEach(a=>imm.push({a}));
     if(!f.uuid)fogliSet({uuid:uuid7()});const u=f.uuid,nome=f.nome||'Foglio';
     for(const b of imm){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
@@ -11437,7 +11438,7 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
   /* ---- the drawing as it is, without images (REC5: their names only) ---- */
   const istantanea=()=>{const f=foglio(),o={foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
     ['sc','o','qu','ts','cartDef','dp','viste','cartelle','strutture','formati','cartigli'].forEach(k=>{if(f[k]!=null)o.foglio[k]=f[k]});
-    RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)))});return o};
+    RAMI.forEach(r=>{if(r==='tabelle'&&!MOS[r].size)return;o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)))});return o};
   const ambiente=()=>{let dm='browser';try{['window-controls-overlay','standalone','minimal-ui','fullscreen'].some(m=>matchMedia('(display-mode: '+m+')').matches&&(dm=m))}catch(e){self.__re(e)}
     return {app:'Gesto di Lab DeMazur',versione:VERSIONE_GESTO,ua:navigator.userAgent,piattaforma:navigator.userAgentData?navigator.userAgentData.platform:navigator.platform,
       tocchi:navigator.maxTouchPoints||0,dpr:devicePixelRatio,vw:innerWidth,vh:innerHeight,schermo:[screen.width,screen.height],display:dm,
@@ -11814,6 +11815,355 @@ function finAree(t){return t?finestre(t).filter(f=>finFg(f)===fgAtt()):[]}
    SF1 the file keeps every background image of the project, whatever a window of the layout shows or hides. */
 const tuttiSfondi=()=>[...sfondi.values()].sort((a,b)=>(a.t||0)-(b.t||0));
 (()=>{const g=window.__gestoFG||{};g.visFin=v=>visSalva(v);window.__gestoFG=g})();
+
+/* ---------- Spreadsheet engine (TB1, TB8, TB9 · presidio DZ-083) ----------
+   Exact decimals, the neutral grammar of formulas and formats, the Italian reading and writing, the evaluation.
+   Pure functions, no DOM: the same file runs in the app and under node for the tests. */
+const TBM=(()=>{
+/* ---- exact decimal: value = m / 10^e, m a BigInt, e >= 0 (TB9) ---- */
+const P10=n=>10n**BigInt(n);
+function D(m,e){m=BigInt(m);e=e|0;while(e>0&&m%10n===0n){m/=10n;e--}return {m,e,D:1}}
+const isD=x=>x&&x.D===1;
+function dParse(s){s=String(s).trim();const g=/^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/.exec(s);if(!g||(!g[2]&&!g[3]))return null;
+  let m=BigInt((g[2]||'0')+(g[3]||'')),e=(g[3]||'').length,x=+(g[4]||0);if(g[1]==='-')m=-m;
+  if(x>0){m*=P10(x)}else if(x<0){e+=-x}return D(m,e)}
+function dNum(f){if(!isFinite(f))return null;if(Number.isInteger(f)&&Math.abs(f)<9e15)return D(BigInt(f),0);return dParse(f.toPrecision(15))}
+const al=(a,b)=>{const e=Math.max(a.e,b.e);return [a.m*P10(e-a.e),b.m*P10(e-b.e),e]};
+const dAdd=(a,b)=>{const [x,y,e]=al(a,b);return D(x+y,e)};
+const dSub=(a,b)=>{const [x,y,e]=al(a,b);return D(x-y,e)};
+const dMul=(a,b)=>D(a.m*b.m,a.e+b.e);
+const dCmp=(a,b)=>{const [x,y]=al(a,b);return x<y?-1:x>y?1:0};
+const dNeg=a=>D(-a.m,a.e);
+const dZero=a=>a.m===0n;
+/* division to 30 significant digits, rounded half away from zero */
+function dDiv(a,b){if(b.m===0n)return null;const dig=30;let num=a.m*P10(b.e),den=b.m*P10(a.e);
+  const neg=(num<0n)!==(den<0n);num=num<0n?-num:num;den=den<0n?-den:den;
+  const q0=num/den,ip=q0===0n?1-(den.toString().length-num.toString().length+1):q0.toString().length;const sc=Math.max(0,dig-ip);let q=num*P10(sc+1)/den;q=(q+5n)/10n;return D(neg?-q:q,sc)}
+/* rounding to n decimals: half away from zero (ROUND), away from zero (ROUNDUP), toward zero (ROUNDDOWN) */
+function dRound(a,n,modo){n=n|0;if(n>=a.e)return a;const k=P10(a.e-n);let q=a.m/k,r=a.m%k;const neg=a.m<0n;if(neg){r=-r}
+  if(modo==='su'){if(r>0n)q+=neg?-1n:1n}else if(modo!=='giu'){if(r*2n>=k)q+=neg?-1n:1n}
+  return n>=0?D(q,n):D(q*P10(-n),0)}
+function dInt(a){const t=dRound(a,0,'giu');return (a.m<0n&&dCmp(t,a)!==0)?dSub(t,D(1,0)):t}
+function dPow(a,b){if(b.e===0&&b.m>=0n&&b.m<=1000n){let r=D(1,0);for(let i=0n;i<b.m;i++)r=dMul(r,a);return r}
+  if(b.e===0&&b.m<0n&&b.m>=-1000n){const p=dPow(a,dNeg(b));return dZero(p)?null:dDiv(D(1,0),p)}
+  const f=Math.pow(dF(a),dF(b));return isFinite(f)?dNum(f):null}
+const dF=a=>Number(a.m)/Math.pow(10,a.e);
+/* canonical form (DZ-083 c): no '+', no superfluous zeros, '-0' written '0' */
+function dCanon(a){let s=(a.m<0n?-a.m:a.m).toString();if(a.e>0){s=s.padStart(a.e+1,'0');s=s.slice(0,s.length-a.e)+'.'+s.slice(s.length-a.e)}return (a.m<0n?'-':'')+s}
+
+/* ---- functions: one closed, numbered list per version (DZ-083 b) ---- */
+const FUNZ_VERSIONE=1;
+const FUNZ=[ // [neutral name, Italian name, group, min args, max args]
+  ['SUM','SOMMA','mat',1,255],['AVERAGE','MEDIA','mat',1,255],['MIN','MIN','mat',1,255],['MAX','MAX','mat',1,255],
+  ['ROUND','ARROTONDA','mat',2,2],['ROUNDUP','ARROTONDA.PER.ECC','mat',2,2],['ROUNDDOWN','ARROTONDA.PER.DIF','mat',2,2],
+  ['ABS','ASS','mat',1,1],['INT','INT','mat',1,1],['MOD','RESTO','mat',2,2],['POWER','POTENZA','mat',2,2],['SQRT','RADQ','mat',1,1],
+  ['PRODUCT','PRODOTTO','mat',1,255],['COUNT','CONTA.NUMERI','mat',1,255],['COUNTA','CONTA.VALORI','mat',1,255],['PI','PI.GRECO','mat',0,0]];
+const DA_IT={},A_IT={},INFO={};FUNZ.forEach(([n,i,g,a,b])=>{DA_IT[i]=n;A_IT[n]=i;INFO[n]={g,a,b}});
+/* ---- errors, as Italian Excel shows them ---- */
+const ERR={div:'#DIV/0!',val:'#VALORE!',rif:'#RIF!',nome:'#NOME?',num:'#NUM!',ciclo:'#CICLO!'};
+const isE=x=>x&&x.E;const E=k=>({E:ERR[k]||k});
+
+/* ---- cell references ---- */
+const colN=s=>{let n=0;for(const c of s)n=n*26+(c.charCodeAt(0)-64);return n};
+const colS=n=>{let s='';while(n>0){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=(n-1-r)/26}return s};
+function rifParse(s){const g=/^(\$?)([A-Za-z]{1,3})(\$?)(\d{1,7})$/.exec(s);if(!g)return null;const c=colN(g[2].toUpperCase()),r=+g[4];if(r<1||c<1||c>16384)return null;return {c,r,ac:!!g[1],ar:!!g[3]}}
+const rifS=q=>(q.ac?'$':'')+colS(q.c)+(q.ar?'$':'')+q.r;
+
+/* ---- tokenizer: the same grammar read in two dresses, Italian (';' and ',') or neutral (',' and '.') ---- */
+const LOC={it:{arg:';',dec:',',vero:'VERO',falso:'FALSO'},neutro:{arg:',',dec:'.',vero:'TRUE',falso:'FALSE'}};
+function token(src,loc){const L=LOC[loc],T=[];let i=0;
+  while(i<src.length){const c=src[i];
+    if(c===' '||c==='\t'||c==='\n'){i++;continue}
+    if(c==='"'){let s='';i++;for(;;){if(i>=src.length)throw new Error('virgolette non chiuse');if(src[i]==='"'){if(src[i+1]==='"'){s+='"';i+=2;continue}i++;break}s+=src[i++]}T.push({k:'str',v:s});continue}
+    const num=loc==='it'?/^\d+(?:,\d+)?(?:[eE][+-]?\d+)?/:/^\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/;
+    const m=num.exec(src.slice(i));if(m&&!/^[A-Za-z]/.test(src.slice(i+m[0].length))){T.push({k:'num',v:dParse(m[0].replace(',','.'))});i+=m[0].length;continue}
+    const w=/^(\$?[A-Za-z]{1,3}\$?\d{1,7})(?::(\$?[A-Za-z]{1,3}\$?\d{1,7}))?(?![A-Za-z0-9_.(])/.exec(src.slice(i));
+    if(w&&rifParse(w[1])&&(!w[2]||rifParse(w[2]))){T.push(w[2]?{k:'rng',a:rifParse(w[1]),b:rifParse(w[2])}:{k:'ref',v:rifParse(w[1])});i+=w[0].length;continue}
+    const id=/^[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_.]*/.exec(src.slice(i));
+    if(id){const s=id[0].toUpperCase();i+=id[0].length;
+      if(src[i]==='('){T.push({k:'fn',v:s});continue}
+      if(s===L.vero||s==='TRUE'||s==='VERO'){T.push({k:'bool',v:true});continue}
+      if(s===L.falso||s==='FALSE'||s==='FALSO'){T.push({k:'bool',v:false});continue}
+      T.push({k:'nome',v:id[0]});continue}
+    const two=src.slice(i,i+2);if(two==='<='||two==='>='||two==='<>'){T.push({k:'op',v:two});i+=2;continue}
+    if('+-*/^&=<>%'.includes(c)){T.push({k:'op',v:c});i++;continue}
+    if(c==='('||c===')'){T.push({k:c});i++;continue}
+    if(c===L.arg){T.push({k:'sep'});i++;continue}
+    throw new Error('carattere non atteso «'+c+'»')}
+  return T}
+/* ---- parser: comparison < '&' < '+' '-' < '*' '/' < '^' < unary '-' < postfix '%' (Excel precedence) ---- */
+function parse(src,loc){const T=token(src,loc);let p=0;const peek=()=>T[p],eat=()=>T[p++];
+  const isOp=(t,...v)=>t&&t.k==='op'&&v.includes(t.v);
+  function cmp(){let a=cat();while(isOp(peek(),'=','<>','<','>','<=','>=')){const o=eat().v;a={k:'bin',o,a,b:cat()}}return a}
+  function cat(){let a=add();while(isOp(peek(),'&')){eat();a={k:'bin',o:'&',a,b:add()}}return a}
+  function add(){let a=mul();while(isOp(peek(),'+','-')){const o=eat().v;a={k:'bin',o,a,b:mul()}}return a}
+  function mul(){let a=pow();while(isOp(peek(),'*','/')){const o=eat().v;a={k:'bin',o,a,b:pow()}}return a}
+  function pow(){let a=una();while(isOp(peek(),'^')){eat();a={k:'bin',o:'^',a,b:una()}}return a}
+  function una(){if(isOp(peek(),'-')){eat();return {k:'neg',a:una()}}if(isOp(peek(),'+')){eat();return una()}return pct()}
+  function pct(){let a=prim();while(isOp(peek(),'%')){eat();a={k:'pct',a}}return a}
+  function prim(){const t=eat();if(!t)throw new Error('formula incompleta');
+    if(t.k==='num')return {k:'num',v:t.v};if(t.k==='str')return {k:'str',v:t.v};if(t.k==='bool')return {k:'bool',v:t.v};
+    if(t.k==='ref')return {k:'ref',v:t.v};if(t.k==='rng')return {k:'rng',a:t.a,b:t.b};
+    if(t.k==='nome')return {k:'nome',v:t.v};
+    if(t.k==='('){const a=cmp();if(!peek()||peek().k!==')')throw new Error('parentesi non chiusa');eat();return {k:'par',a}}
+    if(t.k==='fn'){const n=loc==='it'?(DA_IT[t.v]||t.v):t.v;eat();const args=[];
+      if(peek()&&peek().k===')'){eat()}else{for(;;){args.push(cmp());const s=eat();if(!s)throw new Error('parentesi non chiusa');if(s.k===')')break;if(s.k!=='sep')throw new Error('separatore atteso')}}
+      return {k:'fn',n,args}}
+    throw new Error('elemento non atteso')}
+  const a=cmp();if(p<T.length)throw new Error('elemento non atteso dopo la formula');return a}
+/* ---- writing back: neutral for the file, Italian for the eye ---- */
+function scrivi(a,loc){const L=LOC[loc],w=x=>scrivi(x,loc);
+  switch(a.k){case 'num':{const s=dCanon(a.v);return loc==='it'?s.replace('.',','):s}
+    case 'str':return '"'+a.v.replace(/"/g,'""')+'"';case 'bool':return a.v?L.vero:L.falso;
+    case 'ref':return rifS(a.v);case 'rng':return rifS(a.a)+':'+rifS(a.b);case 'nome':return a.v;
+    case 'par':return '('+w(a.a)+')';case 'neg':return '-'+w(a.a);case 'pct':return w(a.a)+'%';
+    case 'bin':return w(a.a)+a.o+w(a.b);
+    case 'fn':return (loc==='it'?(A_IT[a.n]||a.n):a.n)+'('+a.args.map(w).join(L.arg)+')'}}
+/* the formula as the file keeps it: '=' always written (DZ-083 b) */
+const neutra=(txt,daLoc)=>'='+scrivi(parse(txt.replace(/^=/,''),daLoc||'it'),'neutro');
+const locale=(f,loc)=>'='+scrivi(parse(f.replace(/^=/,''),'neutro'),loc||'it');
+const nomiUsati=a=>{const r=[];(function v(x){if(!x)return;if(x.k==='fn'){if(!INFO[x.n])r.push(x.n);x.args.forEach(v)}['a','b'].forEach(k=>x[k]&&x[k].k&&v(x[k]))})(a);return r};
+
+/* ---- evaluation ---- */
+function valuta(tab,ref,ctx){ctx=ctx||{memo:new Map(),pila:new Set()};const k=rifS({c:ref.c,r:ref.r});
+  if(ctx.memo.has(k))return ctx.memo.get(k);const c=tab.celle&&tab.celle[k];let v;
+  if(!c)v=null;else if(c.n!=null)v=dParse(c.n);else if(c.t!=null)v=c.t;else if(c.b!=null)v=!!c.b;
+  else if(c.f!=null){if(ctx.pila.has(k))return E('ciclo');ctx.pila.add(k);
+    try{v=calcola(parse(c.f.replace(/^=/,''),'neutro'),tab,ctx);if(Array.isArray(v))v=v.length?v[0]:null}catch(e){v=E('nome')}ctx.pila.delete(k)}
+  ctx.memo.set(k,v);return v}
+const num=v=>{if(v==null)return D(0,0);if(isD(v))return v;if(typeof v==='boolean')return D(v?1:0,0);if(isE(v))return v;
+  if(typeof v==='string'){const s=v.trim();if(s==='')return D(0,0);const d=dParse(s.replace(/\./g,'').replace(',','.'))||dParse(s);return d||E('val')}return E('val')};
+function calcola(a,tab,ctx){const C=x=>calcola(x,tab,ctx);
+  switch(a.k){
+    case 'num':return a.v;case 'str':return a.v;case 'bool':return a.v;case 'par':return C(a.a);
+    case 'ref':return valuta(tab,a.v,ctx);
+    case 'rng':{const r=[];const c0=Math.min(a.a.c,a.b.c),c1=Math.max(a.a.c,a.b.c),r0=Math.min(a.a.r,a.b.r),r1=Math.max(a.a.r,a.b.r);
+      if((c1-c0+1)*(r1-r0+1)>200000)return E('rif');for(let r_=r0;r_<=r1;r_++)for(let c_=c0;c_<=c1;c_++)r.push(valuta(tab,{c:c_,r:r_},ctx));return r}
+    case 'nome':return E('nome');
+    case 'neg':{const x=num(sc(C(a.a)));return isE(x)?x:dNeg(x)}
+    case 'pct':{const x=num(sc(C(a.a)));return isE(x)?x:dDiv(x,D(100,0))}
+    case 'bin':{let x=sc(C(a.a)),y=sc(C(a.b));if(isE(x))return x;if(isE(y))return y;
+      if(a.o==='&')return testo(x)+testo(y);
+      if(['=','<>','<','>','<=','>='].includes(a.o)){const c=confronta(x,y);return {'=':c===0,'<>':c!==0,'<':c<0,'>':c>0,'<=':c<=0,'>=':c>=0}[a.o]}
+      x=num(x);y=num(y);if(isE(x))return x;if(isE(y))return y;
+      if(a.o==='+')return dAdd(x,y);if(a.o==='-')return dSub(x,y);if(a.o==='*')return dMul(x,y);
+      if(a.o==='/'){const q=dDiv(x,y);return q||E('div')}if(a.o==='^'){const q=dPow(x,y);return q||E('num')}}
+    case 'fn':return funzione(a,tab,ctx)}
+  return E('val')}
+const sc=v=>Array.isArray(v)?(v.length?v[0]:null):v;
+const testo=v=>v==null?'':isD(v)?dCanon(v).replace('.',','):typeof v==='boolean'?(v?'VERO':'FALSO'):String(v);
+const confronta=(x,y)=>{if(x==null)x=isD(y)?D(0,0):typeof y==='boolean'?false:'';if(y==null)y=isD(x)?D(0,0):typeof x==='boolean'?false:'';
+  const rk=v=>isD(v)?0:typeof v==='string'?1:2;if(rk(x)!==rk(y))return rk(x)-rk(y);
+  if(isD(x))return dCmp(x,y);if(typeof x==='string'){const a=x.toLowerCase(),b=y.toLowerCase();return a<b?-1:a>b?1:0}return (x?1:0)-(y?1:0)};
+function funzione(a,tab,ctx){const f=a.n,I=INFO[f];if(!I)return E('nome');if(a.args.length<I.a||a.args.length>I.b)return E('val');
+  const args=a.args.map(x=>calcola(x,tab,ctx));
+  /* numbers of the arguments as Excel takes them: typed values count, values from ranges only when numbers */
+  const numeri=()=>{const r=[];for(let i=0;i<args.length;i++){const v=args[i];
+      if(Array.isArray(v)){for(const q of v){if(isE(q))return q;if(isD(q))r.push(q)}}
+      else{if(isE(v))return v;const n=num(v);if(isE(n))return n;if(v!=null)r.push(n)}}return r};
+  const uno=i=>{const v=num(sc(args[i]));return v};
+  switch(f){
+    case 'SUM':{const L=numeri();if(isE(L))return L;return L.reduce(dAdd,D(0,0))}
+    case 'PRODUCT':{const L=numeri();if(isE(L))return L;return L.length?L.reduce(dMul,D(1,0)):D(0,0)}
+    case 'AVERAGE':{const L=numeri();if(isE(L))return L;if(!L.length)return E('div');return dDiv(L.reduce(dAdd,D(0,0)),D(L.length,0))}
+    case 'MIN':case 'MAX':{const L=numeri();if(isE(L))return L;if(!L.length)return D(0,0);return L.reduce((p,q)=>(dCmp(q,p)<0)===(f==='MIN')?q:p)}
+    case 'COUNT':{let n=0;args.forEach(v=>{if(Array.isArray(v))v.forEach(q=>{if(isD(q))n++});else if(isD(v)||(typeof v==='string'&&!isE(num(v))))n++});return D(n,0)}
+    case 'COUNTA':{let n=0;args.forEach(v=>{if(Array.isArray(v))v.forEach(q=>{if(q!=null&&q!=='')n++});else if(v!=null)n++});return D(n,0)}
+    case 'ROUND':case 'ROUNDUP':case 'ROUNDDOWN':{const x=uno(0),n=uno(1);if(isE(x))return x;if(isE(n))return n;return dRound(x,Number(dRound(n,0,'giu').m),f==='ROUNDUP'?'su':f==='ROUNDDOWN'?'giu':'')}
+    case 'ABS':{const x=uno(0);if(isE(x))return x;return x.m<0n?dNeg(x):x}
+    case 'INT':{const x=uno(0);if(isE(x))return x;return dInt(x)}
+    case 'MOD':{const x=uno(0),y=uno(1);if(isE(x))return x;if(isE(y))return y;if(dZero(y))return E('div');const q=dDiv(x,y);return dSub(x,dMul(y,dInt(q)))}
+    case 'POWER':{const x=uno(0),y=uno(1);if(isE(x))return x;if(isE(y))return y;return dPow(x,y)||E('num')}
+    case 'SQRT':{const x=uno(0);if(isE(x))return x;if(x.m<0n)return E('num');return dNum(Math.sqrt(dF(x)))}
+    case 'PI':return dParse('3.14159265358979')}
+  return E('nome')}
+
+/* ---- formats: Excel's grammar in its neutral, English form (DZ-083 e); shown the Italian way ---- */
+const FORMATI=[['General','Generale'],['0','Intero'],['0.00','Due decimali'],['#,##0','Migliaia'],['#,##0.00','Migliaia, due decimali'],['0%','Percentuale'],['0.00%','Percentuale, due decimali'],['"€" #,##0.00','Euro']];
+function formatta(v,fmt){if(v==null)return '';if(isE(v))return v.E;if(typeof v==='boolean')return v?'VERO':'FALSO';if(typeof v==='string')return v;
+  fmt=fmt||'General';
+  if(fmt==='General'){let x=v;const s=dCanon(x);const [ip,fp]=s.split('.');if(fp&&ip.replace('-','').length+fp.length>15)x=dRound(x,Math.max(0,15-ip.replace('-','').length),'');return dCanon(x).replace('.',',')}
+  const g=/^(?:"([^"]*)"\s?)?(#,##)?(0+)(?:\.(0+))?(%)?$/.exec(fmt);if(!g)return dCanon(v).replace('.',',');
+  let x=v;if(g[5])x=dMul(x,D(100,0));const dec=g[4]?g[4].length:0;x=dRound(x,dec,'');
+  let s=dCanon(x),neg=s[0]==='-';if(neg)s=s.slice(1);let [ip,fp]=s.split('.');fp=(fp||'').padEnd(dec,'0');ip=ip.padStart(g[3].length,'0');
+  if(g[2])ip=ip.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  return (g[1]?g[1]+' ':'')+(neg?'-':'')+ip+(dec?','+fp:'')+(g[5]?'%':'')}
+
+/* ---- what is typed into a cell: number, text, true or false, formula ---- */
+function leggi(txt){const s=String(txt);if(s==='')return null;if(s[0]==="'")return {t:s.slice(1)};
+  if(s[0]==='='){return {f:neutra(s,'it')}}
+  const u=s.trim().toUpperCase();if(u==='VERO')return {b:true};if(u==='FALSO')return {b:false};
+  const t=s.trim();let g=/^([+-]?)(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d+))?(%?)$/.exec(t);
+  if(g){let d=dParse(g[1]+g[2].replace(/\./g,'')+(g[3]?'.'+g[3]:''));if(g[4]){d=dDiv(d,D(100,0));return {n:dCanon(d),fmt:'0%'}}return {n:dCanon(d)}}
+  return {t:s}}
+/* what the editor shows for a cell */
+function scritto(c){if(!c)return '';if(c.f!=null){try{return locale(c.f,'it')}catch(e){return c.f}}if(c.n!=null)return dCanon(dParse(c.n)).replace('.',',');if(c.b!=null)return c.b?'VERO':'FALSO';
+  if(c.t!=null){const l=leggi(c.t);return l&&l.t===c.t?c.t:"'"+c.t}return ''}
+
+return {D,dParse,dNum,dAdd,dSub,dMul,dDiv,dCmp,dRound,dCanon,dF,isD,isE,parse,scrivi,neutra,locale,valuta,formatta,leggi,scritto,
+  colS,colN,rifParse,rifS,FUNZ,FUNZ_VERSIONE,FORMATI,ERR,nomiUsati};
+})();
+/* ---------- 125 TB1, TB8, TB9 (owner, 25.11.2026 · presidio DZ-083) ----------
+   The spreadsheets of the project: entries of the Project Manager, opened over the plate in a grid written with keyboard and pen.
+   Data: branch `tabelle` of the module gesto. A cell carries one value field: n (number, canonical decimal text), t (text), b (true or false),
+   f (formula in the neutral grammar, '=' always written); fmt is a format code in Excel's neutral grammar. col and rig carry widths and heights. */
+function tbLista(){return [...MOS.tabelle.values()].sort((a,b)=>(a.t||0)-(b.t||0)||String(a.id).localeCompare(String(b.id)))}
+function tbStato(){return tbStato.s||(tbStato.s={id:null,c:1,r:1,c2:1,r2:1,ed:false,rin:null})}
+const TB_W=96,TB_H=26;
+function tbIco(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15"/></svg>'}
+function tbNuova(){let k=tbLista().length+1;const nomi=new Set(tbLista().map(x=>x.nome));while(nomi.has('Tabella '+k))k++;
+  const o={id:nuovoId('tabelle'),_r:'tabelle',nome:'Tabella '+k,celle:{},t:Date.now()};esegui({add:[o],del:[]});return o.id}
+/* one change of a table = one step of the undo */
+function tbCambia(id,fn){const o=MOS.tabelle.get(id);if(!o)return;const n=JSON.parse(JSON.stringify(corpo('tabelle',o)));n.id=o.id;n._r='tabelle';if(!n.celle)n.celle={};
+  if(fn(n)===false)return;esegui({add:[n],del:[o]})}
+function tbRinomina(id,nome){nome=String(nome||'').trim();if(!nome)return;tbCambia(id,n=>{if(n.nome===nome)return false;n.nome=nome})}
+function tbElimina(id){const o=MOS.tabelle.get(id);if(!o)return;if(tbStato().id===id)tbChiudi();esegui({add:[],del:[o]});avviso('«'+o.nome+'» eliminata: Annulla la riporta')}
+/* the block of the tables in the Project Manager */
+function tbRiempi(box){box.textContent='';const st=tbStato();
+  const h=document.createElement('div');h.className='fgH';h.innerHTML='<span>Tabelle</span><button type="button" title="Nuova tabella">+</button>';
+  h.querySelector('button').onclick=e=>{e.stopPropagation();const id=tbNuova();tbApri(id)};box.appendChild(h);
+  tbLista().forEach(x=>{const r=document.createElement('div');r.className='fgR tbR'+(st.id===x.id?' att':'');r.dataset.id=x.id;r.title=x.nome;
+    r.innerHTML=tbIco()+'<span></span>';r.querySelector('span').textContent=x.nome;
+    if(st.rin===x.id){const i=document.createElement('input');i.className='fgIn';i.value=x.nome;r.querySelector('span').replaceWith(i);
+      const fine=ok=>{st.rin=null;if(ok)tbRinomina(x.id,i.value);rendiCol()};
+      i.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();fine(true)}else if(e.key==='Escape'){e.preventDefault();fine(false)}});
+      i.addEventListener('blur',()=>fine(true));setTimeout(()=>{i.focus();i.select()},0)}
+    else{let tm=0;r.onclick=e=>{e.stopPropagation();if(tm){clearTimeout(tm);tm=0;st.rin=x.id;dcChiave='';rendiCol();return}tm=setTimeout(()=>{tm=0;tbApri(x.id)},300)}}
+    const d=document.createElement('button');d.type='button';d.className='fgDel';d.title='Elimina la tabella';d.innerHTML=icoCestino();
+    d.onclick=e=>{e.stopPropagation();if(!d.classList.contains('arm')){d.classList.add('arm');d.title='Tocca di nuovo per eliminare «'+x.nome+'»';return}tbElimina(x.id)};
+    r.appendChild(d);box.appendChild(r)})}
+
+/* ---- the grid ---- */
+var TBV=null;
+function tbVista(){if(TBV)return TBV;const v=document.createElement('div');v.id='tbV';v.hidden=true;v.tabIndex=-1;
+  v.innerHTML='<div class="tbBar"><input class="tbNome" title="Cella scelta" aria-label="Cella scelta" readonly><span class="tbFx">fx</span><input class="tbF" aria-label="Contenuto della cella" spellcheck="false">'+
+    '<select class="tbFmt" title="Formato del numero" aria-label="Formato del numero"></select><button type="button" class="tbX" title="Chiudi la tabella" aria-label="Chiudi la tabella"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'+
+    '<div class="tbTit"></div><div class="tbG"><table class="tbT"></table><input class="tbE" spellcheck="false" hidden><input class="tbKc" aria-label="Tabella" autocomplete="off" spellcheck="false"></div>';
+  document.body.appendChild(v);TBV=v;
+  const fs=v.querySelector('.tbFmt');TBM.FORMATI.forEach(([k,n])=>{const o=document.createElement('option');o.value=k;o.textContent=n;fs.appendChild(o)});
+  fs.onchange=()=>{const s=tbStato(),R=tbRange();tbCambia(s.id,n=>{for(let r=R.r0;r<=R.r1;r++)for(let c=R.c0;c<=R.c1;c++){const k=TBM.colS(c)+r,q=n.celle[k]||{};if(fs.value==='General')delete q.fmt;else q.fmt=fs.value;if(Object.keys(q).length)n.celle[k]=q}});tbFuoco()};
+  v.querySelector('.tbX').onclick=()=>tbChiudi();
+  const G=v.querySelector('.tbG'),E=v.querySelector('.tbE'),F=v.querySelector('.tbF');
+  /* keys stay inside the table: nothing reaches the drawing */
+  v.addEventListener('keydown',e=>{e.stopPropagation();tbTasto(e)});
+  ['keyup','keypress'].forEach(t=>v.addEventListener(t,e=>e.stopPropagation()));
+  G.addEventListener('pointerdown',tbPunta);G.addEventListener('dblclick',e=>{const td=e.target.closest('td[data-k]');if(td)tbModifica(null)});
+  F.addEventListener('focus',()=>{const s=tbStato();if(!s.ed){s.ed='bar';E.value=F.value}});
+  F.addEventListener('input',()=>{E.value=F.value});E.addEventListener('input',()=>{F.value=E.value});
+  v.addEventListener('copy',tbCopia);v.addEventListener('paste',tbIncolla);
+  addEventListener('resize',()=>{if(!v.hidden)tbPosiziona()});
+  return v}
+function tbPosiziona(){const v=TBV;if(!v)return;const ic=document.getElementById('impCol'),pp=document.getElementById('pp');
+  const l=ic&&ic.offsetParent&&!document.body.classList.contains('colChiusa')?ic.getBoundingClientRect().right+8:80;
+  const pr=pp&&pp.offsetParent?pp.getBoundingClientRect():null;const r=pr&&pr.width?innerWidth-pr.left+8:8;
+  v.style.left=l+'px';v.style.right=r+'px';v.style.top='8px';v.style.bottom='8px'}
+function tbApri(id){const o=MOS.tabelle.get(id);if(!o)return;const st=tbStato();if(st.id!==id){Object.assign(st,{id,c:1,r:1,c2:1,r2:1,ed:false})}
+  const v=tbVista();v.hidden=false;tbPosiziona();tbRendi();dcChiave='';rendiCol();setTimeout(()=>tbFuoco(),0)}
+function tbChiudi(){const st=tbStato();if(!st.id&&(!TBV||TBV.hidden))return;if(st.ed)tbConferma(false);st.id=null;if(TBV)TBV.hidden=true;dcChiave='';try{rendiCol()}catch(e){self.__re&&self.__re(e)}}
+/* the keys go to an input of its own: the shortcuts of the drawing leave inputs alone */
+function tbFuoco(){if(!TBV)return;const k=TBV.querySelector('.tbKc');k.value='';k.focus({preventScroll:true})}
+const tbRange=()=>{const s=tbStato();return {c0:Math.min(s.c,s.c2),c1:Math.max(s.c,s.c2),r0:Math.min(s.r,s.r2),r1:Math.max(s.r,s.r2)}};
+function tbRendi(){const st=tbStato(),o=MOS.tabelle.get(st.id);if(!TBV)return;if(!o){tbChiudi();return}
+  const T=TBV.querySelector('.tbT'),cel=o.celle||{};let mc=0,mr=0;Object.keys(cel).forEach(k=>{const q=TBM.rifParse(k);if(q){mc=Math.max(mc,q.c);mr=Math.max(mr,q.r)}});
+  const NC=Math.max(16,mc+4,st.c+2),NR=Math.max(60,mr+20,st.r+5),ctx={memo:new Map(),pila:new Set()};
+  TBV.querySelector('.tbTit').textContent=o.nome;
+  let h='<colgroup><col style="width:44px">',tw=44;for(let c=1;c<=NC;c++){const w=(o.col&&o.col[TBM.colS(c)])||TB_W;tw+=w;h+='<col style="width:'+w+'px">'}T.style.width=tw+'px';h+='</colgroup><thead><tr><th class="tbK"></th>';
+  const R=tbRange();for(let c=1;c<=NC;c++)h+='<th data-c="'+c+'"'+(c>=R.c0&&c<=R.c1?' class="on"':'')+'>'+TBM.colS(c)+'<i class="tbRc"></i></th>';h+='</tr></thead><tbody>';
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  for(let r=1;r<=NR;r++){const hh=o.rig&&o.rig[r];h+='<tr'+(hh?' style="height:'+hh+'px"':'')+'><th data-r="'+r+'"'+(r>=R.r0&&r<=R.r1?' class="on"':'')+'>'+r+'<i class="tbRr"></i></th>';
+    for(let c=1;c<=NC;c++){const k=TBM.colS(c)+r,q=cel[k];let cls='';let tx='';
+      if(q){const v=TBM.valuta(o,{c,r},ctx);tx=TBM.formatta(v,q.fmt);cls=TBM.isE(v)?'err':TBM.isD(v)?'num':typeof v==='boolean'?'bool':''}
+      if(c>=R.c0&&c<=R.c1&&r>=R.r0&&r<=R.r1)cls+=' sel';if(c===st.c&&r===st.r)cls+=' att';
+      h+='<td data-k="'+k+'"'+(cls?' class="'+cls.trim()+'"':'')+'>'+esc(tx)+'</td>'}h+='</tr>'}
+  T.innerHTML=h+'</tbody>';tbBarra()}
+function tbBarra(){const st=tbStato(),o=MOS.tabelle.get(st.id);if(!o||!TBV)return;const R=tbRange(),k=TBM.colS(st.c)+st.r,q=(o.celle||{})[k];
+  TBV.querySelector('.tbNome').value=(R.c0!==R.c1||R.r0!==R.r1)?TBM.colS(R.c0)+R.r0+':'+TBM.colS(R.c1)+R.r1:k;
+  if(!st.ed)TBV.querySelector('.tbF').value=TBM.scritto(q);TBV.querySelector('.tbFmt').value=(q&&q.fmt)||'General'}
+function tbVai(c,r,est){const st=tbStato();c=Math.max(1,c);r=Math.max(1,r);if(est){st.c2=c;st.r2=r}else{st.c=st.c2=c;st.r=st.r2=r}
+  tbRendi();const td=TBV.querySelector('td[data-k="'+TBM.colS(est?st.c2:st.c)+(est?st.r2:st.r)+'"]');if(td)td.scrollIntoView({block:'nearest',inline:'nearest'})}
+/* editing in the cell: the input lies over it */
+function tbModifica(car){const st=tbStato(),o=MOS.tabelle.get(st.id);if(!o)return;const k=TBM.colS(st.c)+st.r,td=TBV.querySelector('td[data-k="'+k+'"]'),E=TBV.querySelector('.tbE'),G=TBV.querySelector('.tbG');
+  st.ed='cella';E.value=car!=null?car:TBM.scritto((o.celle||{})[k]);TBV.querySelector('.tbF').value=E.value;
+  if(td){const a=td.getBoundingClientRect(),g=G.getBoundingClientRect();E.style.left=(a.left-g.left+G.scrollLeft)+'px';E.style.top=(a.top-g.top+G.scrollTop)+'px';E.style.width=Math.max(a.width,140)+'px';E.style.height=a.height+'px'}
+  E.hidden=false;E.focus();const n=E.value.length;E.setSelectionRange(n,n)}
+function tbConferma(ok){const st=tbStato(),E=TBV.querySelector('.tbE'),F=TBV.querySelector('.tbF');if(!st.ed)return true;
+  const testo=st.ed==='bar'?F.value:E.value;
+  if(ok){const k=TBM.colS(st.c)+st.r;let nuova;try{nuova=TBM.leggi(testo)}catch(e){avviso('Formula non valida: '+e.message);E.classList.add('err');return false}
+    tbCambia(st.id,n=>{const prima=n.celle[k]||null,fmt=prima&&prima.fmt;if(!nuova){if(!prima)return false;if(fmt)n.celle[k]={fmt};else delete n.celle[k];return}
+      const q=Object.assign({},nuova);if(!q.fmt&&fmt)q.fmt=fmt;if(JSON.stringify(q)===JSON.stringify(prima))return false;n.celle[k]=q})}
+  st.ed=false;E.hidden=true;E.classList.remove('err');tbRendi();tbFuoco();return true}
+function tbCancella(){const st=tbStato(),R=tbRange();tbCambia(st.id,n=>{let x=false;for(let r=R.r0;r<=R.r1;r++)for(let c=R.c0;c<=R.c1;c++){const k=TBM.colS(c)+r,q=n.celle[k];if(!q)continue;
+  const f=q.fmt;delete n.celle[k];if(f)n.celle[k]={fmt:f};x=true}if(!x)return false})}
+function tbTasto(e){const st=tbStato(),k=e.key,mod=e.ctrlKey||e.metaKey;
+  if(mod&&!e.altKey&&(k==='z'||k==='Z')){e.preventDefault();if(st.ed)return;e.shiftKey?ripeti():annulla();return}
+  if(mod&&!e.altKey&&(k==='y'||k==='Y')){e.preventDefault();if(!st.ed)ripeti();return}
+  if(st.ed){if(k==='Enter'){e.preventDefault();if(tbConferma(true))tbVai(st.c,st.r+(e.shiftKey?-1:1))}
+    else if(k==='Tab'){e.preventDefault();if(tbConferma(true))tbVai(st.c+(e.shiftKey?-1:1),st.r)}
+    else if(k==='Escape'){e.preventDefault();tbConferma(false)}
+    else if(st.ed==='cella'&&(k==='ArrowUp'||k==='ArrowDown')&&!/^=/.test(TBV.querySelector('.tbE').value)){e.preventDefault();if(tbConferma(true))tbVai(st.c,st.r+(k==='ArrowUp'?-1:1))}
+    return}
+  const mv={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[k];
+  if(mv){e.preventDefault();const b=e.shiftKey?[st.c2,st.r2]:[st.c,st.r];tbVai(b[0]+mv[0],b[1]+mv[1],e.shiftKey);return}
+  if(k==='Enter'||k==='F2'){e.preventDefault();tbModifica(null);return}
+  if(k==='Tab'){e.preventDefault();tbVai(st.c+(e.shiftKey?-1:1),st.r);return}
+  if(k==='Delete'||k==='Backspace'){e.preventDefault();tbCancella();return}
+  if(k==='Escape'){e.preventDefault();tbChiudi();return}
+  if(mod&&(k==='a'||k==='A')){e.preventDefault();return}
+  if(!mod&&!e.altKey&&k.length===1){e.preventDefault();tbModifica(k)}}
+/* the pen: tap chooses, a drag widens the choice, a tap in a formula being written puts the reference of the cell */
+function tbPunta(e){const st=tbStato(),G=TBV.querySelector('.tbG');
+  const rc=e.target.closest('.tbRc'),rr=e.target.closest('.tbRr');
+  if(rc||rr){e.preventDefault();const th=e.target.closest('th'),x0=e.clientX,y0=e.clientY,c=+th.dataset.c,r=+th.dataset.r,o=MOS.tabelle.get(st.id);
+    const w0=rc?((o.col&&o.col[TBM.colS(c)])||TB_W):((o.rig&&o.rig[r])||TB_H);let w=w0;
+    const mv=ev=>{w=Math.max(rc?24:16,Math.round(w0+(rc?ev.clientX-x0:ev.clientY-y0)));const cg=TBV.querySelectorAll('.tbT col');if(rc&&cg[c]){const T=TBV.querySelector('.tbT');T.style.width=(parseFloat(T.style.width)+w-parseFloat(cg[c].style.width))+'px';cg[c].style.width=w+'px'}if(rr)th.parentNode.style.height=w+'px'};
+    const up=()=>{removeEventListener('pointermove',mv,true);removeEventListener('pointerup',up,true);if(w!==w0)tbCambia(st.id,n=>{if(rc){n.col=n.col||{};n.col[TBM.colS(c)]=w}else{n.rig=n.rig||{};n.rig[r]=w}})};
+    addEventListener('pointermove',mv,true);addEventListener('pointerup',up,true);return}
+  const th=e.target.closest('th');if(th){if(th.dataset.c){st.c=st.c2=+th.dataset.c;st.r=1;st.r2=60}else if(th.dataset.r){st.r=st.r2=+th.dataset.r;st.c=1;st.c2=16}tbRendi();tbFuoco();return}
+  const td=e.target.closest('td[data-k]');if(!td)return;const q=TBM.rifParse(td.dataset.k);
+  if(st.ed){const E=st.ed==='bar'?TBV.querySelector('.tbF'):TBV.querySelector('.tbE');const v=E.value,p=E.selectionStart==null?v.length:E.selectionStart;
+    if(/^=/.test(v)&&/[=+\-*/^(;&<>]\s*$/.test(v.slice(0,p))){e.preventDefault();const ins=td.dataset.k;E.value=v.slice(0,p)+ins+v.slice(p);
+      (st.ed==='bar'?TBV.querySelector('.tbE'):TBV.querySelector('.tbF')).value=E.value;setTimeout(()=>{E.focus();E.setSelectionRange(p+ins.length,p+ins.length)},0);return}
+    if(!tbConferma(true))return}
+  e.preventDefault();if(e.shiftKey){st.c2=q.c;st.r2=q.r}else{st.c=st.c2=q.c;st.r=st.r2=q.r}tbRendi();tbFuoco();
+  const mv=ev=>{const t=document.elementFromPoint(ev.clientX,ev.clientY),d=t&&t.closest&&t.closest('td[data-k]');if(!d)return;const z=TBM.rifParse(d.dataset.k);if(z.c!==st.c2||z.r!==st.r2){st.c2=z.c;st.r2=z.r;tbRendi()}};
+  const up=()=>{removeEventListener('pointermove',mv,true);removeEventListener('pointerup',up,true)};addEventListener('pointermove',mv,true);addEventListener('pointerup',up,true)}
+/* copy and paste as text in columns, the form Excel exchanges */
+function tbCopia(e){const st=tbStato();if(st.ed||!st.id)return;const o=MOS.tabelle.get(st.id),R=tbRange(),L=[];
+  for(let r=R.r0;r<=R.r1;r++){const a=[];for(let c=R.c0;c<=R.c1;c++)a.push(TBM.scritto((o.celle||{})[TBM.colS(c)+r]));L.push(a.join('\t'))}
+  e.clipboardData.setData('text/plain',L.join('\n'));e.preventDefault()}
+function tbIncolla(e){const st=tbStato();if(st.ed||!st.id)return;const t=e.clipboardData.getData('text/plain');if(!t)return;e.preventDefault();
+  const L=t.replace(/\r/g,'').replace(/\n$/,'').split('\n').map(x=>x.split('\t'));let errati=0;
+  tbCambia(st.id,n=>{L.forEach((a,i)=>a.forEach((s,j)=>{const k=TBM.colS(st.c+j)+(st.r+i);let q;try{q=TBM.leggi(s)}catch(x){q={t:s};errati++}
+    const f=n.celle[k]&&n.celle[k].fmt;if(!q){if(f)n.celle[k]={fmt:f};else delete n.celle[k]}else{if(f&&!q.fmt)q.fmt=f;n.celle[k]=q}}))});
+  st.c2=st.c+Math.max(...L.map(a=>a.length))-1;st.r2=st.r+L.length-1;tbRendi();if(errati)avviso(errati+' formule non valide incollate come testo')}
+(()=>{
+  const st=document.createElement('style');st.textContent=
+    '#tbV{position:fixed;z-index:30;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(15,35,44,.16);overflow:hidden}#tbV[hidden]{display:none}'+
+    '#tbV .tbBar{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line)}'+
+    '#tbV .tbNome{width:86px;height:30px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--fg);font:600 12.5px var(--sans);text-align:center}'+
+    '#tbV .tbFx{font:italic 600 12.5px var(--serif,Georgia);color:var(--muted);padding:0 2px}'+
+    '#tbV .tbF{flex:1;min-width:0;height:30px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--fg);font:500 13px var(--mono,ui-monospace,monospace);padding:0 8px}'+
+    '#tbV .tbFmt{height:30px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--fg);font:500 12.5px var(--sans);padding:0 6px}'+
+    '#tbV .tbX{width:32px;height:30px;border:0;background:none;color:var(--fg);border-radius:7px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}#tbV .tbX:hover{box-shadow:inset 0 0 0 1px var(--line)}#tbV .tbX svg{width:16px;height:16px}'+
+    '#tbV .tbTit{font:600 10.5px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:6px 12px 4px}'+
+    '#tbV .tbG{position:relative;flex:1;overflow:auto;outline:none;touch-action:pan-x pan-y}'+
+    '#tbV .tbT{border-collapse:separate;border-spacing:0;table-layout:fixed;font:400 13px var(--sans);color:var(--fg)}'+
+    '#tbV .tbT th{position:sticky;background:var(--panel);font:600 11px var(--sans);color:var(--muted);height:24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);user-select:none;-webkit-user-select:none}'+
+    '#tbV .tbT thead th{top:0;z-index:2;text-align:center}#tbV .tbT tbody th{left:0;z-index:1;text-align:right;padding-right:6px}#tbV .tbT thead th.tbK{left:0;z-index:3}'+
+    '#tbV .tbT th.on{color:var(--fg);background:var(--on)}'+
+    '#tbV .tbT td{height:'+TB_H+'px;padding:0 6px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:cell}'+
+    '#tbV .tbT td.num{text-align:right;font-variant-numeric:tabular-nums}#tbV .tbT td.bool{text-align:center}#tbV .tbT td.err{color:#AC7853;text-align:center;font-weight:600}'+
+    '#tbV .tbT td.sel{background:var(--on)}#tbV .tbT td.att{box-shadow:inset 0 0 0 2px var(--fg)}'+
+    '#tbV .tbRc{position:absolute;right:-3px;top:0;bottom:0;width:7px;cursor:col-resize;z-index:4}#tbV .tbRr{position:absolute;left:0;right:0;bottom:-3px;height:7px;cursor:row-resize;z-index:4}'+
+    '#tbV .tbT th{position:sticky}#tbV .tbT thead th,#tbV .tbT tbody th{overflow:visible}'+
+    '#tbV .tbKc{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;border:0;padding:0;pointer-events:none}'+
+    '#tbV .tbE{position:absolute;z-index:5;border:0;box-shadow:0 0 0 2px var(--fg);background:var(--panel);color:var(--fg);font:400 13px var(--sans);padding:0 6px;outline:none}#tbV .tbE.err{box-shadow:0 0 0 2px #AC7853}'+
+    '.dcTb .tbR svg{flex:none}.dcTb{border-bottom:1px solid var(--line)}';
+  document.head.appendChild(st);
+  window.__gestoTB={lista:()=>tbLista().map(x=>({id:x.id,nome:x.nome,celle:x.celle,col:x.col,rig:x.rig})),nuova:tbNuova,apri:tbApri,chiudi:tbChiudi,stato:()=>Object.assign({},tbStato()),
+    imposta:(id,celle,col,rig)=>tbCambia(id,n=>{n.celle=JSON.parse(JSON.stringify(celle));if(col)n.col=col;if(rig)n.rig=rig}),
+    valore:(id,k)=>{const o=MOS.tabelle.get(id);return o?TBM.formatta(TBM.valuta(o,TBM.rifParse(k)),(o.celle[k]||{}).fmt):null},M:TBM};
+})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{if(localStorage.getItem('gesto.avvio')==='ultimo')foglioId=localStorage.getItem('gesto.sheet')||'f1';else{AVVIO_ZERO=true;NOME_NUOVO='Nuovo progetto';foglioId='f'+Date.now().toString(36)}}catch(e){self.__re&&self.__re(e)}
