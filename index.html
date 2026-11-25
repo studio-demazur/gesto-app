@@ -1000,7 +1000,8 @@ function ricomponi(){
   const s3=on('s3')?function(){s2();if(IMPAG){if(!tavAtt()){esciImpag();return}rendiCol();richiedi('fondo')}}:s2;
   return s3.apply(this,arguments);
 }
-function foglio(){let f=fogli.find(f=>f.id===foglioId);if(!f){f={id:foglioId,nome:'Foglio 1',t:Date.now()};fogli.push(f)}return f}
+var NOME_NUOVO='Foglio 1',AVVIO_ZERO=false;
+function foglio(){let f=fogli.find(f=>f.id===foglioId);if(!f){f={id:foglioId,nome:NOME_NUOVO,t:Date.now()};fogli.push(f)}return f}
 let orig=()=>foglio().o||[0,0];
 let den=()=>foglio().sc||50;
 /* SC2 (owner, 25.11.2026): fogliSet in one body.
@@ -1079,7 +1080,7 @@ function apriFoglio(id){
   selSf=null;sel.clear();pivotTemp=null;rac=DISEGNO.has(S.tool)?{scopo:S.tool,pts:[],refs:[],anc:[],raw:null,nuova:null,rif:null,v:[],prima:null,ent:null}:null;
   if(S.tool==='origine')strumento('sel');
   haFoglio=fogli.some(f=>f.id===id&&f.esiste);caricato=false;
-  try{localStorage.setItem('gesto.sheet',id)}catch(e){self.__re&&self.__re(e)}
+  try{localStorage.setItem('gesto.sheet',id);if(fogli.some(f=>f.id===id&&f.esiste)){const R=JSON.parse(localStorage.getItem('gesto.recenti')||'{}')||{};R[id]=Date.now();localStorage.setItem('gesto.recenti',JSON.stringify(R))}}catch(e){self.__re&&self.__re(e)}
   unsub.forEach(u=>{try{u()}catch(e){self.__re&&self.__re(e)}});unsub=[];
   ricomponi();aggStato();aggScala();
   vistaDaInquadrare=true;vrImposta(0);try{const v=JSON.parse(localStorage.getItem(vistaChiave())||'null');if(v){V.s=v[0];V.ox=v[1];V.oy=v[2];vrImposta(IMPAG?0:(v[3]||0));vistaDaInquadrare=false;cambioVista()}}catch(e){self.__re&&self.__re(e)}
@@ -4936,7 +4937,7 @@ function taraSfondo(A,B,reale){
   const k=reale/d,n=Object.assign({},b,{x:A[0]+(b.x-A[0])*k,y:A[1]+(b.y-A[1])*k,w:b.w*k,h:b.h*k});
   salva('sfondi',b.id,'set',n);ricomponi();notaSf('Sfondo tarato: '+fmt(reale)+' mm fra i due punti.');
 }
-function notaSf(t){$('notaSf').textContent=t}
+function notaSf(t){$('notaSf').textContent=t;if(t)avviso(t)}
 /* SC2 (owner, 25.11.2026): rendiSf in one body.
    The layers are the stages of this one body, written as they were, each calling the stage it held below it; each stage is active from the point
    of the loading where its layer stood (rendiSf_FASI). */
@@ -5031,7 +5032,7 @@ async function inserisci(blob,f,pw,ph,nome){
 }
 
 /* ---------- 13 esportazione ---------- */
-function notaEx(t){$('notaEx').textContent=t}
+function notaEx(t){$('notaEx').textContent=t;if(t)avviso(t)}
 function estremi(a){
   if(a==='vista'){const r=rettVista();return {x:r.x0,y:r.y0,w:r.x1-r.x0,h:r.y1-r.y0}}
   let x0=1e18,y0=1e18,x1=-1e18,y1=-1e18;const u=b=>{x0=Math.min(x0,b.x0);y0=Math.min(y0,b.y0);x1=Math.max(x1,b.x1);y1=Math.max(y1,b.y1)};
@@ -7881,7 +7882,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.119';
+const VERSIONE_GESTO='0.120';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -11654,12 +11655,43 @@ function fgRiempi(box){box.textContent='';
   document.head.appendChild(st);
   const agg=()=>{aggNome();fgMenu()};agg();
   const lg=document.getElementById('logo');if(lg)lg.addEventListener('click',()=>setTimeout(agg,0));
-  window.__gestoFG={lista:fgLista,att:fgAtt,vai:fgVai,nuovo:fgNuovo,rinomina:fgRinomina,di:fgDi};
+  window.__gestoFG={lista:fgLista,att:fgAtt,vai:fgVai,nuovo:fgNuovo,rinomina:fgRinomina,di:fgDi,agg};
+})();
+
+/* ---------- 120 PR2, MN5 (owner, 25.11.2026) ----------
+   PR2 Gesto opens from zero: a new empty project, the world origin at the centre of the screen, the logo menu open on
+   «Progetto» and «Recenti»; a project is opened from the recent ones or from a file, or a new one begun. Nothing is written
+   until something is drawn. MN5 every notice comes out in one place, the line at the bottom right. */
+(()=>{
+  const lm=document.querySelector('.lmenu');if(!lm)return;
+  const sel=document.getElementById('foglio');if(sel)sel.hidden=true;
+  const sR=document.createElement('div');sR.className='lmSez lmSezRec';sR.innerHTML='<div class="lmST">Recenti</div><div class="lmRc"></div>';
+  const sP=lm.querySelector('.lmSezP');if(sP)sP.after(sR);
+  const recenti=()=>{let R={};try{R=JSON.parse(localStorage.getItem('gesto.recenti')||'{}')||{}}catch(e){self.__re&&self.__re(e)}return R};
+  const fileDi=id=>{try{const v=window.__gestoFD&&window.__gestoFD.FD&&window.__gestoFD.FD.get(id);return v&&v.nome||''}catch(e){return ''}};
+  function rendiRec(){const box=sR.querySelector('.lmRc');box.textContent='';const R=recenti();
+    const L=fogli.filter(f=>f.esiste&&f.id!==foglioId).sort((a,b)=>(R[b.id]||b.t||0)-(R[a.id]||a.t||0)).slice(0,12);
+    sR.hidden=!L.length;
+    L.forEach(f=>{const r=document.createElement('div');r.className='fgR rcR';r.title=f.nome||'Progetto';
+      r.innerHTML='<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="rcN"></span><span class="rcF"></span>';
+      r.querySelector('.rcN').textContent=f.nome||'Progetto';const fn=fileDi(f.id);r.querySelector('.rcF').textContent=fn;
+      r.onclick=e=>{e.stopPropagation();lmChiudi();apriFoglio(f.id);menuFogli();setTimeout(()=>{try{fgMenu()}catch(x){self.__re&&self.__re(x)}},50)};box.appendChild(r)})}
+  const st=document.createElement('style');st.textContent=
+    '.lmRc{display:flex;flex-direction:column;gap:2px;max-height:300px;overflow-y:auto}'+
+    '.rcR .rcN{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rcR .rcF{font-size:11.5px;color:var(--muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    /* MN5: the notes of the panels and the saving error speak in the one line at the bottom right */
+    '#notaEx,#notaSf{display:none!important}'+
+    '.salvaErr{left:auto!important;top:auto!important;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(54px + env(safe-area-inset-bottom,0px))}';
+  document.head.appendChild(st);
+  const lg=document.getElementById('logo');if(lg)['click','dblclick'].forEach(t=>lg.addEventListener(t,()=>setTimeout(rendiRec,0)));
+  rendiRec();
+  window.__gestoAV={zero:()=>AVVIO_ZERO,recenti:()=>[...sR.querySelectorAll('.rcN')].map(x=>x.textContent),rendi:rendiRec};
 })();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
-try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){self.__re&&self.__re(e)}
+try{if(localStorage.getItem('gesto.avvio')==='ultimo')foglioId=localStorage.getItem('gesto.sheet')||'f1';else{AVVIO_ZERO=true;NOME_NUOVO='Nuovo progetto';foglioId='f'+Date.now().toString(36)}}catch(e){self.__re&&self.__re(e)}
 dim();menuFogli();apriFoglio(foglioId);strumento(S.tool);
+if(AVVIO_ZERO)setTimeout(()=>{const m=document.querySelector('.lmenu');if(m&&m.hidden&&!tratti.size&&!MOS.cad.size){V.ox=wrap.clientWidth/2;V.oy=wrap.clientHeight/2;cambioVista();richiedi();m.hidden=false;const l=document.getElementById('logo');if(l)l.setAttribute('aria-expanded','true');try{window.__gestoAV.rendi();window.__gestoFG.agg()}catch(e){self.__re&&self.__re(e)}}},900);
 if(AUTONOMA)avviaLocale();
 else{
   window.claude.use('assets').then(a=>{if(!locale){assets=a||null;rendiSf()}},()=>{});
