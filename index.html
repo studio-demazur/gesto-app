@@ -4335,8 +4335,8 @@ function disegnaTavola(x){
   schermo(x);const p=w2s(G.mx0,G.my0);x.fillStyle=T.acc;x.font='600 12px Inter,Calibri,sans-serif';x.fillText((t.nome||'Tavola')+' · '+nomeFmt(t)+' · 1:'+G.sc,p[0]+6,p[1]-7);
   const q=w2s(cx,cy);x.font='500 11px Inter,Calibri,sans-serif';x.fillText('Cartiglio',q[0]+6,q[1]+16);
 };
-  const s1=on('s1')?function(x){const t=tavAtt();if(!t||$('pEsporta').hidden||!(t.fin&&t.fin.length))return s0(x);
-  const att=finAtt(t);finestre(t).forEach(f=>{const g=finGeo(f),on=att&&f.id===att.id;vista(x);x.setLineDash(on?[]:[6/V.s,4/V.s]);x.strokeStyle=T.acc;x.lineWidth=(on?2:1)/V.s;x.strokeRect(g.mx0,g.my0,g.mw,g.mh);
+  const s1=on('s1')?function(x){const t=tavAtt();if(IMPAG)return;if(!t||$('pEsporta').hidden||!(t.fin&&t.fin.length))return s0(x);
+  const att=finAtt(t);finAree(t).forEach(f=>{const g=finGeo(f),on=att&&f.id===att.id;vista(x);x.setLineDash(on?[]:[6/V.s,4/V.s]);x.strokeStyle=T.acc;x.lineWidth=(on?2:1)/V.s;x.strokeRect(g.mx0,g.my0,g.mw,g.mh);
     schermo(x);const p=w2s(g.mx0,g.my0);x.fillStyle=T.acc;x.font=(on?'600 ':'500 ')+'12px Inter,Calibri,sans-serif';x.fillText((t.nome||'Tavola')+' · '+f.n+(f.tit?' '+f.tit:'')+' · 1:'+f.sc,p[0]+6,p[1]-7)});x.setLineDash([])}:s0;
   const s2=on('s2')?function(x){s1(x);if(S.vincVis===false)return;const V=vincoliE();if(!V.length)return;
   const col=id=>{const s=STATO_V.get(id);return !s?'#9FBAC3':s.stato==='conflitto'?'#AC7853':s.stato==='completo'?'#264E5D':'#3D6B7D'};
@@ -7883,7 +7883,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.122';
+const VERSIONE_GESTO='0.123';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -10812,17 +10812,18 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){self.__re&&self.__
     '#dcL .drSel{box-shadow:inset 0 0 0 1.5px var(--fg)!important}';
   document.head.appendChild(st);
   /* DR4: the list scrolls near its edges and a closed folder opens under the pen */
-  let py=null,px=null,raf=0,sopra=null,tSopra=0;
-  const trascina=()=>!!L.querySelector('.trasc');
-  const giro=()=>{raf=0;if(!trascina()||py==null)return;const r=L.getBoundingClientRect(),m=40;let v=0;
+  let py=null,px=null,raf=0,sopra=null,tSopra=0,tBordo=0;
+  const trascina=()=>!!L.querySelector('.trasc')||!!(window.__gestoDV&&window.__gestoDV.stato().drag);
+  const giro=()=>{raf=0;if(!trascina()||py==null)return;const r=L.getBoundingClientRect(),m=24;let v=0;
     if(py<r.top+m)v=-Math.ceil((r.top+m-py)/4);else if(py>r.bottom-m)v=Math.ceil((py-(r.bottom-m))/4);
+    if(!v)tBordo=0;else if(!tBordo){tBordo=performance.now();v=0}else if(performance.now()-tBordo<300)v=0;
     if(v){L.scrollTop+=v;/* the mark follows the row that is now under the pen */L.dispatchEvent(new PointerEvent('pointermove',{clientX:px,clientY:py,bubbles:false,pointerId:ultimoId}))}
     const el=document.elementFromPoint(px,py),f=el&&el.closest('.dcF');const id=f&&f.dataset.f;
     if(id&&DC.chiuse.has(id)&&!f.classList.contains('trasc')){if(sopra!==id){sopra=id;tSopra=performance.now()}else if(performance.now()-tSopra>600){DC.chiuse.delete(id);sopra=null;dcChiave='';rendiCol()}}else sopra=null;
     raf=requestAnimationFrame(giro)};
   let ultimoId=1;
-  L.addEventListener('pointermove',e=>{if(!e.isTrusted)return;ultimoId=e.pointerId;py=e.clientY;px=e.clientX;if(trascina()&&!raf)raf=requestAnimationFrame(giro)},true);
-  const ferma=()=>{py=null;sopra=null;if(raf){cancelAnimationFrame(raf);raf=0}};L.addEventListener('pointerup',ferma,true);L.addEventListener('pointercancel',ferma,true);
+  addEventListener('pointermove',e=>{if(!e.isTrusted)return;ultimoId=e.pointerId;py=e.clientY;px=e.clientX;if(trascina()&&!raf)raf=requestAnimationFrame(giro)},true);
+  const ferma=()=>{py=null;sopra=null;if(raf){cancelAnimationFrame(raf);raf=0}};addEventListener('pointerup',ferma,true);addEventListener('pointercancel',ferma,true);
   /* DR5: more rows chosen together */
   const SEL=new Set();const chiave=r=>r.classList.contains('dcF')?'f:'+r.dataset.f:r.classList.contains('dcDh')?'d:'+r.dataset.d:r.classList.contains('dcI')?'t:'+r.dataset.id:null;
   const righe=()=>[...L.querySelectorAll('.dcF,.dcDh,.dcI')].filter(r=>r.offsetParent);
@@ -11803,6 +11804,11 @@ function finSceltaFoglio(f,cls){const s=scelta(fgLista().map(x=>[x.id,x.nome]),f
       try{const r=[];MOS.cad.forEach(e=>{if(visibileE(e))r.push(e.k)});tratti.forEach(x=>{if(visibileT(x))r.push('tratto')});return r}finally{TAV_FILTRO=sv;datiVer++;tsVer++}}});
   window.__gestoFG=g;
 })();
+
+/* ---------- 123 MS1 (v0.123) ----------
+   MS1 the areas of the windows are drawn in the model only, each in the model of its own sheet; the layout never draws them. */
+function finAree(t){return t?finestre(t).filter(f=>finFg(f)===fgAtt()):[]}
+(()=>{const g=window.__gestoFG||{};g.aree=()=>IMPAG?[]:finAree(tavAtt()).map(f=>f.id);window.__gestoFG=g})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{if(localStorage.getItem('gesto.avvio')==='ultimo')foglioId=localStorage.getItem('gesto.sheet')||'f1';else{AVVIO_ZERO=true;NOME_NUOVO='Nuovo progetto';foglioId='f'+Date.now().toString(36)}}catch(e){self.__re&&self.__re(e)}
