@@ -3832,16 +3832,48 @@ async function stampaTavola(){
 /* ---------- 20 fase 5: archivio sul dispositivo, file del foglio, librerie interne, app installabile ----------
    Due archivi dietro la stessa interfaccia (collection, doc, onSnapshot):
    · in claude.ai l'archivio della pagina, come prima;
-   · fuori da claude.ai, o se quello non risponde, l'archivio del dispositivo (IndexedDB «lavagna-demazur»:
+   · fuori da claude.ai, o se quello non risponde, l'archivio del dispositivo (IndexedDB «gesto-dati», già «lavagna-demazur»:
      «doc» = documenti con chiave «percorso/id», «blob» = immagini degli sfondi).
    Il file del foglio (.dmz dal 21.11.2026; i vecchi .linen.json e .lavagna.json restano leggibili) porta un foglio intero da un archivio all'altro e fa da copia di sicurezza.
    Le librerie per PDF stanno in fondo al file, compresse; nessun sito esterno è necessario. */
 const AUTONOMA=!(window.claude&&window.claude.use);
 let locale=false;
 const idCasuale=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
-function apriIdb(){return new Promise((ok,ko)=>{let r;try{r=indexedDB.open('lavagna-demazur',1)}catch(e){ko(e);return}
-  r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('doc',{keyPath:'k'}).createIndex('c','c');d.createObjectStore('blob')};
-  r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error);r.onblocked=()=>ko(new Error('bloccato'))})}
+/* NM2 (owner, 25.11.2026): a device store moves to its gesto-… name once. Every record is copied and compared;
+   only a complete and identical copy is used. The old store is left untouched: it is removed in a later version, after the owner confirms.
+   If anything differs, the new copy is deleted and the old store keeps serving, as before. */
+const NM2={esiti:{}};
+function idbApri(nome,ver,schema,crea){return new Promise((ok,ko)=>{let r;try{r=indexedDB.open(nome,ver)}catch(e){ko(e);return}
+  r.onupgradeneeded=e=>{if(!crea&&e.oldVersion===0){r.transaction.abort();return}schema(r.result)};
+  r.onsuccess=()=>ok(r.result);r.onerror=()=>{if(!crea&&r.error&&r.error.name==='AbortError'){ok(null);return}ko(r.error)};r.onblocked=()=>ko(new Error('bloccato'))})}
+async function idbEsiste(nome){try{if(indexedDB.databases){const l=await indexedDB.databases();return l.some(x=>x.name===nome)}}catch(e){self.__re&&self.__re(e)}
+  const d=await idbApri(nome,undefined,()=>{},false);if(d){d.close();return true}return false}
+const idbReq=q=>new Promise((ok,ko)=>{q.onsuccess=()=>ok(q.result);q.onerror=()=>ko(q.error)});
+const idbUguali=(a,b)=>{if(a instanceof Blob||b instanceof Blob)return a instanceof Blob&&b instanceof Blob&&a.size===b.size&&a.type===b.type;
+  if(a&&typeof a==='object'&&'kind' in a&&'name' in a&&typeof a.isSameEntry==='function')return b&&a.kind===b.kind&&a.name===b.name;
+  try{return JSON.stringify(a)===JSON.stringify(b)}catch(e){return false}};
+async function migraIdb(vecchio,nuovo,ver,schema){
+  const segno='gesto.nm2.'+nuovo;let fatto=null;try{fatto=localStorage.getItem(segno)}catch(e){self.__re&&self.__re(e)}
+  if(fatto==='ok'||!(await idbEsiste(vecchio)))return idbApri(nuovo,ver,schema,true).then(d=>{try{if(fatto!=='ok')localStorage.setItem(segno,'ok')}catch(e){self.__re&&self.__re(e)}return d});
+  const V=await idbApri(vecchio,undefined,schema,false);if(!V)return idbApri(nuovo,ver,schema,true);
+  let N=null;
+  try{
+    await new Promise((ok,ko)=>{const q=indexedDB.deleteDatabase(nuovo);q.onsuccess=ok;q.onerror=()=>ko(q.error);q.onblocked=ok});
+    N=await idbApri(nuovo,ver,schema,true);const conti={};
+    for(const st of [...V.objectStoreNames]){if(!N.objectStoreNames.contains(st))throw new Error('archivio senza «'+st+'»');
+      const chiavi=await idbReq(V.transaction(st).objectStore(st).getAllKeys());const inl=N.transaction(st).objectStore(st).keyPath!=null;
+      for(const k of chiavi){const v=await idbReq(V.transaction(st).objectStore(st).get(k));
+        await new Promise((ok,ko)=>{const tx=N.transaction(st,'readwrite');inl?tx.objectStore(st).put(v):tx.objectStore(st).put(v,k);tx.oncomplete=ok;tx.onerror=()=>ko(tx.error);tx.onabort=()=>ko(tx.error)})}
+      const ck=await idbReq(N.transaction(st).objectStore(st).getAllKeys());if(ck.length!==chiavi.length)throw new Error('«'+st+'»: '+ck.length+' su '+chiavi.length);
+      for(const k of chiavi){const a=await idbReq(V.transaction(st).objectStore(st).get(k)),b=await idbReq(N.transaction(st).objectStore(st).get(k));
+        if(window.__nm2Guasto&&st===window.__nm2Guasto)throw new Error('guasto di prova');
+        if(!idbUguali(a,b))throw new Error('«'+st+'»: un elemento è diverso')}
+      conti[st]=chiavi.length}
+    V.close();NM2.esiti[nuovo]={da:vecchio,conti};try{localStorage.setItem(segno,'ok');localStorage.setItem(segno+'.conti',JSON.stringify(conti))}catch(e){self.__re&&self.__re(e)}
+    return N}
+  catch(e){self.__re&&self.__re(e,'migrazione '+vecchio);NM2.esiti[nuovo]={da:vecchio,errore:String(e&&e.message||e)};
+    try{if(N)N.close();indexedDB.deleteDatabase(nuovo)}catch(x){self.__re&&self.__re(x)}return V}}
+function apriIdb(){return migraIdb('lavagna-demazur','gesto-dati',1,d=>{d.createObjectStore('doc',{keyPath:'k'}).createIndex('c','c');d.createObjectStore('blob')})}
 function erroreIdb(e){const x=new Error((e&&e.message)||'archivio');if(e&&e.name==='QuotaExceededError')x.code='quota_exceeded';return x}
 function archivioLocale(idb){
   const col=new Map();let coda=[],inCorso=null;
@@ -3921,7 +3953,7 @@ async function datiSfondo(b){
   return cv.toDataURL(b.f==='png'?'image/png':'image/jpeg',0.92);
 }
 async function esportaFoglio(){
-  const f=foglio(),o={formato:'lavagna-demazur',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
+  const f=foglio(),o={formato:'gesto',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
   if(f.sc)o.foglio.sc=f.sc;if(f.o)o.foglio.o=f.o;if(f.qu)o.foglio.qu=f.qu;if(f.ts)o.foglio.ts=f.ts;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;if(f.cartDef)o.foglio.cartDef=f.cartDef;if(f.dp)o.foglio.dp=f.dp;if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;let n=0,persi=0;
   RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
   if(!n){notaEx('Il foglio è vuoto');return}
@@ -3947,7 +3979,7 @@ async function importaFoglio(file){
   if(!db){notaEx('Archivio non pronto: riprova fra un momento');return}
   notaEx('Leggo il file…');let o;
   try{o=apriDmz(JSON.parse(new TextDecoder('utf-8').decode(daZip(new Uint8Array(await file.arrayBuffer())))))}catch(e){notaEx('Il file non è un foglio di Gesto');return}
-  if(!o||o.formato!=='lavagna-demazur'||!o.rami){notaEx('Il file non è un foglio di Gesto');return}
+  if(!o||(o.formato!=='gesto'&&o.formato!=='lavagna-demazur')||!o.rami){notaEx('Il file non è un foglio di Gesto');return}
   if(o.versione>1){notaEx('Il file viene da una versione più recente di Gesto: aggiorna l’app');return}
   if(ptr)termina();
   /* le immagini prima: ogni sfondo punta alla copia nuova */
@@ -4560,7 +4592,7 @@ const ICB={ric:SV('<path d="M20 11a8 8 0 0 0-14-4.5M4 4v4h4"/><path d="M4 13a8 8
   agg:SV('<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M10 13.5l-1.2 1.2a1.7 1.7 0 0 1-2.4-2.4L7.6 11M14 10.5l1.2-1.2a1.7 1.7 0 0 1 2.4 2.4L16.4 13M10.5 13.5l3-3"/>')};
 
 /* il file dei blocchi esterni: il riferimento al file resta sul dispositivo, dove il browser lo consente */
-const fontiDB=()=>new Promise((ok,ko)=>{const r=indexedDB.open('linen-fonti',1);r.onupgradeneeded=()=>r.result.createObjectStore('h');r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)});
+let fontiP=null;const fontiDB=()=>fontiP||(fontiP=migraIdb('linen-fonti','gesto-fonti',1,d=>d.createObjectStore('h')).catch(e=>{fontiP=null;throw e}));
 async function fonteSalva(id,h){try{const d=await fontiDB();d.transaction('h','readwrite').objectStore('h').put(h,id)}catch(e){self.__re&&self.__re(e)}}
 async function fonteTogli(id){try{const d=await fontiDB();d.transaction('h','readwrite').objectStore('h').delete(id)}catch(e){self.__re&&self.__re(e)}}
 async function fonteLeggi(id){try{const d=await fontiDB();return await new Promise(ok=>{const q=d.transaction('h').objectStore('h').get(id);q.onsuccess=()=>ok(q.result||null);q.onerror=()=>ok(null)})}catch(e){return null}}
@@ -5084,7 +5116,7 @@ cartiglioPdf=function(doc,G,t,logo){const m=G.mod||modelloDi(t),c=t.cart||{},sx=
   let y=top;m.alto.filter(k=>attivo(t,k)&&k!=='legenda').forEach(k=>{y=disegna[k](y)});if(m.alto.includes('legenda'))y=disegna.legenda(y);
   y=yBasso;B.forEach(k=>{y=disegna[k](y)});return y};
 /* immagini del cartiglio: key-plan dal foglio, firma e timbro dal dispositivo */
-const idbFirme=()=>new Promise((ok,ko)=>{const r=indexedDB.open('linen-firme',1);r.onupgradeneeded=()=>r.result.createObjectStore('img');r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)});
+let firmeP=null;const idbFirme=()=>firmeP||(firmeP=migraIdb('linen-firme','gesto-firme',1,d=>d.createObjectStore('img')).catch(e=>{firmeP=null;throw e}));
 async function firmaGet(k){try{const d=await idbFirme();return await new Promise(ok=>{const q=d.transaction('img').objectStore('img').get(k);q.onsuccess=()=>ok(q.result||null);q.onerror=()=>ok(null)})}catch(e){return null}}
 async function firmaSet(k,v){const d=await idbFirme();await new Promise((ok,ko)=>{const tx=d.transaction('img','readwrite');if(v==null)tx.objectStore('img').delete(k);else tx.objectStore('img').put(v,k);tx.oncomplete=ok;tx.onerror=()=>ko(tx.error)})}
 const misuraImg=data=>new Promise(ok=>{const i=new Image();i.onload=()=>ok({data,w:i.naturalWidth,h:i.naturalHeight,fmt:/^data:image\/jpe?g/.test(data)?'JPEG':'PNG'});i.onerror=()=>ok(null);i.src=data});
@@ -5762,10 +5794,10 @@ function aggIdentUI(){if(pI.hidden)return;const B=$('idB'),I=IDENT||{};B.textCon
   const r1=document.createElement('div');r1.className='pr';r1.append(bt('Carica logo',()=>f.click(),'Logo chiaro su fondo trasparente, PNG o SVG'),bt('Togli logo',()=>{const v=Object.assign({},IDENT||{});delete v.logo;delete v.vett;scriviIdent(v)}));B.appendChild(r1);
   const sez=document.createElement('div');sez.className='sez';sez.textContent='Pacchetto';B.appendChild(sez);
   const fp=document.createElement('input');fp.type='file';fp.accept='.json,application/json';fp.hidden=true;B.appendChild(fp);
-  fp.onchange=async()=>{const file=fp.files[0];if(!file)return;try{const o=JSON.parse(await file.text());if(!o||o.tipo!=='linen-identita')throw new Error('non è un pacchetto di identità');
+  fp.onchange=async()=>{const file=fp.files[0];if(!file)return;try{const o=JSON.parse(await file.text());if(!o||(o.tipo!=='gesto-identita'&&o.tipo!=='linen-identita'))throw new Error('non è un pacchetto di identità');
       scriviIdent({nome:o.nome||'',prog:o.prog||'',red:o.red||'',logo:o.logo||null,vett:o.vett||null});avviso('Identità caricata su questo dispositivo')}catch(e){avviso('Pacchetto non valido: '+e.message)}};
   const r2=document.createElement('div');r2.className='pr';r2.append(bt('Carica pacchetto',()=>fp.click(),'Carica un pacchetto di identità (.json)'),
-    bt('Salva pacchetto',()=>{const o=Object.assign({tipo:'linen-identita',versione:1},IDENT||{});salvaFile('Identità '+((IDENT&&IDENT.nome)||'Gesto')+'.json',new Blob([JSON.stringify(o)],{type:'application/json'}))},'Salva l’identità in un file, per gli altri dispositivi'),
+    bt('Salva pacchetto',()=>{const o=Object.assign({tipo:'gesto-identita',versione:1},IDENT||{});salvaFile('Identità '+((IDENT&&IDENT.nome)||'Gesto')+'.json',new Blob([JSON.stringify(o)],{type:'application/json'}))},'Salva l’identità in un file, per gli altri dispositivi'),
     bt('Togli identità',()=>{scriviIdent(null)},'Il cartiglio torna neutro su questo dispositivo'));B.appendChild(r2)}
 function apriIdent(){if($('pIdent').hidden)pannello('pIdent');aggIdentUI()}
 COMANDI.push({k:'identita',n:'Identità',en:'Identity',ab:'ID',f:apriIdent,al:['Logo','Studio','Cartiglio neutro']});
@@ -5776,7 +5808,7 @@ setTimeout(leggiIdent,0);
    nel campo facoltativo dp: valgono per tutte le tavole, viaggiano con il file e il cartiglio li legge e li scrive.
    Senza dp ogni tavola mostra i suoi campi come prima: i disegni salvati non cambiano.
    Logo dello studio, firma e timbro restano sul dispositivo (Identità, ID3).
-   F1: il foglio si salva in .dmz, involucro 2 del formato DeMazur, modulo «linen»; i vecchi .linen.json e .lavagna restano leggibili. */
+   F1: il foglio si salva in .dmz, involucro 2 del formato DeMazur, modulo «gesto»; i vecchi .linen.json e .lavagna restano leggibili e non si scrivono più. */
 const CHIAVI_DP=['opera','ogg','comm','prog'];
 const dpF=()=>foglio().dp||null;
 function conDp(t){const d=dpF();if(!t||!d)return t;const c=Object.assign({},t.cart||{});CHIAVI_DP.forEach(k=>{if(k in d)c[k]=d[k]});return Object.assign({},t,{cart:c})}
@@ -5824,7 +5856,7 @@ const senzaNull=v=>Array.isArray(v)?v.map(senzaNull):v&&typeof v==='object'?Obje
 function involucroDmz(o){const f=foglio();let u=f.uuid;if(!u){u=uuid7();fogliSet({uuid:u})}const c=senzaNull(o);delete c.formato;delete c.versione;
   return {formato:'demazur',involucro:'2.0',documento:u,tipo:'gesto',nome:f.nome||'Foglio',app:'Gesto di Lab DeMazur',scritto:new Date().toISOString(),moduli:{gesto:{versione:1,richiesto:true,contenuto:c}}}}
 function apriDmz(o){if(!o||o.formato!=='demazur'||!o.moduli)return o;const m=o.moduli.gesto;if(!m||!m.contenuto)return {};
-  if(m.versione>1)return {formato:'lavagna-demazur',versione:m.versione};return Object.assign({formato:'lavagna-demazur',versione:1},m.contenuto,{_doc:o.documento})}
+  if(m.versione>1)return {formato:'gesto',versione:m.versione};return Object.assign({formato:'gesto',versione:1},m.contenuto,{_doc:o.documento})}
 /* ---------- 40. Finestre sulla carta (Impaginazione, passo 3: IP7–IP13, Vlad, 21.11.2026) ----------
    Nello spazio Impaginazione le finestre si toccano, si spostano, si ridimensionano e si regolano direttamente sulla carta.
    Una finestra nuova si traccia sulla carta: mostra il disegno intero alla scala normalizzata più grande che lo contiene.
@@ -6808,7 +6840,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.111';
+const VERSIONE_GESTO='0.112';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -6836,7 +6868,7 @@ logo.innerHTML=GESTO_SVG;
 
   /* ---- il contenuto del foglio corrente, letto subito: il cambio di foglio durante la lettura delle immagini non lo altera ---- */
   async function contenuto(){
-    const f=foglio(),o={formato:'lavagna-demazur',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
+    const f=foglio(),o={formato:'gesto',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
     ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
     let n=0,persi=0;RAMI.forEach(r=>{o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
     const imm=[...elencoSfondi()];elencoSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a});if(tv.pdf&&tv.pdf.a)imm.push({a:tv.pdf.a})});pgTuttiAsset().forEach(a=>imm.push({a}));
@@ -6878,7 +6910,7 @@ logo.innerHTML=GESTO_SVG;
     silenzio=true;try{esegui({add,del},false)}finally{setTimeout(()=>{silenzio=false},0)}clearTimeout(pausa);return persi}
   async function apriHandle(h){
     const {fl,o:grezzo}=await leggiFile(h);const o=grezzo&&apriDmz(grezzo);
-    if(!o||o.formato!=='lavagna-demazur'||!o.rami){avviso('«'+h.name+'» non è un foglio di Gesto');return}
+    if(!o||(o.formato!=='gesto'&&o.formato!=='lavagna-demazur')||!o.rami){avviso('«'+h.name+'» non è un foglio di Gesto');return}
     if(o.versione>1){avviso('Il file viene da una versione più recente di Gesto: aggiorna l’app');return}
     /* già aperto: stesso file o stesso documento */
     let id=null;for(const [k,v] of FD){try{if(await v.h.isSameEntry(h)){id=k;break}}catch(e){self.__re&&self.__re(e)}}
@@ -6944,7 +6976,7 @@ logo.innerHTML=GESTO_SVG;
       riga.querySelector('.fdN').textContent=v.nome;riga.title='Foglio legato al file '+v.nome}
     const b=riga.querySelector('button');if(b)b.onclick=()=>{b.dataset.a==='sc'?salvaConNome():salvaFD()};
     try{document.title=(v?v.nome.replace(/\.dmz$/i,'')+(v.sporco?' •':'')+' · ':'')+'Gesto di Lab DeMazur'}catch(e){self.__re&&self.__re(e)}}
-  window.__gestoFD={FD,salvaFD,salvaConNome,apriHandle,aggFile,contenuto,FDOK,FG};
+  window.__gestoFD={FD,salvaFD,salvaConNome,apriHandle,aggFile,contenuto,FDOK,FG,NM2};
   aggFile();
 })();
 
@@ -6960,7 +6992,7 @@ logo.innerHTML=GESTO_SVG;
    AL8 Sullo spigolo il centro del gizmo vince sulla maniglia (caso G1, titolare, 22.11.2026).
    DT1 Le dita muovono solo la vista: il dito non prende il gizmo né le maniglie (titolare, 22.11.2026).
    AL7 Stesso disegno e stesso comportamento di Lab Disegno: tre modi, «Ciò che è scelto», «Solo il gizmo», «Solo l'origine».
-   Il perno resta sul dispositivo, fuori dal file, finché il presidio del formato non lo accoglie nel modulo linen. */
+   Il perno resta sul dispositivo, fuori dal file, finché il presidio del formato non lo accoglie nel modulo gesto. */
 (function(){
   const GZ_CRESCE=2.2,GZ_VICINO=70,GZ_PRESA=22;
   PREF.push('gzModo');
@@ -10359,7 +10391,7 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
     usaCartella:h=>{REG.cartella=h;aggMenu();return elenca()},
     ultima:async()=>{const v=await idb('reg','readonly',s=>s.getAll());const x=(v||[]).sort((a,b)=>a.nome<b.nome?1:-1)[0];if(!x)return null;
       const txt=x.nf.endsWith('.gz')?await new Response(x.traccia.stream().pipeThrough(new DecompressionStream('gzip'))).text():await x.traccia.text();return txt},
-    carica:async tr=>{const o=Object.assign({formato:'lavagna-demazur',versione:1},tr.disegno0);await importaFoglio(new File([JSON.stringify(o)],'registrazione.dmz'));
+    carica:async tr=>{const o=Object.assign({formato:'gesto',versione:1},tr.disegno0);await importaFoglio(new File([JSON.stringify(o)],'registrazione.dmz'));
       await new Promise(r=>setTimeout(r,450));const p=tr.prefs||{};for(const k in p)if(k!=='tool')S[k]=p[k];
       const s0=tr.stato0||{};if(s0.impag&&!IMPAG)$('tSpazio').click();if(s0.tool)strumento(s0.tool);
       const v=s0.vista;if(v){V.s=v[0];V.ox=v[1];V.oy=v[2];V.r=v[3]||0;V.c=Math.cos(V.r);V.n=Math.sin(V.r);cambioVista()}sel.clear();PARTI=[];aggCtx();richiedi();return true},
