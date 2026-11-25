@@ -6783,7 +6783,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.108';
+const VERSIONE_GESTO='0.109';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -10124,11 +10124,65 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
   window.__gestoAL={eti:()=>eti.style.display==='block'?eti.textContent:''};
 })();
 
-/* ===== Phase 108 (GZ3, owner 25.11.2026): one chosen point turns by the angle measured
-   around the ring the pen holds, and the turn is applied around the pivot ===== */
-{const _c=gzCalcola;gzCalcola=function(D,W,shift){const B=D.B;
-  if(B&&B.tipo==='pt1'&&D.modo==='rot'&&B.piv){D.B=Object.assign({},B,{piv:null});try{_c(D,W,shift)}finally{D.B=B}return}
-  return _c(D,W,shift)}}
+/* ===== Phase 109 (owner 25.11.2026)
+   GZ4: one chosen point travels on its circle around the pivot, following the pen; the angle is measured from the pivot.
+   CU1-CU7: a cursor for each handle of the gizmo, kept while dragging; the handle under the pen lights before the press. ===== */
+(()=>{
+  const K=()=>GZ.drag||GZ.vicino?2.2:1;
+  const M=k=>({from:6.5*k,len:20*k,head:.75*k,tip:(20+7*.75)*k,centro:4.5*k,anello:13*k,scala:30*k,su:17*k});
+  const nrm=a=>Math.atan2(Math.sin(a),Math.cos(a));
+  /* the path of one point: centre on the pivot, through the point, on screen */
+  const giro=B=>{if(!B||B.tipo!=='pt1'||!B.piv)return null;const c=w2s(B.piv[0],B.piv[1]),p=w2s(B.O[0],B.O[1]),r=Math.hypot(p[0]-c[0],p[1]-c[1]);return r>8?{c,p,r}:null};
+  GZ.cerchio=false;
+  /* GZ4: the dashed circle is a handle of the turn */
+  {const _h=gzColpo;gzColpo=function(B,sx,sy){GZ.cerchio=false;const h=_h.apply(this,arguments);if(h||GZ.tipo==='touch')return h;
+    const g=giro(B);if(!g)return h;
+    if(Math.abs(Math.hypot(sx-g.c[0],sy-g.c[1])-g.r)<=10&&!gripVicino(sx,sy)){GZ.cerchio=true;return 'rot'}return h}}
+  /* path, travelled arc, and the light on the handle under the pen (CU7) */
+  {const _d=gzDisegna;gzDisegna=function(x){_d.apply(this,arguments);try{
+    const D=GZ.drag,B=D?D.B:gzBersaglio();if(!B)return;schermo(x);x.save();x.lineCap='round';x.lineJoin='round';
+    const g=giro(B);
+    if(g){const gira=D&&D.modo==='rot',acceso=gira||(!D&&GZ.hover==='rot'&&GZ.cerchio);
+      if(!D&&GZ.hover==='rot'&&GZ.cerchio){x.strokeStyle=T.scuro?'#3D6B7D':'#C5D5DA';x.lineWidth=9;x.beginPath();x.arc(g.c[0],g.c[1],g.r,0,DUEPI);x.stroke()}
+      x.strokeStyle=T.acc;x.globalAlpha=acceso?.9:.5;x.lineWidth=acceso?1.8:1.1;x.setLineDash([5,5]);x.beginPath();x.arc(g.c[0],g.c[1],g.r,0,DUEPI);x.stroke();x.setLineDash([]);x.globalAlpha=1;
+      if(gira&&D.ris&&D.ris.r!=null){const c=Math.cos(D.ris.r),s=Math.sin(D.ris.r),P=B.O,O=B.piv,N=[O[0]+(P[0]-O[0])*c-(P[1]-O[1])*s,O[1]+(P[0]-O[0])*s+(P[1]-O[1])*c],q=w2s(N[0],N[1]);
+        const a1=Math.atan2(g.p[1]-g.c[1],g.p[0]-g.c[0]),a2=Math.atan2(q[1]-g.c[1],q[0]-g.c[0]);const sw=nrm(a2-a1);
+        x.strokeStyle=T.acc;x.lineWidth=3;x.beginPath();x.arc(g.c[0],g.c[1],g.r,a1,a1+sw,sw<0);x.stroke();
+        x.lineWidth=1;x.globalAlpha=.6;x.setLineDash([4,3]);x.beginPath();x.moveTo(g.c[0],g.c[1]);x.lineTo(g.p[0],g.p[1]);x.moveTo(g.c[0],g.c[1]);x.lineTo(q[0],q[1]);x.stroke();x.setLineDash([]);x.globalAlpha=1;
+        x.fillStyle=T.paper;x.strokeStyle=T.acc;x.lineWidth=2;x.beginPath();x.arc(q[0],q[1],5,0,DUEPI);x.fill();x.stroke()}}
+    if(!D&&GZ.hover&&!(GZ.hover==='rot'&&GZ.cerchio)){
+      const {O,u,v}=gzGeo(B),m=M(K()),h=GZ.hover,col=h==='tx'?colore('terracotta'):h==='ty'?colore('verde'):T.acc;
+      x.strokeStyle=col;x.fillStyle=col;x.globalAlpha=.28;x.lineWidth=11;x.beginPath();
+      if(h==='tx'||h==='ty'){const w=h==='tx'?u:v;x.moveTo(O[0]+w[0]*m.from,O[1]+w[1]*m.from);x.lineTo(O[0]+w[0]*m.tip,O[1]+w[1]*m.tip);x.stroke()}
+      else if(h==='free'){x.arc(O[0],O[1],m.centro+5,0,DUEPI);x.fill()}
+      else if(h==='rot'){const a0=Math.atan2(u[1],u[0]),sp=nrm(Math.atan2(v[1],v[0])-a0);x.arc(O[0],O[1],m.anello,a0+sp*.2,a0+sp*.8,sp<0);x.stroke()}
+      else if(h==='man'){const q=Math.SQRT1_2*m.anello;x.arc(O[0]-(u[0]+v[0])*q,O[1]-(u[1]+v[1])*q,8,0,DUEPI);x.fill()}
+      else if(h==='sx'||h==='sy'){const w=h==='sx'?u:v;x.arc(O[0]+w[0]*m.scala,O[1]+w[1]*m.scala,8,0,DUEPI);x.fill()}
+      else if(h==='su'){x.arc(O[0]+(u[0]+v[0])*m.su,O[1]+(u[1]+v[1])*m.su,8,0,DUEPI);x.fill()}
+      x.globalAlpha=1}
+    x.restore()}catch(e){}}}
+  /* CU1-CU6: the cursors, drawn once per shape and angle */
+  const SV=b=>'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g fill="none" stroke-linecap="round" stroke-linejoin="round">'+b+'</g></svg>';
+  const DUO=(body,col)=>'<g stroke="#FFFFFF" stroke-width="5">'+body+'</g><g stroke="'+col+'" stroke-width="2.2">'+body+'</g>';
+  const P='#264E5D',cache=new Map();
+  const forma={
+    asse:(col,a)=>SV('<g transform="rotate('+a+' 16 16)">'+DUO('<path d="M5 16H27M9 11.5L4.5 16L9 20.5M23 11.5L27.5 16L23 20.5"/>',col)+'</g>'),
+    rot:()=>SV(DUO('<path d="M25 18.5A9.5 9.5 0 1 1 20.5 7.8"/><path d="M16.5 4.8L21.2 7.6L18.6 12.2"/>',P)+'<circle cx="16" cy="16" r="2" fill="'+P+'" stroke="#FFFFFF" stroke-width="1"/>'),
+    free:()=>SV(DUO('<path d="M16 4V28M4 16H28M12.5 7.5L16 4L19.5 7.5M12.5 24.5L16 28L19.5 24.5M7.5 12.5L4 16L7.5 19.5M24.5 12.5L28 16L24.5 19.5"/>',P)),
+    scala:a=>SV('<g transform="rotate('+a+' 16 16)">'+DUO('<path d="M9.5 22.5L22.5 9.5"/><rect x="4.5" y="21.5" width="6" height="6"/><rect x="21.5" y="4.5" width="6" height="6"/>',P)+'<rect x="4.5" y="21.5" width="6" height="6" fill="'+P+'"/><rect x="21.5" y="4.5" width="6" height="6" fill="'+P+'"/></g>'),
+    man:()=>SV(DUO('<path d="M24 19A8.5 8.5 0 1 1 19.8 8.6"/><path d="M15.8 6L20.2 8.4L17.9 12.7"/><path d="M16 16H22M16 16V10"/>',P))};
+  const url=(chiave,fn)=>{if(!cache.has(chiave))cache.set(chiave,'url("data:image/svg+xml;base64,'+btoa(fn())+'") 16 16, '+(chiave.startsWith('rot')||chiave.startsWith('man')?'grab':'move'));return cache.get(chiave)};
+  const cursore=(h,B)=>{const {u,v}=gzGeo(B),gr=w=>Math.round(Math.atan2(w[1],w[0])*180/Math.PI/5)*5;
+    if(h==='tx'||h==='ty'){const col=colore(h==='tx'?'terracotta':'verde'),a=gr(h==='tx'?u:v);return url('asse'+col+a,()=>forma.asse(col,a))}
+    if(h==='rot')return url('rot',forma.rot);if(h==='man')return url('man',forma.man);if(h==='free')return url('free',forma.free);
+    if(h==='sx'||h==='sy'){const a=gr(h==='sx'?u:v)+45;return url('scala'+a,()=>forma.scala(a))}
+    if(h==='su'){const a=gr([u[0]+v[0],u[1]+v[1]])+45;return url('scala'+a,()=>forma.scala(a))}return ''};
+  let mio=false;
+  addEventListener('pointermove',e=>{if(GZ.drag)return;
+    if(S.gz&&e.target===area&&e.pointerType!=='touch'&&GZ.hover){const B=gzBersaglio();if(!B)return;const c=cursore(GZ.hover,B);if(c){area.style.cursor=c;mio=true}}
+    else if(mio){mio=false;area.style.cursor=''}},true);
+  window.__gestoCU={cursore:()=>area.style.cursor,hover:()=>GZ.hover,cerchio:()=>GZ.cerchio,giro:()=>{const g=giro(gzBersaglio());return g&&{c:g.c,r:g.r,p:g.p}}};
+})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{foglioId=localStorage.getItem('gesto.sheet')||'f1'}catch(e){}
