@@ -8012,7 +8012,7 @@ logo.innerHTML=GESTO_SVG;
   document.head.appendChild(st);
   const riga=document.createElement('div');riga.className='lmR lmFile';riga.hidden=!FDOK;$('lmF').after(riga);
   function aggFile(){if(!FDOK)return;const v=voce(foglioId);
-    if(!v){riga.innerHTML='<span class="fdDot sp"></span><span class="fdS">Solo in questo browser</span><button type="button" data-a="sc">Salva su disco</button>';riga.title='Il foglio non è ancora legato a un file .dmz'}
+    if(!v){riga.innerHTML='<span class="fdDot sp"></span><span class="fdS">Solo su questo dispositivo</span><button type="button" data-a="sc">Salva su disco</button>';riga.title='Il foglio non è ancora legato a un file .dmz'}
     else{const s=v.conflitto?'cambiato altrove':v.attesa?'da riconsentire':v.sporco?'modifiche in corso':'salvato';
       riga.innerHTML='<span class="fdDot'+(v.sporco||v.attesa||v.conflitto?' sp':'')+'"></span><span class="fdN"></span><span class="fdS">'+s+'</span>'+(v.attesa||v.conflitto?'<button type="button" data-a="s">'+(v.conflitto?'Sovrascrivi':'Consenti')+'</button>':'');
       riga.querySelector('.fdN').textContent=v.nome;riga.title='Foglio legato al file '+v.nome}
