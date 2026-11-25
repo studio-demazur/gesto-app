@@ -3243,7 +3243,7 @@ function fineTocco(a){
     const p1=rac.prima;rac.prima=null;const e1=MOS.cad.get(p1.id);if(e1&&e1.id!==e.id)applicaCmd(raccordoLinee(e1,p1.P,e,P));aggCtx();return}
   if(s==='offset'){
     if(!rac.ent){const e=entVicina(P);if(!e){avviso('Tocca un oggetto');return}rac.ent=e.id;aggCtx();return}
-    const e=MOS.cad.get(rac.ent);rac.ent=null;if(e){const n=offsetE(e,S.od,P);if(n)crea(n);else avviso('Offset non possibile con questa distanza')}aggCtx();return}
+    const e=MOS.cad.get(rac.ent);rac.ent=null;if(e){const n=offsetE(e,S.od,P);if(Array.isArray(n))esegui({add:n,del:[]});else if(n)crea(n);else avviso('Offset non possibile con questa distanza')}aggCtx();return}
 }
 
 /* ---------- 16 esportazione DXF (R2000, mm) per QCAD ----------
@@ -7880,7 +7880,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.117';
+const VERSIONE_GESTO='0.118';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -10404,7 +10404,7 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){self.__re&&self.__
     risolvi();
     for(let it=0;it<4;it++){for(let k=1;k<u.length-1;k++){const t=u[k],d=sub(Q(t),C[i+k]),q1=Q1(t),q2=Q2(t),num=dot(d,q1),den=dot(q1,q1)+dot(d,q2);if(Math.abs(den)>1e-12)u[k]=Math.max(0,Math.min(1,t-num/den))}risolvi()}
     /* error: distance of the samples from the curve itself */
-    const S=[];for(let k=0;k<=48;k++)S.push(Q(k/48));const GS=griglia(S,Math.max(1e-3,Ls/24));
+    const S=[];for(let k=0;k<=48;k++)S.push(Q(k/48));let Lq=0;for(let k=1;k<S.length;k++)Lq+=dd(S[k],S[k-1]);const GS=griglia(S,Math.max(1e-3,Ls/24,Lq/48));
     let we=0,wk=-1;for(let k=1;k<u.length-1;k++){const e=distG(GS,C[i+k],Math.max(TOL*50,Ls/4));if(e>we){we=e;wk=i+k}}
     if(we>TOL&&j-i>2&&prof<40){const tm=tanC(C,wk,false);cubica(C,i,wk,t1,tm,out,prof+1);cubica(C,wk,j,tm,t2,out,prof+1);return}
     out.push([...B[0],...B[1],...B[2],...B[3]])}
@@ -10425,13 +10425,121 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){self.__re&&self.__
       if(ok)return {k:'spline',g:ch?{f:pts,ch:true}:{f:pts}}}
     const Ia=I.slice();Ia.angoli=new Set(L.angoli);const segs=bezSuAncore(C,Ia,ch);const g={p:bezPunti(segs)};if(ch)g.ch=true;return {k:'curva',g}}
   function bezPunti(segs){if(!segs.length)return [];const p=[segs[0][0],segs[0][1]];segs.forEach(q=>p.push(q[2],q[3],q[4],q[5],q[6],q[7]));return p}
+  /* OF0-OF6 (owner, 25.11.2026): the offset of a curve, measured before it comes out.
+     1. the original is sampled with its exact tangents; at a corner a sample keeps the tangent in and the tangent out;
+     2. the raw offset moves each sample along its normal; where the offset opens at a corner it turns on an arc of radius d (OF5),
+        where it closes the two sides cross and the loop is cut (OF1);
+     3. every stretch nearer than d to the original is cut where the distance is d; every kept stretch comes out (OF6); an open
+        curve's offset starts and ends on the normal through the original's ends (OF3);
+     4. each stretch is fitted with few cubics and measured both ways against the raw offset; where it departs more than half
+        the tolerance, or turns back, an anchor is added and the stretch is fitted again (OF0). */
+  function campiona(e){
+    const sg=segmentiBez(e).filter(s=>Math.hypot(s[6]-s[0],s[7]-s[1])+Math.hypot(s[2]-s[0],s[3]-s[1])+Math.hypot(s[4]-s[6],s[5]-s[7])>1e-9);
+    if(!sg.length)return null;const ch=!!e.g.ch;
+    const bz=(s,t)=>{const m=1-t,a=m*m*m,b=3*m*m*t,c=3*m*t*t,d=t*t*t;return [a*s[0]+b*s[2]+c*s[4]+d*s[6],a*s[1]+b*s[3]+c*s[5]+d*s[7]]};
+    const tg=(s,t)=>{const m=1-t;let x=3*m*m*(s[2]-s[0])+6*m*t*(s[4]-s[2])+3*t*t*(s[6]-s[4]),y=3*m*m*(s[3]-s[1])+6*m*t*(s[5]-s[3])+3*t*t*(s[7]-s[5]);
+      if(Math.hypot(x,y)<1e-9){const a=bz(s,Math.max(0,t-1e-4)),b=bz(s,Math.min(1,t+1e-4));x=b[0]-a[0];y=b[1]-a[1]}return nrm([x,y])};
+    const P=[],TI=[],TO=[],push=(p,t)=>{P.push(p);TI.push(t);TO.push(t)},c2=Math.cos(1*Math.PI/180);
+    sg.forEach((s,k)=>{const t0=tg(s,0),p0=bz(s,0);
+      if(!P.length)push(p0,t0);else TO[TO.length-1]=t0;
+      const rec=(a,b,pa,pb,ta,tb,dep)=>{const m=(a+b)/2,pm=bz(s,m),ab=sub(pb,pa),L=len(ab);
+        const fl=L>1e-12?Math.abs((pm[0]-pa[0])*ab[1]-(pm[1]-pa[1])*ab[0])/L:dd(pm,pa);
+        if(dep>20||(dep>=2&&fl<=0.002&&dot(ta,tb)>=c2)){push(pb,tb);return}
+        const tm=tg(s,m);rec(a,m,pa,pm,ta,tm,dep+1);rec(m,b,pm,pb,tm,tb,dep+1)};
+      rec(0,1,p0,bz(s,1),t0,tg(s,1),0)});
+    if(ch){const n=P.length;if(dd(P[0],P[n-1])>1e-7)P.push(P[0].slice()),TI.push(TI[0]),TO.push(TO[0]);const m=P.length;TI[0]=TI[m-1];TO[m-1]=TO[0]}
+    return {P,TI,TO,ch}}
+  const LISCIO=Math.cos(0.2*Math.PI/180);
+  function grezzo(S,ds){const {P,TI,TO,ch}=S,n=P.length,O=[],R=Math.abs(ds),last=ch?n-1:n,IX=[];
+    for(let i=0;i<last;i++){const ti=TI[i],to=TO[i];
+      if(dot(ti,to)>=LISCIO){O.push(add(P[i],mul(lft(nrm(add(ti,to))),ds)));IX.push(i);continue}
+      const ni=mul(lft(ti),ds),no=mul(lft(to),ds),cr=ti[0]*to[1]-ti[1]*to[0];
+      if(cr*ds<0){let a0=Math.atan2(ni[1],ni[0]),a1=Math.atan2(no[1],no[0]),sw=a1-a0;while(sw>Math.PI)sw-=2*Math.PI;while(sw<-Math.PI)sw+=2*Math.PI;
+        const k=Math.max(2,Math.ceil(Math.abs(sw)/(2*Math.PI/180)));for(let j=0;j<=k;j++){const a=a0+sw*j/k;O.push([P[i][0]+Math.cos(a)*R,P[i][1]+Math.sin(a)*R]);IX.push(i)}}
+      else{O.push(add(P[i],ni));O.push(add(P[i],no));IX.push(i,i)}}
+    if(ch){O.push(O[0].slice());IX.push(n-1)}
+    const Q=[O[0]],QI=[IX[0]];for(let i=1;i<O.length;i++)if(dd(O[i],Q[Q.length-1])>1e-9){Q.push(O[i]);QI.push(IX[i])}
+    /* a stretch of the raw offset that runs against the original (radius of curvature below d) is never part of the offset */
+    const N=Q.length-1;Q.contro=new Uint8Array(Math.max(1,N));for(let k=0;k<N;k++){const a=QI[k],b=QI[k+1];if(a!==b&&b>a&&dot(sub(Q[k+1],Q[k]),sub(P[b],P[a]))<0)Q.contro[k]=1}
+    return Q}
+  function tagliaOffset(O,P,D,ch){
+    const cell=Math.max(D/2,1e-3),G=griglia(P,cell),GO=griglia(O,cell),eps=0.003+D*1e-4,N=O.length-1;
+    const tagli=[];for(let s=0;s<N;s++){const a=O[s],b=O[s+1],x0=Math.floor(Math.min(a[0],b[0])/cell),x1=Math.floor(Math.max(a[0],b[0])/cell),y0=Math.floor(Math.min(a[1],b[1])/cell),y1=Math.floor(Math.max(a[1],b[1])/cell),vis=new Set();
+      for(let i=x0;i<=x1;i++)for(let j=y0;j<=y1;j++){const l=GO.g.get(GO.k(i,j));if(!l)continue;for(const m of l){if(m<=s+1||vis.has(m))continue;if(ch&&s===0&&m===N-1)continue;vis.add(m);
+        const c=O[m],e=O[m+1],r=sub(b,a),q=sub(e,c),den=r[0]*q[1]-r[1]*q[0];if(Math.abs(den)<1e-14)continue;const w=sub(c,a),t=(w[0]*q[1]-w[1]*q[0])/den,u=(w[0]*r[1]-w[1]*r[0])/den;
+        if(t>=0&&t<=1&&u>=0&&u<=1)tagli.push(s+t,m+u)}}}
+    const contro=O.contro||new Uint8Array(N),dist=s=>distG(G,aParam(O,s),D*1.05),vicinoOK=s=>dist(s)>=D-eps,valido=s=>!contro[Math.min(N-1,Math.floor(s))]&&vicinoOK(s);
+    const incroci=tagli.slice(),vicino=Math.max(TOL,D*0.005);
+    /* a change of validity next to a crossing is the crossing itself, seen through the sampling: the crossing decides */
+    for(let k=1;k<N;k++)if(contro[k]!==contro[k-1])tagli.push(k);
+    let pv=vicinoOK(0);for(let k=1;k<=N;k++){const v=vicinoOK(k);if(v!==pv){let a=k-1,b=k;for(let it=0;it<40;it++){const m=(a+b)/2;if(vicinoOK(m)===pv)a=m;else b=m}
+      const x=(a+b)/2,X=aParam(O,x);if(!incroci.some(c=>dd(aParam(O,c),X)<=vicino))tagli.push(x)}pv=v}
+    const cuts=[...new Set([0,...tagli,N])].sort((x,y)=>x-y);
+    const tratto=(a,b)=>{const o=[aParam(O,a)];for(let i=Math.floor(a)+1;i<b&&i<=N;i++)if(i>a)o.push(O[i]);const z=aParam(O,b);if(dd(z,o[o.length-1])>1e-9)o.push(z);return o};
+    const pezzi=[];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1];if(b-a<1e-9||!valido((a+b)/2))continue;const p=tratto(a,b);if(p.length>1)pezzi.push({a,b,p})}
+    /* kept stretches that meet at the same point of a crossing join with a corner; any other gap starts a new line */
+    const J=1e-6*(1+D),linee=[];let cur=null;
+    pezzi.forEach(z=>{if(cur&&dd(cur.p[cur.p.length-1],z.p[0])<=J){cur.angoli.push(cur.p.length-1);z.p.slice(1).forEach(q=>cur.p.push(q));cur.fine=z.b}
+      else{cur={p:z.p.slice(),angoli:[],inizio:z.a,fine:z.b};linee.push(cur)}});
+    if(ch&&linee.length){const f=linee[0],l=linee[linee.length-1];
+      if(linee.length>1&&dd(l.p[l.p.length-1],f.p[0])<=J){const k=l.p.length-1,liscio=l.fine>=N-1e-9&&f.inizio<=1e-9;if(!liscio)l.angoli.push(k);f.p.slice(1).forEach(q=>l.p.push(q));f.angoli.forEach(a=>l.angoli.push(a+k));linee.shift();l.chiusa=true;l.seam=!liscio}
+      else if(linee.length===1&&f.inizio<=1e-9&&f.fine>=N-1e-9){f.chiusa=true}}
+    return {linee:linee.filter(L=>L.p.length>1),G}}
+  /* nearest point of C[i0..i1] to q through the grid of C, as a parameter of C; Infinity when nothing of the stretch is near */
+  function piedeG(GC,C,q,i0,i1){const {g,cell,k}=GC,ci=Math.floor(q[0]/cell),cj=Math.floor(q[1]/cell);let bs=i0,bd=Infinity;
+    for(let r=1;r<=3&&bd===Infinity;r+=2)for(let i=ci-r;i<=ci+r;i++)for(let j=cj-r;j<=cj+r;j++){const l=g.get(k(i,j));if(!l)continue;for(const sg of l){if(sg<i0||sg>=i1)continue;
+      const a=C[sg],ab=sub(C[sg+1],a),L=dot(ab,ab);let t=L?dot(sub(q,a),ab)/L:0;t=Math.max(0,Math.min(1,t));const d=dd(q,add(a,mul(ab,t)));if(d<bd){bd=d;bs=sg+t}}}
+    return {s:bs,d:bd}}
+  /* nearest point of C[i0..i1] to q, as a parameter of C */
+  function piedeR(C,q,i0,i1){let bs=i0,bd=Infinity;for(let s=i0;s<i1;s++){const a=C[s],ab=sub(C[s+1],a),L=dot(ab,ab);let t=L?dot(sub(q,a),ab)/L:0;t=Math.max(0,Math.min(1,t));const d=dd(q,add(a,mul(ab,t)));if(d<bd){bd=d;bs=s+t}}
+    if(i1<=i0){bd=dd(q,C[i0]);bs=i0}return {s:bs,d:bd}}
+  /* OF0: one fitted cubic against its stretch C[i0..i1], both ways and forward: the error and the index of C where an anchor is needed */
+  function verSeg(q,C,i0,i1,GC){const lim=TOL*0.8;let Lc=0;for(let i=i0;i<i1;i++)Lc+=dd(C[i],C[i+1]);
+    const Lq=Math.hypot(q[2]-q[0],q[3]-q[1])+Math.hypot(q[4]-q[2],q[5]-q[3])+Math.hypot(q[6]-q[4],q[7]-q[5]);
+    if(Lq>1.5*Lc+TOL)return {err:Infinity,wk:Math.round((i0+i1)/2)};/* a cubic far longer than its stretch has a loop or a bulge */
+    const n=Math.min(800,Math.max(8,Math.ceil(Lq/0.25))),F=[];for(let k=0;k<=n;k++){const t=k/n,m=1-t,a=m*m*m,b=3*m*m*t,c=3*m*t*t,d=t*t*t;F.push([a*q[0]+b*q[2]+c*q[4]+d*q[6],a*q[1]+b*q[3]+c*q[5]+d*q[7]])}
+    let last=i0,err=0,wk=-1;
+    for(const f of F){const pf=piedeG(GC,C,f,i0,i1);if(pf.d>err){err=pf.d;wk=Math.round(pf.s)}
+      if(pf.s<last-1e-9&&dd(aParam(C,last),aParam(C,pf.s))>TOL/4&&err<=lim){err=lim*1.01;wk=-2}last=Math.max(last,pf.s)}
+    if(i1-i0>1){const GF=griglia(F,Math.max(1e-3,TOL));for(let i=i0+1;i<i1;i++){const e=distG(GF,C[i],TOL*8);if(e>err){err=e;wk=i}}}
+    if(wk<=i0||wk>=i1)wk=Math.round((i0+i1)/2);return {err,wk}}
+  function misuraTutti(segs,C,I,cache,GC){const lim=TOL*0.8;let w=-1,wv=lim;
+    for(let k=0;k<segs.length;k++){const i0=I[k],i1=I[k+1];if(i1-i0<2)continue;const key=i0+','+i1+','+segs[k].join(',');let r=cache.get(key);if(!r)cache.set(key,r=verSeg(segs[k],C,i0,i1,GC));if(r.err>wv){wv=r.err;w=r.wk}}
+    return w}
+  /* one cubic through C[i] and C[j] with the given end tangents, fitted to the stretch by least squares (the measure is verSeg's) */
+  function cubicaUna(C,i,j,ang,ch){const t1=ang.has(i)?nrm(sub(C[i+1],C[i])):tanC(C,i,ch),t2=ang.has(j)?nrm(sub(C[j],C[j-1])):tanC(C,j,ch);
+    const P0=C[i],P3=C[j],u=[0];for(let k=i+1;k<=j;k++)u.push(u[u.length-1]+dd(C[k],C[k-1]));const L=u[u.length-1]||1;for(let k=0;k<u.length;k++)u[k]/=L;
+    const Ls=dd(P0,P3);let B;
+    const Q=t=>{const m=1-t;return add(add(mul(B[0],m*m*m),mul(B[1],3*m*m*t)),add(mul(B[2],3*m*t*t),mul(B[3],t*t*t)))},
+      Q1=t=>{const m=1-t;return add(add(mul(sub(B[1],B[0]),3*m*m),mul(sub(B[2],B[1]),6*m*t)),mul(sub(B[3],B[2]),3*t*t))},
+      Q2=t=>add(mul(add(sub(B[2],mul(B[1],2)),B[0]),6*(1-t)),mul(add(sub(B[3],mul(B[2],2)),B[1]),6*t));
+    const risolvi=()=>{let c00=0,c01=0,c11=0,x0=0,x1=0;for(let k=0;k<u.length;k++){const t=u[k],m=1-t,b0=m*m*m,b1=3*m*m*t,b2=3*m*t*t,b3=t*t*t,A1=mul(t1,b1),A2=mul(t2,-b2);
+        c00+=dot(A1,A1);c01+=dot(A1,A2);c11+=dot(A2,A2);const tmp=sub(C[i+k],add(mul(P0,b0+b1),mul(P3,b2+b3)));x0+=dot(A1,tmp);x1+=dot(A2,tmp)}
+      const det=c00*c11-c01*c01;let a1=det?(x0*c11-x1*c01)/det:0,a2=det?(c00*x1-c01*x0)/det:0;if(!(a1>Ls*1e-3)||!(a2>Ls*1e-3)||a1>L*0.9||a2>L*0.9){a1=a2=Math.max(Ls,1e-9)/3}
+      B=[P0,add(P0,mul(t1,a1)),sub(P3,mul(t2,a2)),P3]};
+    risolvi();
+    for(let it=0;it<4;it++){for(let k=1;k<u.length-1;k++){const t=u[k],d=sub(Q(t),C[i+k]),q1=Q1(t),q2=Q2(t),num=dot(d,q1),den=dot(q1,q1)+dot(d,q2);if(Math.abs(den)>1e-12)u[k]=Math.max(0,Math.min(1,t-num/den))}risolvi()}
+    return [...B[0],...B[1],...B[2],...B[3]]}
+  function adattaBez(C,I0,ang,ch){const GC=griglia(C,1);let I=[...new Set(I0)].sort((a,b)=>a-b);const cache=new Map(),cub=new Map(),una=(i,j)=>{const k=i+','+j;let q=cub.get(k);if(!q)cub.set(k,q=cubicaUna(C,i,j,ang,ch));return q};
+    for(let it=0;it<C.length;it++){const segs=[];for(let k=0;k<I.length-1;k++)segs.push(una(I[k],I[k+1]));
+      const w=misuraTutti(segs,C,I,cache,GC);if(w<0)return segs;I=[...new Set([...I,w])].sort((a,b)=>a-b)}
+    const segs=[];for(let k=0;k<I.length-1;k++)segs.push(una(I[k],I[k+1]));return segs}
+  function costruisciMisurato(L,F,P,ds,D,G,tipo){
+    const C=L.p,ch=!!L.chiusa,ang=new Set(L.angoli);if(L.seam)ang.add(0),ang.add(C.length-1);
+    const cand=candidati(F,P,ds,C,D,G),fissi=[0,C.length-1,...L.angoli].map(k=>C[k]),vic=Math.max(1,D*0.1),idx=[0,C.length-1,...L.angoli];
+    cand.forEach(c=>{const k=Math.round(c.s);if(k>0&&k<C.length-1&&!fissi.some(q=>dd(q,C[k])<vic))idx.push(k)});
+    let I=[...new Set(idx)].sort((a,b)=>a-b);
+    if(!L.angoli.length&&!L.seam&&tipo==='spline'){const cacheS=new Map(),GC=griglia(C,1);/* a spline through points of the exact offset, if it passes the measure */
+      for(let it=0;it<3*Math.max(4,F.length);it++){const f=(ch?I.slice(0,-1):I).flatMap(k=>C[k]),sg=splineBez(f,ch);if(sg.length!==I.length-1)break;
+        const w=misuraTutti(sg,C,I,cacheS,GC);if(w<0)return {k:'spline',g:ch?{f,ch:true}:{f}};I=[...new Set([...I,w])].sort((a,b)=>a-b)}}
+    I=[...new Set(idx)].sort((a,b)=>a-b);const segs=adattaBez(C,I,ang,ch);const g={p:bezPunti(segs)};if(ch)g.ch=true;return {k:'curva',g}}
   function offsetCurva(e,d,Pt,mk){
-    const P=densa(e),ch=!!e.g.ch;if(P.length<2)return null;
+    const S=campiona(e);if(!S||S.P.length<2)return null;const P=S.P;
     let bi=0,bd=Infinity;for(let i=0;i<P.length-1;i++){const q=distPrim({s:[...P[i],...P[i+1]]},Pt[0],Pt[1]);if(q<bd){bd=q;bi=i}}
-    const lato=Math.sign(dot(sub(Pt,P[bi]),lft(nrm(sub(P[bi+1],P[bi])))))||1,ds=d*lato;
-    const R=offsetPulito(P,ds,ch);if(!R.linee.length)return null;
-    const L=R.linee.reduce((a,b)=>b.p.length>a.p.length?b:a),r=costruisci(L,passaggi(e),P,ds,R.D,R.G,e,e.k);
-    return r?mk(r.k,r.g):null}
+    const t=dd(P[bi+1],P[bi])>1e-12?nrm(sub(P[bi+1],P[bi])):S.TO[bi],lato=Math.sign(dot(sub(Pt,P[bi]),lft(t)))||1,ds=d*lato,D=Math.abs(d);
+    const O=grezzo(S,ds);if(O.length<2)return [];
+    const R=tagliaOffset(O,P,D,S.ch),F=passaggi(e);
+    return R.linee.map(L=>{const r=costruisciMisurato(L,F,P,ds,D,R.G,e.k);return r?mk(r.k,r.g):null}).filter(Boolean)}
   /* poly-lines with straight sides only: the same cut of the loops on the corners */
   function pulisciPoli(e,r){if(!r||r.k!=='poli'||r.g.bu)return r;const V=coppie(r.g.p),ch=!!r.g.ch;if(V.length<3)return r;
     const Q=ch?V.concat([V[0]]):V.slice(),O=Q,orig=pezziOrig(e);const D=Math.abs(orig.d);if(!D)return r;
@@ -10447,7 +10555,7 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){self.__re&&self.__
     return {P,d:ultimaD}}
   offsetE_PASSO.p1=inner=>function(e,d,P){ultimaD=d;
     if(e.k==='curva'||e.k==='spline'){const mk=(k,g)=>{const o={id:nuovoId('cad'),k,g:arrotondaG(g),l:e.l,t:Date.now()};if(e.col)o.col=e.col;if(e.st)o.st=e.st;return fattaEnt(o)};
-      try{const r=offsetCurva(e,d,P,mk);if(r)return r}catch(err){console.warn('offset',err)}}
+      try{const r=offsetCurva(e,d,P,mk);return r&&r.length?(r.length===1?r[0]:r):null}catch(err){console.warn('offset',err);return null}}
     const r=inner(e,d,P);if(e.k==='poli'){try{return pulisciPoli(e,r)}catch(err){return r}}return r};
   /* Semplifica: fewest passing points within 0.1 mm */
   function semplificaE(e){const P=densa(e),ch=!!e.g.ch;if(P.length<3)return null;const GP=griglia(P,Math.max(1e-3,TOL*20));
@@ -10469,7 +10577,7 @@ setTimeout(()=>{try{if(!pstrip.hidden)posPennaLato()}catch(e){self.__re&&self.__
     const an=coppie(e.g.p),idx=[0,P.length-1],ang=new Set();for(let i=3;i<an.length-1;i+=3){const t1=nrm(sub(an[i],an[i-1])),t2=nrm(sub(an[i+1],an[i]));if(dot(t1,t2)<Math.cos(10*Math.PI/180)){const k=Math.round(piede(P,an[i]).s);idx.push(k);ang.add(k)}}
     const I=[...new Set(idx)].sort((a,b)=>a-b);I.angoli=ang;const segs=bezSuAncore(P,I,ch);
     if(segs.length>=Math.floor((an.length-1)/3))return null;const g={p:bezPunti(segs)};if(ch)g.ch=true;return {k:'curva',g}}
-  window.__gestoOF={bez:e=>{const P=densa(e),I=[0,P.length-1];I.angoli=new Set();return bezSuAncore(P,I,false).length+1},tol:v=>{TOL=v},offsetPulito,semplificaE,adatta,offset:(...a)=>offsetE(...a),poly:e=>polyCurva(e)};
+  window.__gestoOF={campiona:e=>campiona(e),grezzo:(S,ds)=>grezzo(S,ds),taglia:(O,P,D,ch)=>tagliaOffset(O,P,D,ch),bez:e=>{const P=densa(e),I=[0,P.length-1];I.angoli=new Set();return bezSuAncore(P,I,false).length+1},tol:v=>{TOL=v},offsetPulito,semplificaE,adatta,offset:(...a)=>offsetE(...a),poly:e=>polyCurva(e)};
   const nPunti=e=>e.k==='spline'?e.g.f.length>>1:Math.floor((e.g.p.length/2-1)/3)+1;
   
 })();
