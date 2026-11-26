@@ -935,7 +935,7 @@ function inquadra(){
    SRV = stato confermato dall'archivio; pend = scritture in corso o non ancora confermate.
    MOS (ciò che si mostra) = SRV con pend sovrapposto: un'istantanea vecchia non smentisce mai
    un gesto. Scritture in parallelo fra documenti, in sequenza sullo stesso documento. */
-const RAMI=['tratti','sfondi','cad','layer','collezioni','blocchi','tavole','parametri','vincoli','tabelle'];
+const RAMI=['tratti','sfondi','cad','layer','collezioni','blocchi','tavole','parametri','vincoli','tabelle','materiali','stratigrafie'];
 /* FG1 (owner, 25.11.2026): 256 MiB is the size limit of the .dmz container; above it nothing is written and the file on disk stays as it was */
 const FG={max:256*1048576,testo:(nome,b)=>'«'+nome+'»'+(b?' pesa '+Math.round(b/1048576)+' MB,':' è troppo grande:')+' oltre i '+Math.round(FG.max/1048576)+' MiB del file .dmz. Non è stato salvato: il file sul disco resta quello di prima.'};
 const SRV={},MOS={};RAMI.forEach(r=>{SRV[r]=new Map();MOS[r]=new Map()});
@@ -983,7 +983,7 @@ function sovrapponi(col,base){const m=new Map(base);pend.forEach(en=>{if(en.col!
    The layers are the stages of this one body, written as they were, each calling the stage it held below it; each stage is active from the point
    of the loading where its layer stood (ricomponi_FASI). */
 var ricomponi_FASI=new Set();
-function ricomponi(){try{if(TBV&&!TBV.hidden&&!tbStato().ed)queueMicrotask(tbRendi);queueMicrotask(()=>tbPosaAgg())}catch(e){self.__re&&self.__re(e)}
+function ricomponi(){try{if(TBV&&!TBV.hidden&&!tbStato().ed)queueMicrotask(tbRendi);queueMicrotask(()=>tbPosaAgg());queueMicrotask(sgRendi)}catch(e){self.__re&&self.__re(e)}
   const on=k=>!!(ricomponi_FASI&&ricomponi_FASI.has(k));
   const s0=function(){
   RAMI.forEach(r=>{MOS[r]=sovrapponi(colDi(r),SRV[r])});
@@ -1068,6 +1068,8 @@ const PARSE={
   blocchi:(id,b)=>Object.assign({id,_r:'blocchi'},b),
   tabelle:(id,b)=>{if(!(b&&typeof b.celle==='object'&&b.celle))return null;const o=Object.assign({id,_r:'tabelle'},b);
     if(o.u!=='mm'){['col','rig'].forEach(k=>{if(o[k]){const q={};for(const z in o[k]){const v=+o[k][z];if(v>0)q[z]=Math.round(v/4*2)/2}o[k]=q}});o.u='mm'}return o},
+  materiali:(id,b)=>b&&b.nome?Object.assign({id,_r:'materiali'},b):null,
+  stratigrafie:(id,b)=>b&&Array.isArray(b.strati)?Object.assign({id,_r:'stratigrafie'},b):null,
   tavole:(id,b)=>Object.assign({id,_r:'tavole'},b)
 };
 /* SC2 (owner, 25.11.2026): apriFoglio in one body.
@@ -1564,7 +1566,7 @@ function trasformaE(e,T,nuovo){
   if(e.col)o.col=e.col;if(e.st)o.st=e.st;if(e.pv)o.pv=M(e.pv).map(r3);
   return fattaEnt(o);
 };
-  const s1=on('s1')?function(e,T,nuovo){const o=s0(e,T,nuovo);let c=false;if(e.nm){o.nm=e.nm;c=true}if(e.u&&!nuovo){o.u=e.u;c=true}if(e.tg){o.tg=e.tg.slice();c=true}if(e.ma){o.ma=e.ma;c=true}if(e.gr&&!nuovo){o.gr=e.gr;c=true}return c?fattaEnt(o):o}:s0;
+  const s1=on('s1')?function(e,T,nuovo){const o=s0(e,T,nuovo);let c=false;if(e.nm){o.nm=e.nm;c=true}if(e.u&&!nuovo){o.u=e.u;c=true}if(e.tg){o.tg=e.tg.slice();c=true}if(e.ma){o.ma=e.ma;c=true}if(e.sr){o.sr=e.sr;c=true}if(e.gr&&!nuovo){o.gr=e.gr;c=true}return c?fattaEnt(o):o}:s0;
   const s2=on('s2')?function(e,T,nuovo){if(!isT(e))return s1(e,T,nuovo);
   const p=[];for(let i=0;i+1<e.p.length;i+=2){const q=mappa(T,e.p[i],e.p[i+1]);p.push(r3(q[0]),r3(q[1]))}
   const k=T.m||T.sp||T.r!=null?1:Math.abs(T.k||1);return nuovoT(e,{p,w:r3((e.w||0)*k)},nuovo)}:s1;
@@ -2987,7 +2989,7 @@ function taglioP(P,s0,s1){const o=[];P.pz.forEach(z=>{const l=lungZ(z),a=Math.ma
 function taglioCiclico(P,s0,s1){return s1>s0+1e-9?taglioP(P,s0,s1):taglioP(P,s0,P.L).concat(taglioP(P,0,s1))}
 function entDaPezzi(pz,base,ch,stessoId){
   pz=pz.filter(z=>lungZ(z)>1e-7);if(!pz.length)return null;
-  const mk=(k,g)=>{const o={id:stessoId?base.id:nuovoId('cad'),k,g:arrotondaG(g),l:base.l,t:base.t||Date.now()};if(base.col)o.col=base.col;if(base.st)o.st=base.st;if(base.tg)o.tg=base.tg.slice();if(base.ma)o.ma=base.ma;if(stessoId){if(base.nm)o.nm=base.nm;if(base.u)o.u=base.u}return fattaEnt(o)};
+  const mk=(k,g)=>{const o={id:stessoId?base.id:nuovoId('cad'),k,g:arrotondaG(g),l:base.l,t:base.t||Date.now()};if(base.col)o.col=base.col;if(base.st)o.st=base.st;if(base.tg)o.tg=base.tg.slice();if(base.ma)o.ma=base.ma;if(base.sr)o.sr=base.sr;if(stessoId){if(base.nm)o.nm=base.nm;if(base.u)o.u=base.u}return fattaEnt(o)};
   if(pz.every(z=>z.k!=='b')){
     if(pz.length===1&&pz[0].k==='a'&&ch&&Math.abs(Math.abs(pz[0].sw)-DUEPI)<1e-6)return mk('cerchio',{c:pz[0].c,r:pz[0].r});
     if(pz.length===1&&!ch){const z=pz[0];if(z.k==='s')return mk('linea',{a:z.a,b:z.b});return mk('arco',{c:z.c,r:z.r,a0:z.sw>0?z.a0:z.a0+z.sw,a1:z.sw>0?z.a0+z.sw:z.a0})}
@@ -4835,7 +4837,7 @@ async function datiSfondo(b){
 async function esportaFoglio(){
   const f=foglio(),o={formato:'gesto',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
   if(f.sc)o.foglio.sc=f.sc;if(f.o)o.foglio.o=f.o;if(f.qu)o.foglio.qu=f.qu;if(f.ts)o.foglio.ts=f.ts;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;if(f.cartDef)o.foglio.cartDef=f.cartDef;if(f.dp)o.foglio.dp=f.dp;if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(Array.isArray(f.fgl)&&f.fgl.length)o.foglio.fgl=f.fgl;let n=0,persi=0;
-  RAMI.forEach(r=>{if(r==='tabelle'&&!MOS[r].size)return;o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
+  RAMI.forEach(r=>{if((r==='tabelle'||r==='materiali'||r==='stratigrafie')&&!MOS[r].size)return;o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
   if(!n){notaEx('Il foglio è vuoto');return}
   notaEx('Preparo il file del foglio…');
   for(const b of tuttiSfondi()){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
@@ -6743,8 +6745,8 @@ function rendiCol(){
   clearTimeout(miniT);miniT=setTimeout(miniature,700)};
   const s1=on('s1')?function(){if(!IMPAG)return;const cur=tavAtt();if(cur&&cur.pdf)DC.aperti.add(cur.pdf.d);
   if(cur){let p=dcDir(cur);while(p){DC.chiuse.delete(p);const c=dcCartelle().find(x=>x.id===p);p=c&&dcEsiste(c.p)?c.p:''}}
-  const key=JSON.stringify([ordineTav().map(t=>[t.id,t.nome,t.dir,t.fmt,t.pdf&&[t.pdf.d,t.pdf.nm,t.pdf.p]]),dcCartelle(),[...DC.chiuse],[...DC.aperti],[...DC.docChiusi],S.tav,DC.rinomina,fgLista(),tbLista().map(x=>[x.id,x.nome]),tbStato().id,tbStato().rin]);
-  if(key!==dcChiave){dcChiave=key;dcL.textContent='';const fgb=document.createElement('div');fgb.id='dcFg';fgb.className='lmFg dcFg';dcL.appendChild(fgb);fgMenu();const tbb=document.createElement('div');tbb.id='dcTb';tbb.className='lmFg dcFg dcTb';dcL.appendChild(tbb);tbRiempi(tbb);dcRiempi('',dcL);if(!dcL.children.length){const v=document.createElement('div');v.className='dcVuoto';v.textContent='Nessuna tavola';dcL.appendChild(v)}}
+  const key=JSON.stringify([ordineTav().map(t=>[t.id,t.nome,t.dir,t.fmt,t.pdf&&[t.pdf.d,t.pdf.nm,t.pdf.p]]),dcCartelle(),[...DC.chiuse],[...DC.aperti],[...DC.docChiusi],S.tav,DC.rinomina,fgLista(),tbLista().map(x=>[x.id,x.nome]),tbStato().id,tbStato().rin,sgLista().map(x=>[x.id,x.nome]),SGE.id]);
+  if(key!==dcChiave){dcChiave=key;dcL.textContent='';const fgb=document.createElement('div');fgb.id='dcFg';fgb.className='lmFg dcFg';dcL.appendChild(fgb);fgMenu();const tbb=document.createElement('div');tbb.id='dcTb';tbb.className='lmFg dcFg dcTb';dcL.appendChild(tbb);tbRiempi(tbb);const sgb=document.createElement('div');sgb.id='dcSg';sgb.className='lmFg dcFg dcTb';dcL.appendChild(sgb);sgRiempi(sgb);dcRiempi('',dcL);if(!dcL.children.length){const v=document.createElement('div');v.className='dcVuoto';v.textContent='Nessuna tavola';dcL.appendChild(v)}}
   else dcL.querySelectorAll('.dcI').forEach(it=>it.classList.toggle('att',it.dataset.id===S.tav));
   clearTimeout(miniT);miniT=setTimeout(miniature,700)}:s0;
   const s2=on('s2')?function(){s1();erNav();erPanApri()}:s1;
@@ -7889,7 +7891,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.129';
+const VERSIONE_GESTO='0.130';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -7919,7 +7921,7 @@ logo.innerHTML=GESTO_SVG;
   async function contenuto(){
     const f=foglio(),o={formato:'gesto',versione:1,salvato:new Date().toISOString(),foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
     ['sc','o','qu','ts','cartDef','dp'].forEach(k=>{if(f[k])o.foglio[k]=f[k]});if(Array.isArray(f.viste)&&f.viste.length)o.foglio.viste=f.viste;if(Array.isArray(f.cartelle)&&f.cartelle.length)o.foglio.cartelle=f.cartelle;if(Array.isArray(f.strutture)&&f.strutture.length)o.foglio.strutture=f.strutture;if(Array.isArray(f.fgl)&&f.fgl.length)o.foglio.fgl=f.fgl;if(f.formati&&f.formati.length)o.foglio.formati=f.formati;if(f.cartigli&&f.cartigli.length)o.foglio.cartigli=f.cartigli;
-    let n=0,persi=0;RAMI.forEach(r=>{if(r==='tabelle'&&!MOS[r].size)return;o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
+    let n=0,persi=0;RAMI.forEach(r=>{if((r==='tabelle'||r==='materiali'||r==='stratigrafie')&&!MOS[r].size)return;o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)));n+=o.rami[r].length});
     const imm=[...tuttiSfondi()];tuttiSfondi().forEach(b=>{if(b.pdf&&b.pdf.a)imm.push({a:b.pdf.a})});[...MOS.tavole.values()].forEach(tv=>{const a=tv.cart&&tv.cart.kp;if(a)imm.push({a});if(tv.pdf&&tv.pdf.a)imm.push({a:tv.pdf.a})});pgTuttiAsset().forEach(a=>imm.push({a}));
     if(!f.uuid)fogliSet({uuid:uuid7()});const u=f.uuid,nome=f.nome||'Foglio';
     for(const b of imm){if(o.immagini[b.a])continue;try{o.immagini[b.a]=await datiSfondo(b)}catch(e){persi++}}
@@ -11443,7 +11445,7 @@ window.__gestoPG={norm:pgNorm,campo:(id,u,v)=>{const b=pfGet(id);if(b)pgCampoNuo
   /* ---- the drawing as it is, without images (REC5: their names only) ---- */
   const istantanea=()=>{const f=foglio(),o={foglio:{nome:f.nome||'Foglio'},rami:{},immagini:{}};
     ['sc','o','qu','ts','cartDef','dp','viste','cartelle','strutture','formati','cartigli'].forEach(k=>{if(f[k]!=null)o.foglio[k]=f[k]});
-    RAMI.forEach(r=>{if(r==='tabelle'&&!MOS[r].size)return;o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)))});return o};
+    RAMI.forEach(r=>{if((r==='tabelle'||r==='materiali'||r==='stratigrafie')&&!MOS[r].size)return;o.rami[r]=[...MOS[r].values()].map(x=>Object.assign({id:x.id},corpo(r,x)))});return o};
   const ambiente=()=>{let dm='browser';try{['window-controls-overlay','standalone','minimal-ui','fullscreen'].some(m=>matchMedia('(display-mode: '+m+')').matches&&(dm=m))}catch(e){self.__re(e)}
     return {app:'Gesto di Lab DeMazur',versione:VERSIONE_GESTO,ua:navigator.userAgent,piattaforma:navigator.userAgentData?navigator.userAgentData.platform:navigator.platform,
       tocchi:navigator.maxTouchPoints||0,dpr:devicePixelRatio,vw:innerWidth,vh:innerHeight,schermo:[screen.width,screen.height],display:dm,
@@ -11857,7 +11859,7 @@ const dF=a=>Number(a.m)/Math.pow(10,a.e);
 function dCanon(a){let s=(a.m<0n?-a.m:a.m).toString();if(a.e>0){s=s.padStart(a.e+1,'0');s=s.slice(0,s.length-a.e)+'.'+s.slice(s.length-a.e)}return (a.m<0n?'-':'')+s}
 
 /* ---- functions: one closed, numbered list per version (DZ-083 b) ---- */
-const FUNZ_VERSIONE=4;
+const FUNZ_VERSIONE=5;
 const FUNZ=[ // [neutral name, Italian name, group, min args, max args]
   ['SUM','SOMMA','mat',1,255],['AVERAGE','MEDIA','mat',1,255],['MIN','MIN','mat',1,255],['MAX','MAX','mat',1,255],
   ['ROUND','ARROTONDA','mat',2,2],['ROUNDUP','ARROTONDA.PER.ECC','mat',2,2],['ROUNDDOWN','ARROTONDA.PER.DIF','mat',2,2],
@@ -11873,17 +11875,21 @@ const FUNZ=[ // [neutral name, Italian name, group, min args, max args]
   ['TODAY','OGGI','dat',0,0],['DATE','DATA','dat',3,3],['YEAR','ANNO','dat',1,1],['MONTH','MESE','dat',1,1],['DAY','GIORNO','dat',1,1],['WEEKDAY','GIORNO.SETTIMANA','dat',1,2],
   ['DAYS','GIORNI','dat',2,2],['EDATE','DATA.MESE','dat',2,2],['NETWORKDAYS','GIORNI.LAVORATIVI.TOT','dat',2,3],['WORKDAY','GIORNO.LAVORATIVO','dat',2,3],
   /* version 3 (v0.128): cells that read the drawing (TB2); measures in metres and square metres */
-  ['AREA','AREA','dis',1,255],['PERIMETER','PERIMETRO','dis',1,255],['LENGTH','SVILUPPO','dis',1,255],['COUNTOBJECTS','CONTA.OGGETTI','dis',1,255]];
+  ['AREA','AREA','dis',1,255],['PERIMETER','PERIMETRO','dis',1,255],['LENGTH','SVILUPPO','dis',1,255],['COUNTOBJECTS','CONTA.OGGETTI','dis',1,255],
+  /* version 5 (v0.130, ST6): m³ of the layers of a stratigraphy, area by thickness */
+  ['VOLUME','VOLUME','dis',1,255]];
 /* version 4 (v0.129, QR1-QR7): the drawing functions take one object, or pairs of property and criterion, all to be met.
    Properties, a closed list numbered by version [neutral, Italian]; measures in m and m² */
 const PROP=[['NAME','NOME'],['TYPE','TIPO'],['LAYER','LAYER'],['COLLECTION','COLLEZIONE'],['TAG','TAG'],['MATERIAL','MATERIALE'],
-  ['WIDTH','LARGHEZZA'],['DEPTH','PROFONDITÀ'],['AREA','AREA'],['PERIMETER','PERIMETRO'],['LENGTH','SVILUPPO']];
-const PROP_VERSIONE=1,PROP_DA={},PROP_A={},senzaAcc=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+  ['WIDTH','LARGHEZZA'],['DEPTH','PROFONDITÀ'],['AREA','AREA'],['PERIMETER','PERIMETRO'],['LENGTH','SVILUPPO'],
+  /* version 2 (v0.130): stratigraphy and its whole thickness, m */
+  ['STRATIGRAPHY','STRATIGRAFIA'],['THICKNESS','SPESSORE']];
+const PROP_VERSIONE=2,PROP_DA={},PROP_A={},senzaAcc=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
 PROP.forEach(([n,i])=>{PROP_DA[senzaAcc(n)]=n;PROP_DA[senzaAcc(i)]=n;PROP_A[n]=i});
 /* the drawing is reached through the app, TBM.ponte.disegno = {oggetti(q) → [{area,per,len}] in m and m², or null when q names nothing;
    risolvi(name) → id of the one object with that name, or null; nomina(id) → its name when unique, or null}.
    A name of one object is stored as its identity (weak reference: renaming keeps the link); counting stays a query by name. */
-const DIS={AREA:1,PERIMETER:1,LENGTH:1,COUNTOBJECTS:1},RISOLVE={AREA:1,PERIMETER:1,LENGTH:1};const ponte={disegno:null,lingua:'it'};
+const DIS={AREA:1,PERIMETER:1,LENGTH:1,COUNTOBJECTS:1,VOLUME:1},RISOLVE={AREA:1,PERIMETER:1,LENGTH:1,VOLUME:1};const ponte={disegno:null,lingua:'it'};
 const DA_IT={},A_IT={},INFO={};FUNZ.forEach(([n,i,g,a,b])=>{DA_IT[i]=n;A_IT[n]=i;INFO[n]={g,a,b}});
 /* ---- errors, as Italian Excel shows them ---- */
 const ERR={nd:'#N/D',div:'#DIV/0!',val:'#VALORE!',rif:'#RIF!',nome:'#NOME?',num:'#NUM!',ciclo:'#CICLO!'};
@@ -12071,12 +12077,13 @@ function funzione2(f,args){const A=args;
     case 'DAYS':{const b=intero(A[0]),a=intero(A[1]);if(isE(a))return a;if(isE(b))return b;return D(b-a,0)}
     case 'EDATE':{const n=intero(A[0]),k=intero(A[1]);if(isE(n))return n;if(isE(k))return k;const q=daSeriale(n),m0=q.m-1+k,y=q.y+Math.floor(m0/12),m=((m0%12)+12)%12+1;
       const ult=new Date(Date.UTC(y,m,0)).getUTCDate();return D(seriale(y,m,Math.min(q.d,ult)),0)}
-    case 'AREA':case 'PERIMETER':case 'LENGTH':case 'COUNTOBJECTS':{const P=ponte.disegno;let L;
+    case 'AREA':case 'PERIMETER':case 'LENGTH':case 'COUNTOBJECTS':case 'VOLUME':{const P=ponte.disegno;let L;
       if(A.length===1){const q=tx(A[0]);if(isE(q))return q;L=P&&P.oggetti?P.oggetti(q):null}
       else{if(A.length%2)return E('val');const C=[];for(let i=0;i<A.length;i+=2){const p=tx(A[i]);if(isE(p))return p;const n=PROP_DA[senzaAcc(p)];if(!n)return E('val');C.push([n,criterio(A[i+1])])}
         const T=P&&P.tutti?P.tutti():[];L=T.filter(o=>C.every(([n,t])=>{const v=o[n];return Array.isArray(v)?v.some(x=>t(x)):t(typeof v==='number'?dNum(v):v)}));
-        L=L.map(o=>({area:o.AREA,per:o.PERIMETER,len:o.LENGTH}))}
-      if(!L)return E('rif');if(f==='COUNTOBJECTS')return D(L.length,0);if(!L.length)return D(0,0);const k=f==='AREA'?'area':f==='PERIMETER'?'per':'len';
+        const cm=C.find(([n])=>n==='MATERIAL');
+        L=L.map(o=>{const S=(o.LAYERS||[]).filter(q=>!cm||cm[1](q.m));return {area:o.AREA,per:o.PERIMETER,len:o.LENGTH,vol:o.AREA!=null&&S.length?o.AREA*S.reduce((a,q)=>a+q.s,0):null}})}
+      if(!L)return E('rif');if(f==='COUNTOBJECTS')return D(L.length,0);if(!L.length)return D(0,0);const k=f==='AREA'?'area':f==='PERIMETER'?'per':f==='VOLUME'?'vol':'len';
       let s=0,n=0;L.forEach(o=>{if(o[k]!=null&&isFinite(o[k])){s+=o[k];n++}});return n?dRound(dNum(s),9,''):E('val')}
     case 'NETWORKDAYS':case 'WORKDAY':{const a=intero(A[0]),b=intero(A[1]);if(isE(a))return a;if(isE(b))return b;const fest=new Set();
       if(A.length>2)for(const q of lin(A[2])){if(isD(q))fest.add(Number(dInt(q).m))}
@@ -12406,7 +12413,7 @@ function tbPdf(doc,t){tbCornici(t).forEach(fr=>{const g=tbGeo(fr),o=g.o,A=g.A,ct
       doc.setTextColor(testa?'#FFFFFF':TBM.isE(v)?'#AC7853':DMZ.testo);s=fit(String(s),x1-x0-2*pad);
       const al=testa?(destra(c)?'right':'left'):TBM.isD(v)?'right':typeof v==='boolean'||TBM.isE(v)?'center':'left';
       doc.text(s,al==='right'?x1-pad:al==='center'?(x0+x1)/2:x0+pad,yb,al==='left'?undefined:{align:al})}}
-  doc.setDrawColor(DMZ.scuro);doc.setLineWidth(0.25);doc.line(fr.x,fr.y+g.h,fr.x+g.w,fr.y+g.h)})}
+  doc.setDrawColor(DMZ.scuro);doc.setLineWidth(0.25);doc.line(fr.x,fr.y+g.h,fr.x+g.w,fr.y+g.h)});sgPdf(doc,t)}
 /* the frames on the screen: a layer over the plate, one box per frame, where the pen writes */
 var TBP=null;
 function tbStrato(){if(TBP)return TBP;TBP=document.createElement('div');TBP.id='tbP';document.body.appendChild(TBP);return TBP}
@@ -12415,8 +12422,8 @@ function tbSch(x,y){const r=tbCv(),[a,b]=w2s(x,y);return [a+r.left,b+r.top]}
 function tbCarta(cx,cy){const r=tbCv();return s2w(cx-r.left,cy-r.top)}
 var tbPosaK='';
 function tbPosaAgg(forza){const L=tbStrato(),t=IMPAG?tavAtt():null,F=tbCornici(t),st=tbStato();
-  const k=[IMPAG,S.tav,V.s,V.ox,V.oy,datiVer,st.fr,st.c,st.r,st.c2,st.r2,st.id,innerWidth,innerHeight].join('|');if(!forza&&k===tbPosaK)return;tbPosaK=k;
-  if(!F.length){L.textContent='';L.hidden=true;return}L.hidden=false;
+  const k=[IMPAG,S.tav,V.s,V.ox,V.oy,datiVer,st.fr,st.c,st.r,st.c2,st.r2,st.id,innerWidth,innerHeight,SGE.id].join('|');if(!forza&&k===tbPosaK)return;tbPosaK=k;
+  const nS=sgCornici(t).length;if(!F.length&&!nS){L.textContent='';L.hidden=true;return}L.hidden=false;sgPosaAgg(L,t);
   const vivi=new Set();F.forEach(fr=>{vivi.add(fr.id);let b=L.querySelector('.tbFr[data-id="'+fr.id+'"]');
     if(!b){b=document.createElement('div');b.className='tbFr';b.dataset.id=fr.id;b.innerHTML='<div class="tbMv" title="Trascina per spostare la tabella"></div><div class="tbSl"></div><div class="tbAt"></div><div class="tbCb"></div><div class="tbRs" title="Trascina per allargare l’area della tabella"></div>';
       L.appendChild(b);tbFrEventi(b)}
@@ -12509,13 +12516,13 @@ let tbIdx={v:-1,m:null};
 function tbIndice(){if(tbIdx.v===datiVer&&tbIdx.m)return tbIdx.m;const m=new Map();MOS.cad.forEach(e=>{if(e.bk)return;m.set(e.id,e);if(e.u)m.set(e.u,e)});tbIdx={v:datiVer,m};return m}
 function tbOggettoDi(q){return tbIndice().get(q)||tbIndice().get(String(q).toLowerCase())||null}
 function tbNomeE(e){if(e.nm)return String(e.nm).trim();if(e.k==='ins'){const b=MOS.blocchi.get(e.g&&e.g.b);if(b&&b.nome)return String(b.nome).trim()}return ''}
-function tbMisura(e){const o={id:e.id};
+function tbMisura(e){const o={id:e.id},C=compDi(e);
   try{if(chiusa(e)){const c=contorno(e);if(c&&c.length>=6)o.area=areaPoly(c)/1e6}}catch(x){}
   try{if(MODIFICABILI.has(e.k)){const L=percorso(e).L/1000;o.len=L;if(chiusa(e))o.per=L}}catch(x){}
-  return o}
+  if(o.area!=null&&C.sp)o.vol=o.area*C.sp;return o}
 function tbProprieta(e){const m=tbMisura(e),o={NAME:tbNomeE(e),TYPE:[e.k,NOMI_K[e.k]||e.k],LAYER:lyDi(e.l||'generale').nome||'',
-  COLLECTION:(e.col&&MOS.collezioni.get(e.col)&&MOS.collezioni.get(e.col).nome)||'',TAG:Array.isArray(e.tg)?e.tg:[],MATERIAL:e.ma||'',
-  AREA:m.area,PERIMETER:m.per,LENGTH:m.len};
+  COLLECTION:(e.col&&MOS.collezioni.get(e.col)&&MOS.collezioni.get(e.col).nome)||'',TAG:Array.isArray(e.tg)?e.tg:[],MATERIAL:[],AREA:m.area,PERIMETER:m.per,LENGTH:m.len};
+  {const C=compDi(e);o.MATERIAL=C.mat;o.LAYERS=C.L;o.STRATIGRAPHY=C.sg;if(C.sp!=null)o.THICKNESS=C.sp}
   try{const b=bbE(e);if(isFinite(b.x0)&&b.x1>=b.x0){o.WIDTH=(b.x1-b.x0)/1000;o.DEPTH=(b.y1-b.y0)/1000}}catch(x){}return o}
 /* ID5: a name shared or absent shows with the last four signs of the identity, «Sedia·3f9a» */
 function tbSegno(e){const i=identita(e)||e.id;return (tbNomeE(e)||NOMI_K[e.k]||e.k)+'·'+i.slice(-4).toLowerCase()}
@@ -12531,7 +12538,7 @@ function tbOggetti(q){q=String(q==null?'':q).trim();if(!q)return null;
   if(m){const n=m[2].trim().toLowerCase(),k=m[1].toLowerCase(),L=[];
     if(k==='layer'||k==='collezione'){const ids=new Set();(k==='layer'?layers:MOS.collezioni).forEach((x,id)=>{if(String(x.nome||'').trim().toLowerCase()===n)ids.add(id)});if(!ids.size)return null;
       MOS.cad.forEach(e=>{if(!e.bk&&ids.has(k==='layer'?(e.l||'generale'):e.col))L.push(tbMisura(e))});return L}
-    MOS.cad.forEach(e=>{if(e.bk)return;if(k==='tag'?(e.tg||[]).some(t=>t.toLowerCase()===n):String(e.ma||'').toLowerCase()===n)L.push(tbMisura(e))});return L}
+    MOS.cad.forEach(e=>{if(e.bk)return;if(k==='tag'?(e.tg||[]).some(t=>t.toLowerCase()===n):compDi(e).mat.some(x=>String(x).toLowerCase()===n))L.push(tbMisura(e))});return L}
   const L=tbConNome(q).map(tbMisura);return L.length?L:null}
 TBM.ponte.disegno={oggetti:tbOggetti,tutti:()=>{const L=[];MOS.cad.forEach(e=>{if(!e.bk)L.push(tbProprieta(e))});return L},
   risolvi:n=>{n=String(n).trim();if(tbOggettoDi(n)||/^(layer|collezione|tag|materiale)\s*:/i.test(n))return null;const s=tbDaSegno(n);if(s)return tbAssicura(s);
@@ -12543,14 +12550,24 @@ try{TBM.ponte.lingua=localStorage.getItem('gesto.formule')==='en'?'en':'it'}catc
   r.innerHTML='<span class="k">Formule</span><div class="seg" id="segFormule"><button data-v="it">Italiano</button><button data-v="en">Inglese</button></div>';
   d.closest('.pr').after(r);const agg=()=>r.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===TBM.ponte.lingua)));
   r.querySelectorAll('button').forEach(b=>b.onclick=()=>{TBM.ponte.lingua=b.dataset.v;try{localStorage.setItem('gesto.formule',b.dataset.v)}catch(e){}agg();try{if(TBV&&!TBV.hidden)tbBarra()}catch(e){}});agg()})();
-/* TG1, QR6: tags and material in the panel of the object */
+/* TG1, ST1: tags, and what the object is made of, in the panel of the object: nothing, one material, or a stratigraphy */
+var tbCompScelta=null;
 function tbCampiOggetto(es,riga,cmp){const com=f=>{const v=es.map(f);return v.every(x=>x===v[0])?v[0]:null};
-  const tg=com(e=>(e.tg||[]).join(', ')),ma=com(e=>e.ma||'');
+  const tg=com(e=>(e.tg||[]).join(', '));
   const wt=cmp(tg==null?'':tg,'Tag',v=>modificaSel(o=>{const L=[...new Set(v.split(/[,;]/).map(x=>x.trim()).filter(Boolean))];if(L.length)o.tg=L;else delete o.tg}));
   if(tg==null)wt.querySelector('input').placeholder='Valori diversi';riga('Tag',wt);
-  const wm=cmp(ma==null?'':ma,'Materiale',v=>modificaSel(o=>{if(v)o.ma=v;else delete o.ma}));const im=wm.querySelector('input');if(ma==null)im.placeholder='Valori diversi';
-  let dl=document.getElementById('tbMatL');if(!dl){dl=document.createElement('datalist');dl.id='tbMatL';document.body.appendChild(dl)}
-  const usati=new Set();MOS.cad.forEach(e=>{if(e.ma)usati.add(e.ma)});dl.innerHTML=[...usati].sort().map(x=>'<option value="'+x.replace(/"/g,'&quot;')+'">').join('');im.setAttribute('list','tbMatL');riga('Materiale',wm)}
+  const ids=es.map(e=>e.id).join(',');if(!tbCompScelta||tbCompScelta.ids!==ids)tbCompScelta={ids,v:null};
+  const cv=com(e=>e.sr?'s':e.ma?'m':''),modo=tbCompScelta.v||(cv==null?'':cv);
+  const applica=fn=>{const add=[];const L=es.map(e=>{const o=Object.assign({},e);fn(o,add);return fattaEnt(o)});esegui({add:add.concat(L),del:es})};
+  const s=scelta([['','Nessuna'],['m','Un materiale'],['s','Una stratigrafia']].concat(cv==null&&!tbCompScelta.v?[['—','Composizioni diverse']]:[]),cv==null&&!tbCompScelta.v?'—':modo,v=>{
+    if(v==='')applica(o=>{delete o.ma;delete o.sr});tbCompScelta.v=v||null;rendiPP()});s.className='cs';s.setAttribute('aria-label','Composizione');riga('Composizione',s);
+  if(modo==='m'){const ma=com(e=>e.ma?mtNome(e.ma):'');
+    const wm=cmp(ma==null?'':ma,'Materiale',v=>applica((o,add)=>{const id=mtPer(v,add);delete o.sr;if(id)o.ma=id;else delete o.ma}));const im=wm.querySelector('input');if(ma==null)im.placeholder='Valori diversi';
+    let dl=document.getElementById('mtL');if(!dl){dl=document.createElement('datalist');dl.id='mtL';document.body.appendChild(dl)}dl.innerHTML=mtLista().map(m=>'<option value="'+String(m.nome).replace(/"/g,'&quot;')+'">').join('');im.setAttribute('list','mtL');riga('Materiale',wm)}
+  if(modo==='s'){const sv=com(e=>e.sr||'');const o=sgLista().map(x=>[x.id,x.nome]);
+    const ss=scelta([['','Scegli…']].concat(o,[['+','Nuova stratigrafia']]),sv||'',v=>{if(!v)return;if(v==='+'){const id=sgNuova();applica(q=>{delete q.ma;q.sr=id});return}applica(q=>{delete q.ma;q.sr=v})});
+    ss.className='cs';ss.setAttribute('aria-label','Stratigrafia');const r=riga('Stratigrafia',ss);
+    if(sv){const b=document.createElement('button');b.type='button';b.className='pb';b.textContent='Apri';b.title='Apri la stratigrafia';b.onclick=()=>sgApri(sv);r.appendChild(b)}}}
 (function(){const g=window.__gestoTB||{};Object.assign(g,{
   oggetto:(k,geo,extra)=>{const o=fattaEnt(Object.assign({id:nuovoId('cad'),k,g:geo,l:'generale',t:Date.now()},extra||{}));esegui({add:[o],del:[]});return o.id},
   modifica:(id,patch)=>{const e=MOS.cad.get(id);if(!e)return false;const n=fattaEnt(Object.assign(JSON.parse(JSON.stringify(corpo('cad',e))),{id},patch));esegui({add:[n],del:[e]});return true},
@@ -12562,6 +12579,140 @@ function tbCampiOggetto(es,riga,cmp){const com=f=>{const v=es.map(f);return v.ev
   selOgg:L=>{sel.clear();L.forEach(i=>sel.add(i));try{aggCtx()}catch(e){}rendiPP();richiedi()},
   lingua:l=>{if(l)TBM.ponte.lingua=l;return TBM.ponte.lingua},
   misura:q=>tbOggetti(q),nomeLayer:id=>lyDi(id).nome});window.__gestoTB=g})();
+/* ---------- 130 ST1-ST7 (owner, 26.11.2026): materials and stratigraphies ----------
+   ST1 an object is made of one material or of a stratigraphy; a covering is a layer of it. ST2 a stratigraphy is a type of the project:
+   ordered layers, each with material, thickness and role, defined once and carried by many objects. ST3 in a polygon the layers stand
+   in height. ST4 the tool draws its section with the hatches of the materials, and the section is laid on the plate as a detail.
+   ST5 the materials of the project are one list, cited by identity. ST6 a material is found in the layers too; measures by layer, m² and m³.
+   ST7 in the file the branches `materiali` and `stratigrafie` of the module gesto, until the module `stratigrafia` is defined. */
+function mtLista(){return [...MOS.materiali.values()].sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'it'))}
+function sgLista(){return [...MOS.stratigrafie.values()].sort((a,b)=>(a.t||0)-(b.t||0))}
+function mtNome(v){const m=v&&MOS.materiali.get(v);return m?m.nome:String(v||'')}
+/* the identity of the material named so; a new one goes into add */
+function mtPer(nome,add){nome=String(nome||'').trim();if(!nome)return null;const k=nome.toLowerCase();
+  const m=mtLista().find(x=>String(x.nome).toLowerCase()===k)||(add||[]).find(x=>x._r==='materiali'&&x.nome.toLowerCase()===k);if(m)return m.id;
+  const n={id:uuid7(),_r:'materiali',nome,t:Date.now()};if(add)add.push(n);return n.id}
+function sgStrati(id){const s=MOS.stratigrafie.get(id);return s&&Array.isArray(s.strati)?s.strati:[]}
+function sgSpessore(id){return sgStrati(id).reduce((a,q)=>a+(+q.s||0),0)}
+/* what an object is made of: its layers [{m:name, s:metres}] and its materials */
+function compDi(e){if(e.sr&&MOS.stratigrafie.has(e.sr)){const L=sgStrati(e.sr).map(q=>({m:mtNome(q.m),s:(+q.s||0)/1000}));
+    return {L,mat:[...new Set(L.map(q=>q.m).filter(Boolean))],sg:MOS.stratigrafie.get(e.sr).nome||'',sp:L.reduce((a,q)=>a+q.s,0)}}
+  if(e.ma)return {L:[],mat:[mtNome(e.ma)],sg:'',sp:null};return {L:[],mat:[],sg:'',sp:null}}
+function sgCambia(id,fn){const o=MOS.stratigrafie.get(id);if(!o)return;const n=JSON.parse(JSON.stringify(corpo('stratigrafie',o)));n.id=o.id;n._r='stratigrafie';
+  if(!Array.isArray(n.strati))n.strati=[];const add=[];if(fn(n,add)===false)return;esegui({add:[n].concat(add),del:[o]})}
+function sgNuova(){const n=sgLista().length+1,o={id:uuid7(),_r:'stratigrafie',nome:'Stratigrafia '+n,strati:[],t:Date.now()};esegui({add:[o],del:[]});sgApri(o.id);return o.id}
+function sgUsata(id){let n=0;MOS.cad.forEach(e=>{if(e.sr===id)n++});return n}
+function sgElimina(id){const o=MOS.stratigrafie.get(id);if(!o)return;const n=sgUsata(id);if(n){avviso('«'+o.nome+'» è portata da '+n+(n===1?' oggetto':' oggetti')+': si elimina quando nessuno la porta');return}
+  const del=[o];MOS.tavole.forEach(t=>{if((t.cornici||[]).some(f=>f.sg===id)){const q=JSON.parse(JSON.stringify(corpo('tavole',t)));q.id=t.id;q._r='tavole';q.cornici=t.cornici.filter(f=>f.sg!==id);esegui({add:[q],del:[t]})}});
+  esegui({add:[],del});sgChiudi()}
+
+/* ---- the Project Manager: «Stratigrafie» under the tables ---- */
+function sgRiempi(box){box.textContent='';const h=document.createElement('div');h.className='fgH';h.innerHTML='<span>Stratigrafie</span><button type="button" title="Nuova stratigrafia">+</button>';
+  h.querySelector('button').onclick=e=>{e.stopPropagation();sgNuova()};box.appendChild(h);
+  sgLista().forEach(x=>{const r=document.createElement('div');r.className='fgR sgR'+(SGE.id===x.id?' att':'');r.title=x.nome;
+    r.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="5" width="16" height="3"/><rect x="4" y="10" width="16" height="4"/><rect x="4" y="16" width="16" height="3"/></svg><span></span>';
+    r.querySelector('span').textContent=x.nome;r.onclick=()=>sgApri(x.id);box.appendChild(r)})}
+
+/* ---- the editor ---- */
+var SGE={id:null,el:null};
+function sgPannello(){if(SGE.el)return SGE.el;const p=document.createElement('section');p.className='pan';p.id='pSg';p.hidden=true;p.setAttribute('aria-label','Stratigrafia');
+  $('wrap').appendChild(p);SGE.el=p;
+  const st=document.createElement('style');st.textContent='#pSg{z-index:7;width:460px}#pSg .sgT{width:calc(100% - 20px);margin:0 10px;border-collapse:collapse;font:500 12.5px var(--sans)}#pSg .sgT th{font:600 10.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:4px 3px}'+
+    '#pSg .sgT td{padding:2px 3px}#pSg .sgT input,#pSg .sgT select{width:100%;height:28px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--fg);font:500 12.5px var(--sans);padding:0 6px;box-sizing:border-box}'+
+    '#pSg .sgT input.n{text-align:right}#pSg .sgB{border:0;background:none;color:var(--fg);width:22px;height:26px;cursor:pointer;border-radius:5px}#pSg .sgB:hover{background:var(--veil)}#pSg .sgPie{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px 12px}'+
+    '#pSg .sgTot{padding:4px 14px;font:500 12.5px var(--sans);color:var(--muted)}#pSg svg.sgV{display:block;margin:6px 14px;width:calc(100% - 28px);height:auto}'+
+    '.sgFr{position:absolute;pointer-events:auto;border:1px dashed transparent;box-sizing:border-box}.sgFr:hover,.sgFr.on{border-color:var(--on)}.sgFr .sgMv{position:absolute;left:0;right:0;cursor:move;background:transparent}.sgFr:hover .sgMv{background:var(--veil)}';
+  document.head.appendChild(st);return p}
+function sgApri(id){if(!MOS.stratigrafie.has(id))return;SGE.id=id;const p=sgPannello();p.hidden=false;sgRendi();try{dcChiave=null;rendiTavole()}catch(e){}}
+function sgChiudi(){SGE.id=null;if(SGE.el)SGE.el.hidden=true;try{dcChiave=null;rendiTavole()}catch(e){}}
+const SG_RET=[['nessuno','Nessuna']].concat(Object.keys(RETINI).map(k=>[k,RETINI[k].n]));
+function sgRendi(){const p=SGE.el,o=MOS.stratigrafie.get(SGE.id);if(!p||p.hidden)return;if(!o){sgChiudi();return}
+  const ae=document.activeElement;if(ae&&p.contains(ae)&&ae.tagName==='INPUT')return;
+  p.textContent='';const h=document.createElement('div');h.className='ph';h.textContent='Stratigrafia';const x=document.createElement('button');x.className='x';x.title='Chiudi';x.textContent='×';x.onclick=sgChiudi;h.appendChild(x);p.appendChild(h);
+  const r0=document.createElement('div');r0.className='pr';r0.innerHTML='<span class="k">Nome</span>';const nm=document.createElement('input');nm.type='text';nm.className='cmp';nm.value=o.nome||'';nm.setAttribute('aria-label','Nome della stratigrafia');
+  nm.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')nm.blur()};nm.onchange=()=>{const v=nm.value.trim();if(v)sgCambia(o.id,n=>{n.nome=v})};r0.appendChild(nm);p.appendChild(r0);
+  const sez=document.createElement('div');sez.className='sez';sez.textContent='Strati, dall’alto';p.appendChild(sez);
+  let dl=document.getElementById('mtL');if(!dl){dl=document.createElement('datalist');dl.id='mtL';document.body.appendChild(dl)}dl.innerHTML=mtLista().map(m=>'<option value="'+String(m.nome).replace(/"/g,'&quot;')+'">').join('');
+  const T=document.createElement('table');T.className='sgT';T.innerHTML='<thead><tr><th>Materiale</th><th style="width:54px">mm</th><th style="width:92px">Funzione</th><th style="width:96px">Campitura</th><th style="width:66px"></th></tr></thead><tbody></tbody>';
+  const tb=T.querySelector('tbody'),S=o.strati||[];
+  S.forEach((q,i)=>{const tr=document.createElement('tr'),m=MOS.materiali.get(q.m);
+    const inp=(v,cls,lab,fn)=>{const td=document.createElement('td'),a=document.createElement('input');a.type='text';a.value=v;if(cls)a.className=cls;a.setAttribute('aria-label',lab);
+      a.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')a.blur()};a.onchange=()=>fn(a.value.trim());td.appendChild(a);tr.appendChild(td);return a};
+    inp(mtNome(q.m),'','Materiale dello strato '+(i+1),v=>sgCambia(o.id,(n,add)=>{n.strati[i].m=mtPer(v,add)||null})).setAttribute('list','mtL');
+    inp(q.s!=null?String(q.s).replace('.',','):'','n','Spessore in mm',v=>{const s=parseFloat(v.replace(',','.'));if(isFinite(s)&&s>0)sgCambia(o.id,n=>{n.strati[i].s=Math.round(s*10)/10});else sgRendi()});
+    inp(q.f||'','','Funzione',v=>sgCambia(o.id,n=>{if(v)n.strati[i].f=v;else delete n.strati[i].f}));
+    const td=document.createElement('td');const sel=scelta(SG_RET,(m&&m.ret)||'nessuno',v=>{if(!m)return;const n=Object.assign({},corpo('materiali',m),{id:m.id,_r:'materiali'});if(v==='nessuno')delete n.ret;else n.ret=v;esegui({add:[n],del:[m]})});
+    sel.disabled=!m;sel.setAttribute('aria-label','Campitura del materiale');td.appendChild(sel);tr.appendChild(td);
+    const tz=document.createElement('td');tz.style.whiteSpace='nowrap';[['↑','Su',-1],['↓','Giù',1],['×','Togli lo strato',0]].forEach(([t,ti,d])=>{const b=document.createElement('button');b.type='button';b.className='sgB';b.textContent=t;b.title=ti;
+      b.onclick=()=>sgCambia(o.id,n=>{if(!d){n.strati.splice(i,1);return}const j=i+d;if(j<0||j>=n.strati.length)return false;const a=n.strati[i];n.strati[i]=n.strati[j];n.strati[j]=a});tz.appendChild(b)});tr.appendChild(tz);tb.appendChild(tr)});
+  p.appendChild(T);
+  const tot=document.createElement('div');tot.className='sgTot';const sp=sgSpessore(o.id);tot.textContent=S.length?'Spessore totale '+String(Math.round(sp*10)/10).replace('.',',')+' mm · '+S.length+(S.length===1?' strato':' strati'):'Nessuno strato';p.appendChild(tot);
+  if(S.length)p.appendChild(sgAnteprima(o));
+  const pie=document.createElement('div');pie.className='sgPie';const bt=(t,f,ti)=>{const b=document.createElement('button');b.type='button';b.className='pb';b.textContent=t;if(ti)b.title=ti;b.onclick=f;pie.appendChild(b);return b};
+  bt('Aggiungi strato',()=>sgCambia(o.id,n=>{n.strati.push({m:null,s:10})}));
+  const t=IMPAG?tavAtt():null,su=t&&(t.cornici||[]).find(f=>f.tipo==='stratigrafia'&&f.sg===o.id);
+  if(t&&!t.pdf&&S.length)bt(su?'Togli dalla tavola':'Posa sulla tavola',()=>su?tavSet({cornici:t.cornici.filter(f=>f!==su)}):sgPosa(o.id),'La sezione della stratigrafia, come particolare della tavola');
+  const n=sgUsata(o.id);const del=bt('Elimina',()=>{if(!del.classList.contains('arm')){del.classList.add('arm');del.textContent='Tocca di nuovo per eliminare';return}sgElimina(o.id)});if(n)del.title='Portata da '+n+(n===1?' oggetto':' oggetti');
+  p.appendChild(pie)}
+/* a small section for the editor, in SVG */
+function sgAnteprima(o){const S=o.strati||[],sp=Math.max(1,sgSpessore(o.id)),W=440,H=Math.max(48,Math.min(170,sp/2)),bw=W*0.28,ns='http://www.w3.org/2000/svg',esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  /* the labels at the height of their layer, never closer than 16 px, as on the plate */
+  let y=6,ly=-1e9;const B=S.map(q=>{const hh=Math.max(2,(+q.s||0)/sp*H),b={y,hh,q};y+=hh;b.ly=Math.max(b.y+hh/2,ly+16);ly=b.ly;return b});
+  const Ht=Math.max(y,ly+8)+4,v=document.createElementNS(ns,'svg');v.setAttribute('viewBox','0 0 '+W+' '+Ht);v.setAttribute('class','sgV');let h='<defs>';
+  Object.keys(RETINI).forEach(k=>{const R=RETINI[k];if(!R.f)return;h+='<pattern id="sgp_'+k+'" width="7" height="7" patternUnits="userSpaceOnUse">'+R.f.map(f=>f.d?'<circle cx="3.5" cy="3.5" r=".8" fill="var(--fg)"/>':'<path d="M0 7L7 0M-1 1L1 -1M6 8L8 6" stroke="var(--fg)" stroke-width=".6" transform="rotate('+(f.a===135?90:0)+' 3.5 3.5)"/>').join('')+'</pattern>'});h+='</defs>';
+  B.forEach(b=>{const m=MOS.materiali.get(b.q.m),r=m&&m.ret,cy=b.y+b.hh/2;
+    h+='<rect x="1" y="'+b.y+'" width="'+bw+'" height="'+b.hh+'" fill="'+(r==='pieno'?'var(--line)':r&&RETINI[r]&&RETINI[r].f?'url(#sgp_'+r+')':'none')+'" stroke="var(--fg)" stroke-width=".8"/>';
+    h+='<path d="M'+(bw-8)+' '+cy+'H'+(bw+8)+'L'+(bw+18)+' '+b.ly+'H'+(bw+26)+'" fill="none" stroke="var(--fg)" stroke-width=".6"/>';
+    const tx=(mtNome(b.q.m)||'Materiale da scegliere')+' · '+String(b.q.s||0).replace('.',',')+' mm'+(b.q.f?' · '+b.q.f:'');h+='<text x="'+(bw+30)+'" y="'+(b.ly+4)+'" font-size="11" fill="var(--fg)" font-family="var(--sans)">'+esc(tx)+'</text>'});
+  v.innerHTML=h;return v}
+/* ---- the detail on the plate (ST4): {id, tipo:'stratigrafia', sg, x, y, sc, w} in mm of paper ---- */
+function sgCornici(t){return (t&&!t.pdf&&Array.isArray(t.cornici)?t.cornici:[]).filter(f=>f&&f.tipo==='stratigrafia'&&MOS.stratigrafie.has(f.sg))}
+function sgGeo(fr){const o=MOS.stratigrafie.get(fr.sg),sc=+fr.sc||5,w=+fr.w||40;let y=fr.y;const B=(o.strati||[]).map(q=>{const h=Math.max(0.3,(+q.s||0)/sc),b={y,h,q};y+=h;return b});
+  /* labels: at the height of their layer, never closer than 3.6 mm */
+  let ly=-1e9;B.forEach(b=>{b.ly=Math.max(b.y+b.h/2,ly+3.6);ly=b.ly});return {o,sc,w,B,H:y-fr.y,Hl:Math.max(y-fr.y,ly-fr.y+2)}}
+function sgPosa(id){const t=tavAtt();if(!t||t.pdf)return;const G=tavGeo(t),ax=G.ax0!=null?G.ax0:10,ay=G.ay0!=null?G.ay0:10,aw=G.aw||G.W-20,ah=G.ah||G.H-20;
+  const fr={id:'s'+uuid7().slice(-12),tipo:'stratigrafia',sg:id,x:Math.round((ax+aw*0.1)*10)/10,y:Math.round((ay+ah*0.15)*10)/10,sc:5,w:40};
+  tavSet({cornici:(t.cornici||[]).concat([fr])});sgRendi()}
+/* hatch lines clipped to a band, in mm of paper */
+function sgTratteggio(doc,x0,y0,x1,y1,fm){const a=-fm.a*Math.PI/180,u=[Math.cos(a),Math.sin(a)],n=[-u[1],u[0]],sp=fm.s;
+  const C=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]],pn=C.map(c=>c[0]*n[0]+c[1]*n[1]),k0=Math.ceil(Math.min(...pn)/sp)*sp,k1=Math.max(...pn);
+  for(let k=k0;k<=k1;k+=sp){const P=n.map(v=>v*k);let t0=-1e9,t1=1e9;
+    for(const [p,d,lo,hi] of [[P[0],u[0],x0,x1],[P[1],u[1],y0,y1]]){if(Math.abs(d)<1e-12){if(p<lo||p>hi){t0=1;t1=0}continue}let a1=(lo-p)/d,a2=(hi-p)/d;if(a1>a2)[a1,a2]=[a2,a1];t0=Math.max(t0,a1);t1=Math.min(t1,a2)}
+    if(t1>t0)doc.line(P[0]+u[0]*t0,P[1]+u[1]*t0,P[0]+u[0]*t1,P[1]+u[1]*t1)}}
+function sgPdf(doc,t){sgCornici(t).forEach(fr=>{const g=sgGeo(fr),o=g.o,x=fr.x,w=g.w,lx=x+w+9;
+  fSerif(doc);doc.setFontSize(TBMM.ptT);doc.setTextColor(DMZ.scuro);doc.text('Stratigrafia · '+(o.nome||''),x,fr.y-1.8);
+  g.B.forEach(b=>{const m=MOS.materiali.get(b.q.m),R=m&&m.ret&&RETINI[m.ret];
+    if(m&&m.ret==='pieno'){doc.setFillColor(DMZ.sotto);doc.rect(x,b.y,w,b.h,'F')}
+    else if(R&&R.f){doc.setDrawColor(DMZ.testo);doc.setLineWidth(0.1);R.f.forEach(fm=>{if(fm.d){doc.setLineCap('round');doc.setLineWidth(0.25);doc.setLineDashPattern([0.001,fm.d],0);sgTratteggio(doc,x,b.y,x+w,b.y+b.h,{a:0,s:fm.s});doc.setLineDashPattern([],0);doc.setLineWidth(0.1)}else sgTratteggio(doc,x,b.y,x+w,b.y+b.h,fm)})}
+    doc.setDrawColor(DMZ.scuro);doc.setLineWidth(0.18);if(b!==g.B[0])doc.line(x,b.y,x+w,b.y);
+    const cy=b.y+b.h/2;doc.setLineWidth(0.12);doc.line(x+w-3,cy,x+w+3,cy);doc.line(x+w+3,cy,x+w+6,b.ly);doc.line(x+w+6,b.ly,lx-1,b.ly);
+    fSans(doc,'normal');doc.setFontSize(TBMM.pt);doc.setTextColor(DMZ.testo);
+    doc.text((mtNome(b.q.m)||'Materiale da scegliere')+' · '+String(b.q.s||0).replace('.',',')+' mm'+(b.q.f?' · '+b.q.f:''),lx,b.ly+TBMM.pt*0.352778*0.35)});
+  if(g.B.length){doc.setDrawColor(DMZ.scuro);doc.setLineWidth(0.25);doc.rect(x,fr.y,w,g.H)}
+  fSans(doc,'italic');doc.setFontSize(TBMM.ptH);doc.setTextColor(DMZ.grigio);
+  doc.text('Spessore totale '+String(Math.round(sgSpessore(o.id)*10)/10).replace('.',',')+' mm · scala 1:'+g.sc,x,fr.y+g.Hl+3.5)})}
+/* the details on the screen: a box to move them, a double tap opens the stratigraphy */
+function sgPosaAgg(L,t){const F=sgCornici(t),vivi=new Set();
+  F.forEach(fr=>{vivi.add(fr.id);let b=L.querySelector('.sgFr[data-id="'+fr.id+'"]');
+    if(!b){b=document.createElement('div');b.className='sgFr';b.dataset.id=fr.id;b.title='Trascina per spostare · doppio tocco per aprire la stratigrafia';b.innerHTML='<div class="sgMv"></div>';L.appendChild(b);sgFrEventi(b)}
+    const g=sgGeo(fr),[x0,y0]=tbSch(fr.x,fr.y-4),[x1,y1]=tbSch(fr.x+g.w+60,fr.y+g.Hl+4.5);Object.assign(b.style,{left:x0+'px',top:y0+'px',width:(x1-x0)+'px',height:(y1-y0)+'px'});
+    Object.assign(b.querySelector('.sgMv').style,{top:'0',height:'100%'});b.classList.toggle('on',SGE.id===fr.sg)});
+  L.querySelectorAll('.sgFr').forEach(b=>{if(!vivi.has(b.dataset.id))b.remove()});return F.length}
+function sgFrEventi(b){let ult=0;
+  b.addEventListener('pointerdown',e=>{if(e.button>0)return;const t=tavAtt(),fr=t&&(t.cornici||[]).find(f=>f.id===b.dataset.id);if(!fr)return;e.stopPropagation();e.preventDefault();
+    const ora=Date.now();if(ora-ult<350){ult=0;sgApri(fr.sg);return}ult=ora;
+    const p0=tbCarta(e.clientX,e.clientY);let d=[0,0];
+    const mv=ev=>{const p=tbCarta(ev.clientX,ev.clientY);d=[p[0]-p0[0],p[1]-p0[1]];const [a,c]=tbSch(fr.x+d[0],fr.y-4+d[1]);b.style.left=a+'px';b.style.top=c+'px'};
+    const up=()=>{removeEventListener('pointermove',mv,true);removeEventListener('pointerup',up,true);if(Math.hypot(d[0],d[1])<0.3)return;
+      const T=tavAtt();tavSet({cornici:T.cornici.map(f=>f.id===fr.id?Object.assign({},f,{x:Math.round((fr.x+d[0])*10)/10,y:Math.round((fr.y+d[1])*10)/10}):f)})};
+    addEventListener('pointermove',mv,true);addEventListener('pointerup',up,true)})}
+(function(){const g=window.__gestoTB||{};Object.assign(g,{
+  sgNuova:()=>sgNuova(),sgLista:()=>sgLista().map(x=>JSON.parse(JSON.stringify(corpo('stratigrafie',x)))).map((x,i)=>Object.assign(x,{id:sgLista()[i].id})),
+  sgImposta:(id,nome,strati)=>sgCambia(id,(n,add)=>{if(nome)n.nome=nome;n.strati=strati.map(([m,s,f])=>{const q={m:mtPer(m,add),s};if(f)q.f=f;return q})}),
+  mtLista:()=>mtLista().map(m=>({id:m.id,nome:m.nome,ret:m.ret})),mtRet:(nome,ret)=>{const m=mtLista().find(x=>x.nome===nome);if(m)esegui({add:[Object.assign({},corpo('materiali',m),{id:m.id,_r:'materiali',ret})],del:[m]})},
+  pdfTav:async()=>{const r=await docTavola(tavAtt()),b=new Uint8Array(await pdfFinale(r.doc).arrayBuffer());let q='';for(let i=0;i<b.length;i+=8192)q+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return btoa(q)},
+  sgPosa:id=>sgPosa(id),sgCornici:()=>sgCornici(tavAtt()).map(f=>Object.assign({},f)),sgApri:id=>sgApri(id),
+  sgPdfTesti:()=>{const T=[],nop=()=>d;const d={text:(s,x,y)=>{T.push([s,Math.round(x*10)/10,Math.round(y*10)/10])},getTextWidth:s=>s.length,setFont:nop,setFontSize:nop,setTextColor:nop,setFillColor:nop,rect:nop,setDrawColor:nop,setLineWidth:nop,line:nop,setLineCap:nop,setLineDashPattern:nop};sgPdf(d,tavAtt());return T}});window.__gestoTB=g})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{if(localStorage.getItem('gesto.avvio')==='ultimo')foglioId=localStorage.getItem('gesto.sheet')||'f1';else{AVVIO_ZERO=true;NOME_NUOVO='Nuovo progetto';foglioId='f'+Date.now().toString(36)}}catch(e){self.__re&&self.__re(e)}
