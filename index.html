@@ -7888,7 +7888,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&soBox){soChiudi();e.stopImme
 /* ---------- 63. Testata del menu del logo (titolare, 22.11.2026) ----------
    TM1 «Gesto», poi «di Lab DeMazur» in un corpo più piccolo, poi il motto; la versione del programma a fine riga, tenue.
    TM2 La versione è «v0.» seguito dal numero della fase pubblicata. */
-const VERSIONE_GESTO='0.127';
+const VERSIONE_GESTO='0.128';
 (()=>{const t=document.querySelector('.lmenu .lmT');if(!t)return;t.innerHTML='<b>Gesto</b><i class="lmDi">di Lab DeMazur</i><span class="lmMotto">Tutto comincia da un gesto</span><span class="lmVer" title="Versione di Gesto">v'+VERSIONE_GESTO+'</span>'})();
 {const st=document.createElement('style');st.textContent='.lmT{flex-wrap:wrap;row-gap:2px}.lmT .lmDi{font:500 12px var(--sans);font-style:normal;color:var(--fg);opacity:.85;margin-left:-3px}.lmT .lmMotto{font-size:11px;letter-spacing:.06em;color:var(--muted)}.lmT .lmVer{margin-left:auto;font-size:10px;letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}@media (max-width:520px){.lmT .lmVer{order:2}.lmT .lmMotto{order:3;flex-basis:100%}}';document.head.appendChild(st)}
 
@@ -11856,7 +11856,7 @@ const dF=a=>Number(a.m)/Math.pow(10,a.e);
 function dCanon(a){let s=(a.m<0n?-a.m:a.m).toString();if(a.e>0){s=s.padStart(a.e+1,'0');s=s.slice(0,s.length-a.e)+'.'+s.slice(s.length-a.e)}return (a.m<0n?'-':'')+s}
 
 /* ---- functions: one closed, numbered list per version (DZ-083 b) ---- */
-const FUNZ_VERSIONE=2;
+const FUNZ_VERSIONE=3;
 const FUNZ=[ // [neutral name, Italian name, group, min args, max args]
   ['SUM','SOMMA','mat',1,255],['AVERAGE','MEDIA','mat',1,255],['MIN','MIN','mat',1,255],['MAX','MAX','mat',1,255],
   ['ROUND','ARROTONDA','mat',2,2],['ROUNDUP','ARROTONDA.PER.ECC','mat',2,2],['ROUNDDOWN','ARROTONDA.PER.DIF','mat',2,2],
@@ -11870,7 +11870,13 @@ const FUNZ=[ // [neutral name, Italian name, group, min args, max args]
   ['TEXT','TESTO','txt',2,2],['VALUE','VALORE','txt',1,1],
   ['VLOOKUP','CERCA.VERT','cer',3,4],['HLOOKUP','CERCA.ORIZZ','cer',3,4],['INDEX','INDICE','cer',2,3],['MATCH','CONFRONTA','cer',2,3],['CHOOSE','SCEGLI','cer',2,255],
   ['TODAY','OGGI','dat',0,0],['DATE','DATA','dat',3,3],['YEAR','ANNO','dat',1,1],['MONTH','MESE','dat',1,1],['DAY','GIORNO','dat',1,1],['WEEKDAY','GIORNO.SETTIMANA','dat',1,2],
-  ['DAYS','GIORNI','dat',2,2],['EDATE','DATA.MESE','dat',2,2],['NETWORKDAYS','GIORNI.LAVORATIVI.TOT','dat',2,3],['WORKDAY','GIORNO.LAVORATIVO','dat',2,3]];
+  ['DAYS','GIORNI','dat',2,2],['EDATE','DATA.MESE','dat',2,2],['NETWORKDAYS','GIORNI.LAVORATIVI.TOT','dat',2,3],['WORKDAY','GIORNO.LAVORATIVO','dat',2,3],
+  /* version 3 (v0.128): cells that read the drawing (TB2); measures in metres and square metres */
+  ['AREA','AREA','dis',1,1],['PERIMETER','PERIMETRO','dis',1,1],['LENGTH','SVILUPPO','dis',1,1],['COUNTOBJECTS','CONTA.OGGETTI','dis',1,1]];
+/* the drawing is reached through the app, TBM.ponte.disegno = {oggetti(q) → [{area,per,len}] in m and m², or null when q names nothing;
+   risolvi(name) → id of the one object with that name, or null; nomina(id) → its name when unique, or null}.
+   A name of one object is stored as its identity (weak reference: renaming keeps the link); counting stays a query by name. */
+const DIS={AREA:1,PERIMETER:1,LENGTH:1};const ponte={disegno:null};
 const DA_IT={},A_IT={},INFO={};FUNZ.forEach(([n,i,g,a,b])=>{DA_IT[i]=n;A_IT[n]=i;INFO[n]={g,a,b}});
 /* ---- errors, as Italian Excel shows them ---- */
 const ERR={nd:'#N/D',div:'#DIV/0!',val:'#VALORE!',rif:'#RIF!',nome:'#NOME?',num:'#NUM!',ciclo:'#CICLO!'};
@@ -11933,8 +11939,9 @@ function scrivi(a,loc){const L=LOC[loc],w=x=>scrivi(x,loc);
     case 'bin':return w(a.a)+a.o+w(a.b);
     case 'fn':return (loc==='it'?(A_IT[a.n]||a.n):a.n)+'('+a.args.map(w).join(L.arg)+')'}}
 /* the formula as the file keeps it: '=' always written (DZ-083 b) */
-const neutra=(txt,daLoc)=>'='+scrivi(parse(txt.replace(/^=/,''),daLoc||'it'),'neutro');
-const locale=(f,loc)=>'='+scrivi(parse(f.replace(/^=/,''),'neutro'),loc||'it');
+function oggettiIn(a,fn){(function v(x){if(!x||typeof x!=='object')return;if(x.k==='fn'){if(DIS[x.n]&&x.args[0]&&x.args[0].k==='str')fn(x.args[0]);x.args.forEach(v)}['a','b'].forEach(k=>x[k]&&x[k].k&&v(x[k]))})(a)}
+const neutra=(txt,daLoc)=>{const a=parse(txt.replace(/^=/,''),daLoc||'it');const P=ponte.disegno;if(P&&P.risolvi)oggettiIn(a,q=>{const id=P.risolvi(q.v);if(id)q.v=id});return '='+scrivi(a,'neutro')};
+const locale=(f,loc)=>{const a=parse(f.replace(/^=/,''),'neutro');const P=ponte.disegno;if(P&&P.nomina)oggettiIn(a,q=>{const n=P.nomina(q.v);if(n)q.v=n});return '='+scrivi(a,loc||'it')};
 const nomiUsati=a=>{const r=[];(function v(x){if(!x)return;if(x.k==='fn'){if(!INFO[x.n])r.push(x.n);x.args.forEach(v)}['a','b'].forEach(k=>x[k]&&x[k].k&&v(x[k]))})(a);return r};
 
 /* ---- evaluation ---- */
@@ -12047,6 +12054,9 @@ function funzione2(f,args){const A=args;
     case 'DAYS':{const b=intero(A[0]),a=intero(A[1]);if(isE(a))return a;if(isE(b))return b;return D(b-a,0)}
     case 'EDATE':{const n=intero(A[0]),k=intero(A[1]);if(isE(n))return n;if(isE(k))return k;const q=daSeriale(n),m0=q.m-1+k,y=q.y+Math.floor(m0/12),m=((m0%12)+12)%12+1;
       const ult=new Date(Date.UTC(y,m,0)).getUTCDate();return D(seriale(y,m,Math.min(q.d,ult)),0)}
+    case 'AREA':case 'PERIMETER':case 'LENGTH':case 'COUNTOBJECTS':{const q=tx(A[0]);if(isE(q))return q;const P=ponte.disegno,L=P&&P.oggetti?P.oggetti(q):null;
+      if(!L)return E('rif');if(f==='COUNTOBJECTS')return D(L.length,0);if(!L.length)return D(0,0);const k=f==='AREA'?'area':f==='PERIMETER'?'per':'len';
+      let s=0,n=0;L.forEach(o=>{if(o[k]!=null&&isFinite(o[k])){s+=o[k];n++}});return n?dRound(dNum(s),9,''):E('val')}
     case 'NETWORKDAYS':case 'WORKDAY':{const a=intero(A[0]),b=intero(A[1]);if(isE(a))return a;if(isE(b))return b;const fest=new Set();
       if(A.length>2)for(const q of lin(A[2])){if(isD(q))fest.add(Number(dInt(q).m))}
       const lav=n=>{const w=daSeriale(n).w;return w!==0&&w!==6&&!fest.has(n)};
@@ -12086,7 +12096,7 @@ function scritto(c){if(!c)return '';if(c.f!=null){try{return locale(c.f,'it')}ca
   if(c.t!=null){const l=leggi(c.t);return l&&l.t===c.t?c.t:"'"+c.t}return ''}
 
 return {D,dParse,dNum,dAdd,dSub,dMul,dDiv,dCmp,dRound,dCanon,dF,isD,isE,parse,scrivi,neutra,locale,valuta,formatta,leggi,scritto,
-  colS,colN,rifParse,rifS,FUNZ,FUNZ_VERSIONE,FORMATI,ERR,nomiUsati,nomeValido,seriale};
+  colS,colN,rifParse,rifS,FUNZ,FUNZ_VERSIONE,FORMATI,ERR,nomiUsati,nomeValido,seriale,ponte};
 })();
 /* ---------- 125 TB1, TB8, TB9 (owner, 25.11.2026 · presidio DZ-083) ----------
    The spreadsheets of the project: entries of the Project Manager, opened over the plate in a grid written with keyboard and pen.
@@ -12402,6 +12412,30 @@ addEventListener('pointerdown',e=>{const st=tbStato();if(!st.fr||!TBV)return;con
     sch:(x,y)=>tbSch(x,y),agg:()=>tbPosaAgg(true),
     pdfTesti:()=>{const T=[],nop=()=>{};const d={text:(s,x,y,o)=>T.push([s,(o&&o.align)||'left',Math.round(x*10)/10,Math.round(y*10)/10]),getTextWidth:s=>String(s).length*1.6,
       setFont:nop,setFontSize:nop,setTextColor:nop,setFillColor:nop,rect:nop,setDrawColor:nop,setLineWidth:nop,line:nop};tbPdf(d,tavAtt());return T}});window.__gestoTB=g})();
+/* ---------- 128 TB2 (owner, 26.11.2026): cells that read the drawing ----------
+   AREA, PERIMETRO and SVILUPPO measure an object in m² and m; CONTA.OGGETTI counts. The text names one object, every object with a name,
+   or every object of a layer («layer:Nome») or of a collection («collezione:Nome»). A name of one object is kept as its identity, so a
+   renamed object stays linked; a deleted one gives #RIF!. Every change of the drawing recomputes the tables. */
+function tbMisura(e){const o={id:e.id};
+  try{if(chiusa(e)){const c=contorno(e);if(c&&c.length>=6)o.area=areaPoly(c)/1e6}}catch(x){}
+  try{if(MODIFICABILI.has(e.k)){const L=percorso(e).L/1000;o.len=L;if(chiusa(e))o.per=L}}catch(x){}
+  return o}
+function tbOggetti(q){q=String(q==null?'':q).trim();if(!q)return null;
+  const e=MOS.cad.get(q);if(e)return [tbMisura(e)];
+  const m=/^(layer|collezione)\s*:\s*(.+)$/i.exec(q);
+  if(m){const n=m[2].trim().toLowerCase(),lay=m[1].toLowerCase()==='layer',ids=new Set();
+    (lay?layers:MOS.collezioni).forEach((x,id)=>{if(String(x.nome||'').trim().toLowerCase()===n)ids.add(id)});if(!ids.size)return null;
+    const L=[];MOS.cad.forEach(e=>{if(ids.has(lay?(e.l||'generale'):e.col))L.push(tbMisura(e))});return L}
+  const L=[];MOS.cad.forEach(e=>{if(e.nm&&String(e.nm).trim()===q)L.push(tbMisura(e))});return L.length?L:null}
+function tbConNome(n){const L=[];MOS.cad.forEach(e=>{if(e.nm&&String(e.nm).trim()===n)L.push(e)});return L}
+TBM.ponte.disegno={oggetti:tbOggetti,
+  risolvi:n=>{n=String(n).trim();if(MOS.cad.has(n)||/^(layer|collezione)\s*:/i.test(n))return null;const L=tbConNome(n);return L.length===1?L[0].id:null},
+  nomina:id=>{const e=MOS.cad.get(id);if(!e||!e.nm)return null;const n=String(e.nm).trim();return tbConNome(n).length===1?n:null}};
+(function(){const g=window.__gestoTB||{};Object.assign(g,{
+  oggetto:(k,geo,extra)=>{const o=fattaEnt(Object.assign({id:nuovoId('cad'),k,g:geo,l:'generale',t:Date.now()},extra||{}));esegui({add:[o],del:[]});return o.id},
+  modifica:(id,patch)=>{const e=MOS.cad.get(id);if(!e)return false;const n=fattaEnt(Object.assign(JSON.parse(JSON.stringify(corpo('cad',e))),{id},patch));esegui({add:[n],del:[e]});return true},
+  togliOggetto:id=>{const e=MOS.cad.get(id);if(e)esegui({add:[],del:[e]});return !!e},
+  misura:q=>tbOggetti(q),nomeLayer:id=>lyDi(id).nome});window.__gestoTB=g})();
 
 applicaTema();leggiTema();aggTasto();aggRail();$('aiuto').textContent=AIUTO_CMD;
 try{if(localStorage.getItem('gesto.avvio')==='ultimo')foglioId=localStorage.getItem('gesto.sheet')||'f1';else{AVVIO_ZERO=true;NOME_NUOVO='Nuovo progetto';foglioId='f'+Date.now().toString(36)}}catch(e){self.__re&&self.__re(e)}
